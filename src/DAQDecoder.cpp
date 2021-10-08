@@ -23,7 +23,6 @@ void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, st
        path_list.push_back(full_path);
      } else if (child_type == HighFive::ObjectType::Group) {
        //std::cout << "Group: " << child_name << std::endl;
-
        HighFive::Group child_group = parent_group.getGroup(child_name);
        // start the recusion
        std::string new_path = relative_path + "/" + child_name;
@@ -32,8 +31,9 @@ void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, st
    }
 }
 
-void readDataset(std::string path_dataset, void* buff) {
 
+// Read the HDF5 dataset and parse the single compoents
+void readDataset(std::string path_dataset, void* buff) {
   std::string tr_header = "TriggerRecordHeader";
   if (path_dataset.find(tr_header) != std::string::npos) {
      std::cout << "--- TR header dataset" << path_dataset << std::endl;
@@ -92,6 +92,7 @@ DAQDecoder::DAQDecoder(const std::string& file_name, const unsigned& num_events)
     m_top_level_group_name = m_file_ptr->getPath();
    
   } catch (std::exception const& excpt) {
+    // TODO: add ERS exceptions 
     throw "FileOperationProblem - ADD ERS";
   } catch (...) {
     throw "FileOperationProblem - ADD ERS";
@@ -113,7 +114,9 @@ void DAQDecoder::read_fragment(std::string dataset_path) {
   delete[] membuffer;
 }
 
-
+/**
+ * @brief Return a vector of datasets 
+ */
 std::vector<std::string> DAQDecoder::get_datasets() {
  
   // Vector containing the path list to the HDF5 datasets
@@ -135,7 +138,6 @@ std::vector<std::string> DAQDecoder::get_datasets() {
 std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
 
  std::vector<std::string> fragment_path; 
- 
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
  int trs_count = 0;

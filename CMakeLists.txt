@@ -20,13 +20,7 @@ find_package(logging REQUIRED)
 find_package(HighFive REQUIRED)
 find_package(dataformats REQUIRED)
 
-#add_library(DAQDecoder apps/daq_decoder.cpp)
-#target_link_libraries(DAQDecoder ers::ers HighFive dataformats::dataformats logging::logging)
 daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive dataformats::dataformats logging::logging )
-
-# Example of a simple data browser
-#add_executable(data_file_browser src/reader.cpp )
-#target_link_libraries(data_file_browser HighFive dataformats::dataformats)
 
 
 # Demo
