@@ -58,7 +58,7 @@ void readDataset(std::string path_dataset, void* buff) {
        size_t raw_data_packets = (frag.get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
        std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
         for (size_t i=0; i < raw_data_packets; ++i) {
-           auto wf1ptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag.get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
+	  auto wf1ptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>((char*)(frag.get_data())+i*sizeof(dunedaq::dataformats::WIBFrame));
            // print first WIB header
            if (i==0) {
                std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
@@ -140,7 +140,7 @@ std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
  std::vector<std::string> fragment_path; 
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
- int trs_count = 0;
+ unsigned trs_count = 0;
  for (auto& element : dataset_path) {
    if (element.find("Link") != std::string::npos && trs_count < num_trs) {
        fragment_path.push_back(element);
@@ -163,7 +163,7 @@ std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
  
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
- int trs_count = 0;
+ unsigned trs_count = 0;
  for (auto& element : dataset_path) {
    if (element.find("TriggerRecordHeader") != std::string::npos && trs_count < num_trs) {
      trs_count += 1 ;
