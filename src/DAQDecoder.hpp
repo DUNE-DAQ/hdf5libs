@@ -22,6 +22,8 @@
 
 #include "logging/Logging.hpp"
 
+#include "hdf5libs/StorageKey.hpp"
+
 
 class DAQDecoder
 {
