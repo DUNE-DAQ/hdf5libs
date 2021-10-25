@@ -22,6 +22,7 @@
 
 #include "logging/Logging.hpp"
 
+#include "dataformats/TriggerRecord.hpp"
 
 class DAQDecoder
 {

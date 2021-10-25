@@ -7,8 +7,6 @@
 
 #include "DAQDecoder.hpp"
 
-#include "dataformats/TriggerRecord.hpp"
-#include "dataformats/wib/WIBFrame.hpp"
 
 
 
@@ -30,56 +28,6 @@ void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, st
      }
    }
 }
-
-
-// Read the HDF5 dataset and parse the single compoents
-void readDataset(std::string path_dataset, void* buff) {
-  std::string tr_header = "TriggerRecordHeader";
-  if (path_dataset.find(tr_header) != std::string::npos) {
-     std::cout << "--- TR header dataset" << path_dataset << std::endl;
-     dunedaq::dataformats::TriggerRecordHeader trh(buff);
-     std::cout << "Run number: " << trh.get_run_number()
-               << " Trigger number: " << trh.get_trigger_number()
-               << " Requested fragments: " <<trh.get_num_requested_components() << std::endl;
-     std::cout << "============================================================" << std::endl;
-  }
-  else {
-     std::cout << "+++ Fragment dataset" << path_dataset << std::endl;
-     dunedaq::dataformats::Fragment frag(buff, dunedaq::dataformats::Fragment::BufferAdoptionMode::kReadOnlyMode);
-     // Here I can now look into the raw data
-     // As an example, we print a couple of attributes of the Fragment header and then dump the first WIB frame.
-     if(frag.get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
-       std::cout << "Fragment with Run number: " << frag.get_run_number()
-                 << " Trigger number: " << frag.get_trigger_number()
-                 << " GeoID: " << frag.get_element_id() << std::endl;
-
-       // Get pointer to the first WIB frame
-       auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag.get_data());
-       size_t raw_data_packets = (frag.get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
-       std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
-        for (size_t i=0; i < raw_data_packets; ++i) {
-           auto wf1ptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag.get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
-           // print first WIB header
-           if (i==0) {
-               std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
-               std::cout << "Printout sampled timestamps in WIB headers: " ;
-           }
-           // printout timestamp every now and then, only as example of accessing data...
-           if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wf1ptr->get_timestamp() << " ";
-       }
-       std::cout << std::endl;
-
-
-     }
-     else {
-       std::cout << "Skipping unknown fragment type" << std::endl;
-     }
-
-  }
-}
-
-
-
 
 DAQDecoder::DAQDecoder(const std::string& file_name, const unsigned& num_events) {
 
@@ -128,7 +76,10 @@ std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
 
  int trs_count = 0;
  for (auto& element : dataset_path) {
-   if (element.find("Link") != std::string::npos && trs_count < num_trs) {
+   if (element.find("Element") != std::string::npos && trs_count < num_trs) {
+       fragment_path.push_back(element);
+   }
+   else if (element.find("Link") != std::string::npos && trs_count < num_trs) {
        fragment_path.push_back(element);
    }
    else if (element.find("TriggerRecordHeader") != std::string::npos) {
@@ -170,11 +121,9 @@ std::unique_ptr<dunedaq::dataformats::Fragment> DAQDecoder::get_frag_ptr(const s
   char* membuffer = new char[data_size];
   data_set.read(membuffer);
   //readDataset(dataset_path, membuffer);
-  std::unique_ptr<dunedaq::dataformats::Fragment> frag = new dunedaq::dataformats::Fragment(membuff, dunedaq::dataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+  std::unique_ptr<dunedaq::dataformats::Fragment> frag(new dunedaq::dataformats::Fragment(membuffer, dunedaq::dataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer));
   //delete[] membuffer;
   return std::move(frag);
-
-
 } 
 
 std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_ptr (const std::string& dataset_name) {
@@ -185,10 +134,8 @@ std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_p
 
   char* membuffer = new char[data_size];
   data_set.read(membuffer);
-
-  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh = new dunedaq::dataformats::TriggerRecordHeader(membuf,true);
+  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh(new dunedaq::dataformats::TriggerRecordHeader(membuffer,true));
   delete[] membuffer;
   return std::move(trh);
-
 }
 
