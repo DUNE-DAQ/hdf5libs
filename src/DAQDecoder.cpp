@@ -100,20 +100,6 @@ DAQDecoder::DAQDecoder(const std::string& file_name, const unsigned& num_events)
 
 }
 
-
-
-//void DAQDecode::read_trigger_record_header() {}
-void DAQDecoder::read_fragment(std::string dataset_path) {
-  HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
-  HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
-  HighFive::DataSpace data_space = data_set.getSpace();
-  size_t data_size = data_set.getStorageSize();
-  char* membuffer = new char[data_size];
-  data_set.read(membuffer);
-  readDataset(dataset_path, membuffer);
-  delete[] membuffer;
-}
-
 /**
  * @brief Return a vector of datasets 
  */
@@ -174,3 +160,35 @@ std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
  return trg_path;
 
 }
+
+std::unique_ptr<dunedaq::dataformats::Fragment> DAQDecoder::get_frag_ptr(const std::string& dataset_name){
+  HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
+  HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
+  HighFive::DataSpace data_space = data_set.getSpace();
+  size_t data_size = data_set.getStorageSize();
+  
+  char* membuffer = new char[data_size];
+  data_set.read(membuffer);
+  //readDataset(dataset_path, membuffer);
+  std::unique_ptr<dunedaq::dataformats::Fragment> frag = new dunedaq::dataformats::Fragment(membuff, dunedaq::dataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+  //delete[] membuffer;
+  return std::move(frag);
+
+
+} 
+
+std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_ptr (const std::string& dataset_name) {
+  HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
+  HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
+  HighFive::DataSpace data_space = data_set.getSpace();
+  size_t data_size = data_set.getStorageSize();
+
+  char* membuffer = new char[data_size];
+  data_set.read(membuffer);
+
+  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh = new dunedaq::dataformats::TriggerRecordHeader(membuf,true);
+  delete[] membuffer;
+  return std::move(trh);
+
+}
+

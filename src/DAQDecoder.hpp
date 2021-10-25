@@ -39,9 +39,9 @@ public:
   std::vector<std::string> get_datasets();
   std::vector<std::string> get_fragments(const unsigned& num_trs);
   std::vector<std::string> get_trh(const unsigned& num_trs);
-  void read_fragment(std::string dataset_path);
-
-
+  //void read_fragment(std::string dataset_path);
+  std::unique_ptr<dunedaq::dataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
+  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
 
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
