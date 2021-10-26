@@ -63,6 +63,15 @@ public:
     , m_region_number(region_number)
     , m_element_number(element_number)
   {
+
+    //convert negative numbers to invalid ones...
+    //very convenient for setting up matching keys
+    if(m_run_number<0) m_run_number=s_invalid_run_number;
+    if(m_trigger_number<0) m_trigger_number=s_invalid_trigger_number;
+    if(m_group_type<0) m_group_type=DataRecordGroupType::kInvalid;
+    if(m_region_number<0) m_region_number=s_invalid_region_number;
+    if(m_element_number<0) m_element_number=s_invalid_element_number;
+
     //WK not sure what these do...
     //m_this_sequence_number = 0;
     //m_max_sequence_number = 0;
