@@ -12,14 +12,9 @@
 #define HDF5LIBS_INCLUDE_HDF5LIBS_STORAGEKEY_HPP_
 
 #include <limits>
-#include <vector>
 
 namespace dunedaq {
   namespace hdf5libs {
-
-    class StorageKey;
-    typedef std::vector<StorageKey> StorageKeyList;
-
 
     /**
      * @brief The StorageKey class defines the collection of parameters that
@@ -47,6 +42,16 @@ public:
       kInvalid = 0
     };
 
+  //default constructor
+  //useful for searching functionalities
+  StorageKey()
+    : m_run_number(s_invalid_run_number)
+    , m_trigger_number(s_invalid_trigger_number)
+    , m_group_type(DataRecordGroupType::kInvalid)
+    , m_region_number(s_invalid_region_number)
+    , m_element_number(s_invalid_element_number)
+  {}
+
   StorageKey(int run_number,
              int trigger_number,
              DataRecordGroupType group_type,
@@ -69,9 +74,68 @@ public:
   int get_region_number() const { return m_region_number; }
   int get_element_number() const { return m_element_number; }
 
+
+  void set_run_number(int r) { m_run_number=r; }
+  void set_trigger_number(int t) { m_trigger_number=t; }
+  void set_group_type(DataRecordGroupType g) { m_group_type=g; }
+  void set_region_number(int r) { m_region_number=r; }
+  void set_element_number(int e) { m_element_number=e; }
+
   //WK not sure what these do ...
   //int m_this_sequence_number;
   //int m_max_sequence_number;
+
+  bool is_fully_valid() const
+  { return ((m_run_number!=s_invalid_run_number) &&
+	    (m_trigger_number!=s_invalid_trigger_number) &&
+	    (m_group_type!=DataRecordGroupType::kInvalid) &&
+	    (m_region_number!=s_invalid_region_number) &&
+	    (m_element_number!=s_invalid_element_number)); }
+
+  friend bool operator==(const StorageKey& k1, const StorageKey& k2)
+  {
+    return ( (k1.m_run_number==k2.m_run_number) &&
+	     (k1.m_trigger_number==k2.m_trigger_number) &&
+	     (k1.m_group_type==k2.m_group_type) &&
+	     (k1.m_region_number==k2.m_region_number) &&
+	     (k1.m_element_number==k2.m_element_number) );
+  }
+  friend bool operator!=(const StorageKey& k1, const StorageKey& k2)
+  { return !(operator==(k1,k2)); }
+
+  friend bool operator<(const StorageKey& k1, const StorageKey& k2)
+  {
+    if (k1.m_run_number!=k2.m_run_number)
+      return k1.m_run_number<k2.m_run_number;
+    if (k1.m_trigger_number!=k2.m_trigger_number)
+      return k1.m_trigger_number<k2.m_trigger_number;
+    if (k1.m_group_type!=k2.m_group_type)
+      return k1.m_group_type<k2.m_group_type;
+    if (k1.m_region_number!=k2.m_region_number)
+      return k1.m_region_number<k2.m_region_number;
+    if (k1.m_element_number!=k2.m_element_number)
+      return k1.m_element_number<k2.m_element_number;
+
+    return false;
+  }
+
+  friend bool operator>(const StorageKey& k1, const StorageKey& k2)
+  { return operator<(k2,k1); }
+  
+  friend bool operator<=(const StorageKey& k1, const StorageKey& k2)
+  { return !(operator>(k1,k2)); }
+
+  friend bool operator>=(const StorageKey& k1, const StorageKey& k2)
+  { return !(operator<(k1,k2)); }
+
+  bool is_match(const StorageKey& k) const
+  {
+    return ( (k.get_run_number()==s_invalid_run_number || k.get_run_number()==m_run_number) && 
+	     (k.get_trigger_number()==s_invalid_trigger_number || k.get_trigger_number()==m_trigger_number) &&
+	     (k.get_group_type()==DataRecordGroupType::kInvalid || k.get_group_type()==m_group_type) &&
+	     (k.get_region_number()==s_invalid_region_number || k.get_region_number()==m_region_number) && 
+	     (k.get_element_number()==s_invalid_element_number || k.get_element_number()==m_element_number) );
+  }
 
 private:
   int m_run_number;

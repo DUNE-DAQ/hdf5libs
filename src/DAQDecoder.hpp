@@ -23,6 +23,7 @@
 #include "logging/Logging.hpp"
 
 #include "hdf5libs/StorageKey.hpp"
+#include "hdf5libs/StorageKeyList.hpp"
 
 
 class DAQDecoder
@@ -43,8 +44,6 @@ public:
   std::vector<std::string> get_trh(const unsigned& num_trs);
   void read_fragment(std::string dataset_path);
 
-
-
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
   DAQDecoder& operator=(const DAQDecoder&) = delete;
@@ -56,6 +55,11 @@ private:
   unsigned m_number_events; 
   std::string m_top_level_group_name;
 
+  dunedaq::hdf5libs::StorageKeyList m_storage_keys;
+
+
+  //fill the internal list of storage keys
+  void fill_storage_keys() {}
 
 };
 
