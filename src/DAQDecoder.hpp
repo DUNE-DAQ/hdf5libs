@@ -24,6 +24,9 @@
 
 #include "dataformats/TriggerRecord.hpp"
 
+#include "ers/Issue.hpp"
+#include <stdexcept>
+
 class DAQDecoder
 {
 

@@ -24,7 +24,7 @@ make -j
 # Run (example)
 
 ```sh
-./apps/demo ../swtest.hdf5 1
+./apps/hdf5_demo_reader ../swtest.hdf5 1
 ```
 
 # Some links on DUNE-DAQ

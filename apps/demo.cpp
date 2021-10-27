@@ -15,32 +15,8 @@
 #include <string>
 
 #include "DAQDecoder.hpp" 
+#include "utils.hpp"
 
-#include "dataformats/wib/WIBFrame.hpp"
-
-void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
-     if(frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
-       std::cout << "Fragment with Run number: " << frag->get_run_number()
-                 << " Trigger number: " << frag->get_trigger_number()
-                 << " GeoID: " << frag->get_element_id() << std::endl;
-
-       size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
-       std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
-        for (size_t i=0; i < raw_data_packets; ++i) {
-           auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
-           if (i==0) {
-               std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
-               std::cout << "Printout sampled timestamps in WIB headers: " ;
-           }
-           if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
-       }
-       std::cout << std::endl;
-     }
-     else {
-       std::cout << "Skipping unknown fragment type" << std::endl;
-     }
-     return;
-}
 
 int main(int argc, char** argv){
   int num_trs = 1;
@@ -59,7 +35,7 @@ int main(int argc, char** argv){
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
   for (auto& element : datasets_path) {
-    ReadWibFrag(decoder.get_frag_ptr(element));
+    read_fragment(decoder.get_frag_ptr(element));
   }
   return 0;
 }
