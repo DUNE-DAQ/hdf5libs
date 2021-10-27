@@ -133,6 +133,68 @@ std::vector<std::string> DAQDecoder::get_datasets() {
 }
 
 /**
+ * @brief Translate path to StorageKey
+ */
+dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& path)
+{
+
+  dunedaq::hdf5libs::StorageKey k;
+
+  std::vector<size_t> path_locs;
+  size_t found = path.find("/");
+  while(found!=std::string::npos){
+    path_locs.emplace_back(found);
+    found = path.find("/",found+1);
+  }
+  path_locs.emplace_back(path.size());
+
+  std::vector<std::string> substrings;
+  for(size_t i=0; i<path_locs.size()-1; ++i){
+    substrings.emplace_back(path.substr(path_locs[i]+1,path_locs[i+1]-path_locs[i]-1));
+  }
+
+  //run number is the first one? Should be ...
+  //k.set_run_number(...)
+
+  //TriggerRecordNumber next
+  //Begins with 'TriggerRecord'
+  k.set_trigger_number(std::stoi(substrings[1].substr(13)));
+
+  //DataGroupType next
+  if(substrings[2]=="TriggerRecordHeader"){
+    k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTriggerRecordHeader);
+    //and this is the end of the line for TRHs
+  }
+  else if(substrings[2]=="TPC"){
+    k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTPC);
+
+    //Region begins with 'APA'
+    k.set_region_number(std::stoi(substrings[3].substr(3)));
+
+    //Element begins with 'Link'
+    k.set_element_number(std::stoi(substrings[4].substr(4)));
+  }
+  else{
+    //leave it invalide for now
+  }
+
+  return k;
+
+}
+
+void DAQDecoder::fill_storage_keys()
+{
+  m_storage_keys.clear();
+
+  auto paths = get_datasets();
+
+  for(auto const& path : paths)
+    m_storage_keys.emplace_back(make_key_from_path(path));
+
+}
+
+
+/**
  * @brief Return a vector of datasets that correspond to a fragment
  */
 std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {

@@ -44,6 +44,12 @@ public:
   std::vector<std::string> get_trh(const unsigned& num_trs);
   void read_fragment(std::string dataset_path);
 
+  dunedaq::hdf5libs::StorageKeyList get_all_storage_keys()
+  { 
+    if(m_storage_keys.empty()) fill_storage_keys();
+    return m_storage_keys;
+  }
+
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
   DAQDecoder& operator=(const DAQDecoder&) = delete;
@@ -57,10 +63,10 @@ private:
 
   dunedaq::hdf5libs::StorageKeyList m_storage_keys;
 
-
   //fill the internal list of storage keys
-  void fill_storage_keys() {}
+  void fill_storage_keys();
 
+  dunedaq::hdf5libs::StorageKey make_key_from_path(std::string const&);
 };
 
 

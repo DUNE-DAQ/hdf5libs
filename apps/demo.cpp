@@ -14,6 +14,7 @@
 #include <string>
 
 #include "DAQDecoder.hpp" 
+#include "hdf5libs/StorageKeyList.hpp"
 
 int main(int argc, char** argv){
 
@@ -29,6 +30,38 @@ int main(int argc, char** argv){
   }   
 
   DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
+
+  for(auto const& path : decoder.get_datasets())
+    std::cout << path << std::endl;
+
+  auto all_keys = decoder.get_all_storage_keys();
+  std::cout << "Found " << all_keys.size() << " total keys." << std::endl;
+
+
+  dunedaq::hdf5libs::StorageKey k;
+  k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTriggerRecordHeader); //trigger record headers
+  auto trh_keys = all_keys.get_all_matching_keys(k);
+
+  std::cout << "Found " << trh_keys.size() << " Trigger Record Headers." << std::endl;
+
+  k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTPC);
+  auto apas_found = all_keys.get_matching_region_numbers(k);
+  for(auto apa : apas_found)
+    std::cout << "\tHave TPCs from APA " << apa << std::endl;
+  auto links_found = all_keys.get_matching_element_numbers(k);
+  for(auto link : links_found)
+    std::cout << "\tHave TPCs with Links " << link << std::endl;
+
+  /*
+  for(auto const& key : decoder.get_all_storage_keys())
+    std::cout << " Run: " << key.get_run_number()
+	      << " Trigger: " << key.get_trigger_number()
+	      << " Group Type: " << key.get_group_type()
+	      << " Region: " << key.get_region_number()
+	      << " Element: " << key.get_element_number()
+	      << std::endl;
+  */
+
 
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
