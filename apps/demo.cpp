@@ -22,6 +22,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
      if(frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
        std::cout << "Fragment with Run number: " << frag->get_run_number()
                  << " Trigger number: " << frag->get_trigger_number()
+                 << " Sequence number: " << frag->get_sequence_number()
                  << " GeoID: " << frag->get_element_id() << std::endl;
 
        size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
@@ -30,9 +31,9 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
            auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
            if (i==0) {
                std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
-               std::cout << "Printout sampled timestamps in WIB headers: " ;
+//               std::cout << "Printout sampled timestamps in WIB headers: " ;
            }
-           if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
+ //          if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
        }
        std::cout << std::endl;
      }
@@ -43,7 +44,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
 }
 
 int main(int argc, char** argv){
-  int num_trs = 1;
+  int num_trs = 1000000;
   if(argc <2) {
     std::cerr << "Usage: demo <fully qualified file name> [number of events to read]" << std::endl;
     return -1;
@@ -56,9 +57,20 @@ int main(int argc, char** argv){
 
   DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
 
+  std::vector<std::string> tr_paths = decoder.get_trh(num_trs);
+  for (auto& tr : tr_paths) {
+    std::cout << "=== " << tr << " ===" << std::endl;
+    std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(tr));
+    std::cout << "Trigger record with run number: " << trh_ptr->get_run_number()
+              << " Trigger number: " << trh_ptr->get_trigger_number()
+              << " Sequence number: " << trh_ptr->get_sequence_number() << std::endl;
+  }
+
+
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
   for (auto& element : datasets_path) {
+    std::cout << "*** " << element << " ***" << std::endl;
     ReadWibFrag(decoder.get_frag_ptr(element));
   }
   return 0;
