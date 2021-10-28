@@ -50,6 +50,9 @@ public:
     return m_storage_keys;
   }
 
+  dunedaq::hdf5libs::StorageKey make_key_from_path(std::string const&);
+  std::string make_path_from_key(dunedaq::hdf5libs::StorageKey const&);
+
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
   DAQDecoder& operator=(const DAQDecoder&) = delete;
@@ -69,7 +72,6 @@ private:
   //fill the internal list of storage keys
   void fill_storage_keys();
 
-  dunedaq::hdf5libs::StorageKey make_key_from_path(std::string const&);
 };
 
 

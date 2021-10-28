@@ -31,8 +31,17 @@ int main(int argc, char** argv){
 
   DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
 
-  for(auto const& path : decoder.get_datasets())
-    std::cout << path << std::endl;
+  for(auto const& path : decoder.get_datasets()){
+    //std::cout << path << std::endl;
+    auto key = decoder.make_key_from_path(path);
+    //std::cout << "Key: " << key << std::endl;
+    auto path_back = decoder.make_path_from_key(key);
+    //std::cout << "Path back: " << decoder.make_path_from_key(key) << std::endl;
+    if(path!=path_back)
+      std::cout << "Problem: path (" << path 
+		<< ") != path_back (" << path_back << ")"
+		<< std::endl;
+  }
 
   auto all_keys = decoder.get_all_storage_keys();
   std::cout << "Found " << all_keys.size() << " total keys." << std::endl;
@@ -53,8 +62,10 @@ int main(int argc, char** argv){
     std::cout << "\tHave TPCs with Links " << link << std::endl;
   */
   
-  for(auto const& key : decoder.get_all_storage_keys())
-    std::cout << " Key: " << key << std::endl;
+  //for(auto const& key : decoder.get_all_storage_keys())
+  //std::cout << " Key: " << key << std::endl;
+
+
 
 
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);

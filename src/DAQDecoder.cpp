@@ -10,6 +10,8 @@
 #include "dataformats/TriggerRecord.hpp"
 #include "dataformats/wib/WIBFrame.hpp"
 
+#include <sstream>
+#include <iomanip>
 
 
 // HDF5 Utility function to recursively traverse a file
@@ -197,6 +199,28 @@ dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& 
 
   return k;
 
+}
+
+std::string DAQDecoder::make_path_from_key(const dunedaq::hdf5libs::StorageKey& k)
+{
+  std::stringstream ss_path;
+
+  ss_path << "/"
+          //<<no run number.... 
+	  << "/"
+	  << "TriggerRecord" << std::setfill('0') << std::setw(5) << k.get_trigger_number()
+	  << "/"
+	  << k.get_group_type().get_group_name();
+  
+  //TriggerRecordHeaders end here
+  if(k.get_group_type().get_id()==dunedaq::hdf5libs::DataRecordGroupTypeID::kTriggerRecordHeader)
+    return ss_path.str();
+  
+  ss_path << "/"
+	  << k.get_group_type().get_region_prefix() << std::setfill('0') << std::setw(3) << k.get_region_number()
+	  << "/"
+	  << k.get_group_type().get_element_prefix() << std::setfill('0') << std::setw(2) << k.get_element_number();
+  return ss_path.str();
 }
 
 void DAQDecoder::fill_storage_keys()
