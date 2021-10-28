@@ -25,6 +25,6 @@ daq_add_library (DAQDecoder.cpp DataRecordGroupType.cpp LINK_LIBRARIES ers::ers 
 
 
 # Demo
-daq_add_application(demo demo.cpp LINK_LIBRARIES DAQDecoder)
+daq_add_application(hdf5_demo_reader demo.cpp LINK_LIBRARIES DAQDecoder)
 
 #daq_install()

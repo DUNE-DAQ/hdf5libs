@@ -24,7 +24,7 @@
 
 #include "hdf5libs/StorageKey.hpp"
 #include "hdf5libs/StorageKeyList.hpp"
-
+#include "dataformats/TriggerRecord.hpp"
 
 class DAQDecoder
 {
@@ -42,7 +42,6 @@ public:
   std::vector<std::string> get_datasets();
   std::vector<std::string> get_fragments(const unsigned& num_trs);
   std::vector<std::string> get_trh(const unsigned& num_trs);
-  void read_fragment(std::string dataset_path);
 
   dunedaq::hdf5libs::StorageKeyList get_all_storage_keys()
   { 
@@ -52,6 +51,9 @@ public:
 
   dunedaq::hdf5libs::StorageKey make_key_from_path(std::string const&);
   std::string make_path_from_key(dunedaq::hdf5libs::StorageKey const&);
+
+  std::unique_ptr<dunedaq::dataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
+  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
 
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
