@@ -61,6 +61,9 @@ private:
   unsigned m_number_events; 
   std::string m_top_level_group_name;
 
+  int m_run_number;
+  int extract_run_number_from_file_name();
+
   dunedaq::hdf5libs::StorageKeyList m_storage_keys;
 
   //fill the internal list of storage keys

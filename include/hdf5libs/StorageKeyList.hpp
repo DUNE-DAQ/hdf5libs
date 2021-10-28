@@ -32,6 +32,8 @@ public:
     return matching_keys;
   }
 
+  /*
+
   //get by matching storage key
   std::set<int> get_matching_run_numbers(const StorageKey k)
   {
@@ -118,7 +120,7 @@ public:
     k.set_region_number(region_number);
     return get_matching_element_numbers(k);
   }
-
+  */
 
 private:
 

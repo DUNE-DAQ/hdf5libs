@@ -20,7 +20,8 @@ find_package(logging REQUIRED)
 find_package(HighFive REQUIRED)
 find_package(dataformats REQUIRED)
 
-daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive dataformats::dataformats logging::logging )
+#daq_add_library (DataGroupType.cpp LINK_LIBRARIES )
+daq_add_library (DAQDecoder.cpp DataRecordGroupType.cpp LINK_LIBRARIES ers::ers HighFive dataformats::dataformats logging::logging)
 
 
 # Demo

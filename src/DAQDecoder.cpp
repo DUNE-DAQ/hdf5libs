@@ -85,6 +85,9 @@ DAQDecoder::DAQDecoder(const std::string& file_name, const unsigned& num_events)
 
   m_file_name = file_name; 
   m_number_events = num_events;
+
+  m_run_number = extract_run_number_from_file_name();
+
   try {
     m_file_ptr.reset(new HighFive::File(m_file_name, HighFive::File::ReadOnly));
     TLOG_DEBUG(TLVL_BASIC) << "get_name()" << "Opened HDF5 file in read-only.";
@@ -132,6 +135,25 @@ std::vector<std::string> DAQDecoder::get_datasets() {
 
 }
 
+int DAQDecoder::extract_run_number_from_file_name()
+{
+  std::vector<size_t> part_locs;
+  size_t found = m_file_name.find("_");
+  while(found!=std::string::npos){
+    part_locs.emplace_back(found);
+    found = m_file_name.find("/",found+1);
+  }
+  part_locs.emplace_back(m_file_name.size());
+
+  for(size_t i=0; i<part_locs.size()-1; ++i){
+    auto sub = m_file_name.substr(part_locs[i]+1,part_locs[i+1]-part_locs[i]-1);
+    if(sub.find("run")==0)
+      return std::stoi(sub.substr(3,sub.find(".")));
+  }
+  return -1;
+}
+
+
 /**
  * @brief Translate path to StorageKey
  */
@@ -155,28 +177,23 @@ dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& 
 
   //run number is the first one? Should be ...
   //k.set_run_number(...)
+  k.set_run_number(m_run_number);
 
   //TriggerRecordNumber next
   //Begins with 'TriggerRecord'
   k.set_trigger_number(std::stoi(substrings[1].substr(13)));
 
-  //DataGroupType next
-  if(substrings[2]=="TriggerRecordHeader"){
-    k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTriggerRecordHeader);
-    //and this is the end of the line for TRHs
-  }
-  else if(substrings[2]=="TPC"){
-    k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTPC);
+  //DataRecordGroupType next
+  //will use string for lookup
+  dunedaq::hdf5libs::DataRecordGroupType gt(substrings[2]);
 
-    //Region begins with 'APA'
-    k.set_region_number(std::stoi(substrings[3].substr(3)));
+  k.set_group_type(gt);
 
-    //Element begins with 'Link'
-    k.set_element_number(std::stoi(substrings[4].substr(4)));
-  }
-  else{
-    //leave it invalide for now
-  }
+  if(gt.get_group_name()=="TriggerRecordHeader")
+    return k;
+
+  k.set_region_number(std::stoi(substrings[3].substr(gt.get_region_prefix().size())));
+  k.set_element_number(std::stoi(substrings[4].substr(gt.get_element_prefix().size())));
 
   return k;
 
