@@ -5,17 +5,21 @@
 #include "dataformats/ssp/SSPTypes.hpp"
 
 void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
-  size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
-  std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
-  for (size_t i=0; i < raw_data_packets; ++i) {
-    auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
-    if (i==0) {
-      std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
-      std::cout << "Printout sampled timestamps in WIB headers: " ;
+  if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
+    size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
+    std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
+    for (size_t i=0; i < raw_data_packets; ++i) {
+      auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
+      if (i==0) {
+        std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
+        std::cout << "Printout sampled timestamps in WIB headers: " ;
+      }
+      if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
     }
-    if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
-  }
   std::cout << std::endl;
+  } else {
+    std::cout << "Skipping: not TPC fragment type " << std::endl;
+  }
   return;
 }
 
@@ -45,17 +49,26 @@ std::vector<int> ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> fra
 */
 
 std::vector<int> ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
-    std::vector<int> ssp_frames; 
+  std::vector<int> ssp_frames; 
+  if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kPDSData) {
     auto ssp_event_header_ptr = reinterpret_cast<dunedaq::dataformats::EventHeader*>(frag->get_data()); 
-    std::cout << ssp_event_header_ptr->group2 << std::endl;
-    
+    // std::cout << ssp_event_header_ptr->group2 << std::endl; // Module ID, Channel ID
+   
+    // Get the timestamp 
     unsigned long ts = 0;
     for (unsigned int iword = 0 ; iword <= 3; ++iword) {
       ts += ((unsigned long)(ssp_event_header_ptr->timestamp[iword])) << 16 * iword;
     }
-    std::cout << " Timestamp: " << ts << std::endl;
+    std::cout << "Timestamp: " << ts << std::endl;
+
+    // Start parsing the waveforms
     size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader) );
     std::cout << "Raw data packets: " << raw_data_packets << std::endl; 
+
+
+
+
+
     std::cout << "SSP event length: "  << ssp_event_header_ptr->length << std::endl; 
     std::cout << "Size of event channels: " <<  ssp_event_header_ptr->length - sizeof(*ssp_event_header_ptr) << std::endl ;
     std::cout << "Raw data packates without event header: " <<  raw_data_packets - sizeof(*ssp_event_header_ptr) << std::endl ;
@@ -73,7 +86,9 @@ std::vector<int> ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> fra
       ssp_frames.push_back(*adc);  
     }
     
-
+   } else {
+     std::cout << "Skipping: not PD fragment type" << std::endl;
+   }
     
     return ssp_frames;
 }
@@ -81,18 +96,4 @@ std::vector<int> ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> fra
 
 
 
-
-void read_fragment(std::unique_ptr<dunedaq::dataformats::Fragment> frag){
-  std::cout << "Fragment with Run number: " << frag->get_run_number()
-                 << " Trigger number: " << frag->get_trigger_number()
-                 << " GeoID: " << frag->get_element_id() << std::endl;
-
-  if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kPDSData) {
-    ReadSSPFrag(std::move(frag));
-  } else if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
-    ReadWibFrag(std::move(frag));
-  } else {
-    std::cout << "Skipping unknown fragment type" << std::endl;
-  }
-}
 

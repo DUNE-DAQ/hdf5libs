@@ -4,9 +4,9 @@
 
 
 ```sh
-source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
+source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh v2.8.1
 
-setup_dbt dunedaq-v2.8.0
+setup_dbt dunedaq-v2.8.1
 
 dbt-workarea-env
 ```
@@ -14,11 +14,7 @@ dbt-workarea-env
 
 # Build
 ```sh
-cd build
-
-cmake ..
-
-make -j
+dbt-build.sh
 ```
 
 # Run (example)

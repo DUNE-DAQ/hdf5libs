@@ -23,7 +23,7 @@
 int main(int argc, char** argv){
   int num_trs = 1;
   if(argc <2) {
-    std::cerr << "Usage: demo <fully qualified file name> [number of events to read]" << std::endl;
+    std::cerr << "Usage: tpc_decoder <fully qualified file name> [number of events to read]" << std::endl;
     return -1;
   }
 
@@ -33,32 +33,20 @@ int main(int argc, char** argv){
   }   
 
 
-  std::cout << "Before DAQDecoder \n";
-
+  std::cout << "Starting TPC decoder" << std::endl;
   DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
 
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
  
-  std::cout << "Start to read" << std::endl;
  
   // Read all the fragments
-  std::ofstream output_file("./ssp_frames_total.txt");
   for (auto& element : datasets_path) {
-    auto vector_adc = ReadSSPFrag(decoder.get_frag_ptr(element));
-    std::cout <<" Read fragment " << std::endl; 
-    for (const auto &e : vector_adc) output_file << e << "\n";  
+    std::cout <<" Reading fragment " << std::endl; 
+    ReadWibFrag(decoder.get_frag_ptr(element));
   }
-  std::cout << "Finished reading" << std::endl;
+
+  std::cout << "Finished parsing all fragments" << std::endl;
   
-  // Read only one fragment
-  /*
-  auto frag = decoder.get_frag_ptr(datasets_path[0]);
-  std::ofstream output_file("./ssp_frames.txt");
-  if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kPDSData) {
-    auto daphne_frames = ReadSSPFrag(std::move(frag));
-    for (const auto &e : daphne_frames) output_file << e << "\n";  
-  }
-  */
-  return 0;
+ return 0;
 }

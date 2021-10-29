@@ -23,7 +23,8 @@ find_package(dataformats REQUIRED)
 daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive dataformats::dataformats logging::logging )
 
 
-# Demo
-daq_add_application(hdf5_demo_reader demo.cpp LINK_LIBRARIES DAQDecoder)
+# Demo applications
+daq_add_application(hdf5_demo_tpc_decoder demo_tpc_decoder.cpp LINK_LIBRARIES DAQDecoder)
+daq_add_application(hdf5_demo_pd_decoder demo_pd_decoder.cpp LINK_LIBRARIES DAQDecoder)
 
 #daq_install()
