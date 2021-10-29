@@ -11,6 +11,9 @@
 #include <sstream>
 #include <iomanip>
 
+namespace dunedaq{
+namespace hdf5libs{
+
 
 // HDF5 Utility function to recursively traverse a file
 void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, std::vector<std::string>& path_list){
@@ -93,10 +96,10 @@ int DAQDecoder::extract_run_number_from_file_name()
 /**
  * @brief Translate path to StorageKey
  */
-dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& path)
+StorageKey DAQDecoder::make_key_from_path(std::string const& path)
 {
 
-  dunedaq::hdf5libs::StorageKey k;
+  StorageKey k;
 
   std::vector<size_t> path_locs;
   size_t found = path.find("/");
@@ -121,7 +124,7 @@ dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& 
 
   //DataRecordGroupType next
   //will use string for lookup
-  dunedaq::hdf5libs::DataRecordGroupType gt(substrings[2]);
+  DataRecordGroupType gt(substrings[2]);
 
   k.set_group_type(gt);
 
@@ -135,7 +138,7 @@ dunedaq::hdf5libs::StorageKey DAQDecoder::make_key_from_path(std::string const& 
 
 }
 
-std::string DAQDecoder::make_path_from_key(const dunedaq::hdf5libs::StorageKey& k)
+std::string DAQDecoder::make_path_from_key(const StorageKey& k)
 {
   std::stringstream ss_path;
 
@@ -147,7 +150,7 @@ std::string DAQDecoder::make_path_from_key(const dunedaq::hdf5libs::StorageKey& 
 	  << k.get_group_type().get_group_name();
   
   //TriggerRecordHeaders end here
-  if(k.get_group_type().get_id()==dunedaq::hdf5libs::DataRecordGroupTypeID::kTriggerRecordHeader)
+  if(k.get_group_type().get_id()==DataRecordGroupTypeID::kTriggerRecordHeader)
     return ss_path.str();
   
   ss_path << "/"
@@ -170,51 +173,57 @@ void DAQDecoder::fill_storage_keys()
 
 
 /**
- * @brief Return a vector of datasets that correspond to a fragment
+ * @brief Return a vector of keys that correspond to a fragment
  */
-std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
+StorageKeyList DAQDecoder::get_fragment_keys(const unsigned& num_trs,
+								std::string gname) {
+  
+  StorageKeyList frag_keys,my_keys;
 
- std::vector<std::string> fragment_path; 
- std::vector<std::string> dataset_path = this->get_datasets(); 
+  //if not specified, get everything _except_ TRHs
+  if(gname==""){
+    auto gids = keyutils::get_group_ids(get_all_storage_keys());
+    for(auto gid : gids)
+      {
+	if(gid==DataRecordGroupTypeID::kTriggerRecordHeader) continue;
+	for(auto const& k : keyutils::get_keys_by_group_id(get_all_storage_keys(),gid))
+	  frag_keys.emplace_back(k);
+      }
+  }
+  else
+    frag_keys = keyutils::get_keys_by_group_name(get_all_storage_keys(),gname);
+  
+  if(num_trs==0)
+    return frag_keys;
 
- unsigned trs_count = 0;
- for (auto& element : dataset_path) {
-   if (element.find("Element") != std::string::npos && trs_count < num_trs) {
-       fragment_path.push_back(element);
-   }
-   else if (element.find("Link") != std::string::npos && trs_count < num_trs) {
-       fragment_path.push_back(element);
-   }
-   else if (element.find("TriggerRecordHeader") != std::string::npos) {
-     trs_count += 1 ;
-   }
- }
+  unsigned trs_count=0;
+  for(auto trn : keyutils::get_trigger_numbers(frag_keys)){
+    
+    for(auto const& k : keyutils::get_keys_by_trigger_number(frag_keys,trn))
+      my_keys.emplace_back(k);
+    
+    if(++trs_count==num_trs) break;
+  }
 
- return fragment_path;
-
+  return my_keys;
 }
 
 /**
  * @brief Return a vector of datasets that correspond to a TRH
  */
-std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
+StorageKeyList DAQDecoder::get_trh_keys(const unsigned& num_trs) {
 
- std::vector<std::string> trg_path; 
- 
- std::vector<std::string> dataset_path = this->get_datasets(); 
+  StorageKeyList trh_keys = keyutils::get_trh_keys(get_all_storage_keys());
 
- unsigned trs_count = 0;
- for (auto& element : dataset_path) {
-   if (element.find("TriggerRecordHeader") != std::string::npos && trs_count < num_trs) {
-     trs_count += 1 ;
-     trg_path.push_back(element);
-   }
- }
+  if(num_trs>trh_keys.size() || num_trs==0)
+    return trh_keys;
 
- return trg_path;
+  trh_keys.resize(num_trs);
+  return trh_keys;
 
 }
 
+//get based on path name
 std::unique_ptr<dunedaq::dataformats::Fragment> DAQDecoder::get_frag_ptr(const std::string& dataset_name){
   HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
@@ -230,6 +239,11 @@ std::unique_ptr<dunedaq::dataformats::Fragment> DAQDecoder::get_frag_ptr(const s
   return std::move(frag);
 } 
 
+std::unique_ptr<dunedaq::dataformats::Fragment> DAQDecoder::get_frag_ptr(StorageKey const& key)
+{
+  return get_frag_ptr(make_path_from_key(key));
+}
+
 std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_ptr (const std::string& dataset_name) {
   HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
@@ -243,3 +257,10 @@ std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_p
   return std::move(trh);
 }
 
+std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> DAQDecoder::get_trh_ptr (StorageKey const& key) 
+{
+  return get_trh_ptr(make_path_from_key(key));
+}
+
+}
+}

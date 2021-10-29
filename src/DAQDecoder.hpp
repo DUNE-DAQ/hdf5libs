@@ -26,6 +26,9 @@
 #include "hdf5libs/StorageKeyList.hpp"
 #include "dataformats/TriggerRecord.hpp"
 
+namespace dunedaq{
+namespace hdf5libs{
+
 class DAQDecoder
 {
 
@@ -40,20 +43,29 @@ public:
   DAQDecoder(const std::string& file_name, const unsigned& num_events);
 
   std::vector<std::string> get_datasets();
-  std::vector<std::string> get_fragments(const unsigned& num_trs);
-  std::vector<std::string> get_trh(const unsigned& num_trs);
+  
 
-  dunedaq::hdf5libs::StorageKeyList get_all_storage_keys()
+  StorageKeyList get_trh_keys(const unsigned& num_trs=0);
+  StorageKeyList get_fragment_keys(const unsigned& num_trs=0,
+				   std::string gname="");
+
+  //std::vector<std::string> get_fragments(const unsigned& num_trs);
+  //std::vector<std::string> get_trh(const unsigned& num_trs);
+
+  StorageKeyList get_all_storage_keys()
   { 
     if(m_storage_keys.empty()) fill_storage_keys();
     return m_storage_keys;
   }
 
-  dunedaq::hdf5libs::StorageKey make_key_from_path(std::string const&);
-  std::string make_path_from_key(dunedaq::hdf5libs::StorageKey const&);
+  StorageKey make_key_from_path(std::string const&);
+  std::string make_path_from_key(StorageKey const&);
 
   std::unique_ptr<dunedaq::dataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
   std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
+
+  std::unique_ptr<dunedaq::dataformats::Fragment> get_frag_ptr(StorageKey const& k);
+  std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> get_trh_ptr (StorageKey const& k);
 
 private: 
   DAQDecoder(const DAQDecoder&) = delete;
@@ -69,14 +81,15 @@ private:
   int m_run_number;
   int extract_run_number_from_file_name();
 
-  dunedaq::hdf5libs::StorageKeyList m_storage_keys;
+  StorageKeyList m_storage_keys;
 
   //fill the internal list of storage keys
   void fill_storage_keys();
 
 };
 
-
+}
+}
 
 #endif // DAQDECODER_HPP_
 

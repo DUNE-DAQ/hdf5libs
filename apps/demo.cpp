@@ -45,7 +45,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
 }
 
 int main(int argc, char** argv){
-  int num_trs = 1000000;
+  int num_trs = 0;
   if(argc <2) {
     std::cerr << "Usage: demo <fully qualified file name> [number of events to read]" << std::endl;
     return -1;
@@ -56,61 +56,31 @@ int main(int argc, char** argv){
     std::cout << "Number of events to read: " << num_trs << std::endl;
   }   
 
-  DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
+  auto decoder = dunedaq::hdf5libs::DAQDecoder(argv[1], num_trs);
 
-  for(auto const& path : decoder.get_datasets()){
-    auto key = decoder.make_key_from_path(path);
-    auto path_back = decoder.make_path_from_key(key);
-
-    //std::cout << path << std::endl;
-    //std::cout << "Key: " << key << std::endl;
-    //std::cout << "Path back: " << decoder.make_path_from_key(key) << std::endl;
-
-    if(path!=path_back)
-      std::cout << "Problem: path (" << path 
-		<< ") != path_back (" << path_back << ")"
-		<< std::endl;
-  }
-
+  //getting all storage keys
   auto all_keys = decoder.get_all_storage_keys();
   std::cout << "Found " << all_keys.size() << " total keys." << std::endl;
 
+  //example to grab the set of trigger numbers from those keys
+  auto trigger_numbers = dunedaq::hdf5libs::keyutils::get_trigger_numbers(all_keys);
+  std::cout << "\tFound " << trigger_numbers.size() << " unique trigger records, "
+	    << "ranging from " << *(trigger_numbers.begin()) << " to " << *(trigger_numbers.rbegin()) << "."
+	    << std::endl;
 
-  dunedaq::hdf5libs::StorageKey k;
-  k.set_group_type(dunedaq::hdf5libs::DataRecordGroupTypeID::kTriggerRecordHeader); //trigger record headers
-  auto trh_keys = all_keys.get_all_matching_keys(k);
-
-  std::cout << "Found " << trh_keys.size() << " Trigger Record Headers." << std::endl;
-
-  /*
-  k.set_group_type(dunedaq::hdf5libs::StorageKey::DataRecordGroupType::kTPC);
-  auto apas_found = all_keys.get_matching_region_numbers(k);
-  for(auto apa : apas_found)
-    std::cout << "\tHave TPCs from APA " << apa << std::endl;
-  auto links_found = all_keys.get_matching_element_numbers(k);
-  for(auto link : links_found)
-    std::cout << "\tHave TPCs with Links " << link << std::endl;
-  */
-  
-  //for(auto const& key : decoder.get_all_storage_keys())
-  //std::cout << " Key: " << key << std::endl;
-
-
-
-  std::vector<std::string> tr_paths = decoder.get_trh(num_trs);
-  for (auto& tr : tr_paths) {
-    std::cout << "=== " << tr << " ===" << std::endl;
-    std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(tr));
+  //Loop over TriggerRecordHeader keys from first num_trs events, and create TriggerRecordHeaders
+  for (auto& trh_key : decoder.get_trh_keys(num_trs)) {
+    std::cout << "=== " << decoder.make_path_from_key(trh_key) << " ===" << std::endl;
+    std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(trh_key));
     std::cout << "Trigger record with run number: " << trh_ptr->get_run_number()
               << " Trigger number: " << trh_ptr->get_trigger_number()
               << " Sequence number: " << trh_ptr->get_sequence_number() << std::endl;
   }
-
-  std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
-  //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
-  for (auto& element : datasets_path) {
-    std::cout << "*** " << element << " ***" << std::endl;
-    ReadWibFrag(decoder.get_frag_ptr(element));
+  
+  //Loop over TPC keys from first num_trs events, and create WIBFragments
+  for (auto& tpc_key : decoder.get_fragment_keys(num_trs,"TPC")) {
+    std::cout << "*** " << decoder.make_path_from_key(tpc_key) << " ***" << std::endl;
+    ReadWibFrag(decoder.get_frag_ptr(tpc_key));
   }
   return 0;
 }

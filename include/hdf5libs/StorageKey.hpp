@@ -31,22 +31,6 @@ public:
   static constexpr int s_invalid_region_number = std::numeric_limits<int>::max();
   static constexpr int s_invalid_element_number = std::numeric_limits<int>::max();
 
-  /**
-   * @brief The group that should be used within the data record.
-   */
-  /*
-  enum DataRecordGroupType
-    {
-      kTriggerRecordHeader = 1,
-      kTPC = 2,
-      kPDS = 3,
-      kTrigger = 4,
-      kTPC_TP = 5,
-      kNDLArTPC = 6,
-      kInvalid = 0
-    };
-  */
-
   //default constructor
   //useful for searching functionalities
   StorageKey()

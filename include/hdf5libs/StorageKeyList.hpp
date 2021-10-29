@@ -19,115 +19,159 @@
 namespace dunedaq {
 namespace hdf5libs {
 
-class StorageKeyList : public std::vector<StorageKey> {
+typedef std::vector<StorageKey> StorageKeyList;
 
-public:
+namespace keyutils{
 
   //general matching function
-  StorageKeyList get_all_matching_keys(const StorageKey k)
+  StorageKeyList get_all_matching_keys(const StorageKeyList& keys,
+				       const StorageKey k)
   {
     StorageKeyList matching_keys;
-    for(auto const& key : *this)
+    for(auto const& key : keys)
       if(key.is_match(k)) matching_keys.emplace_back(key);
     return matching_keys;
   }
 
-  /*
-
-  //get by matching storage key
-  std::set<int> get_matching_run_numbers(const StorageKey k)
+  std::set<int> get_run_numbers(const StorageKeyList& keys,
+				const StorageKey k=StorageKey())
   {
     std::set<int> runs;
-    for(auto const& key : this->get_all_matching_keys(k))
+    for(auto const& key : get_all_matching_keys(keys,k))
       runs.emplace(key.get_run_number());
     return runs;
   }
-
-  std::set<int> get_matching_trigger_numbers(const StorageKey k)
+  
+  std::set<int> get_trigger_numbers(const StorageKeyList& keys,
+				    const StorageKey k=StorageKey())
   {
     std::set<int> trigs;
-    for(auto const& key : this->get_all_matching_keys(k))
+    for(auto const& key : get_all_matching_keys(keys,k))
       trigs.emplace(key.get_trigger_number());
     return trigs;
   }
-
-  std::set<StorageKey::DataRecordGroupType> get_matching_group_types(const StorageKey k)
+  
+  std::set<DataRecordGroupTypeID> get_group_ids(const StorageKeyList& keys,
+						const StorageKey k=StorageKey())
   {
-    std::set<StorageKey::DataRecordGroupType> groups;
-    for(auto const& key : this->get_all_matching_keys(k))
-      groups.emplace(key.get_group_type());
-    return groups;
+    std::set<DataRecordGroupTypeID> gids;
+    for(auto const& key : get_all_matching_keys(keys,k))
+      gids.emplace(key.get_group_type().get_id());
+    return gids;
   }
 
-  std::set<int> get_matching_region_numbers(const StorageKey k)
+  std::set<std::string> get_group_names(const StorageKeyList& keys,
+					const StorageKey k=StorageKey())
+  {
+    std::set<std::string> gnames;
+    for(auto const& key : get_all_matching_keys(keys,k))
+      gnames.emplace(key.get_group_type().get_group_name());
+    return gnames;
+  }
+
+  std::set<int> get_region_numbers(const StorageKeyList& keys,
+				   const StorageKey k=StorageKey())
   {
     std::set<int> regs;
-    for(auto const& key : this->get_all_matching_keys(k))
+    for(auto const& key : get_all_matching_keys(keys,k))
       regs.emplace(key.get_region_number());
     return regs;
   }
 
-  std::set<int> get_matching_element_numbers(const StorageKey k)
+  std::set<int> get_element_numbers(const StorageKeyList& keys,
+				    const StorageKey k=StorageKey())
   {
     std::set<int> elems;
-    for(auto const& key : this->get_all_matching_keys(k))
+    for(auto const& key : get_all_matching_keys(keys,k))
       elems.emplace(key.get_element_number());
     return elems;
   }
 
-  //work down the heirarchy
-  std::set<int> get_all_run_numbers()
-  { 
-    StorageKey k;
-    return get_matching_run_numbers(k);
-  }
-
-  std::set<int> get_all_trigger_numbers(int run_number)
+  StorageKeyList get_trh_keys(const StorageKeyList& keys,
+			      StorageKey k=StorageKey())
   {
-    StorageKey k;
-    k.set_run_number(run_number);
-    return get_matching_trigger_numbers(k);
+    k.set_group_type("TriggerRecordHeader");
+    return get_all_matching_keys(keys,k);
   }
 
-  std::set<StorageKey::DataRecordGroupType> get_all_group_types(int run_number,
-								int trigger_number)
+  StorageKeyList get_tpc_keys(const StorageKeyList& keys,
+			      StorageKey k=StorageKey())
   {
-    StorageKey k;
-    k.set_run_number(run_number);
-    k.set_trigger_number(trigger_number);
-    return get_matching_group_types(k);
+    k.set_group_type("TPC");
+    return get_all_matching_keys(keys,k);
   }
-
-  std::set<int> get_all_region_numbers(int run_number,
-				       int trigger_number,
-				       StorageKey::DataRecordGroupType group_type)
+  
+  StorageKeyList get_pds_keys(const StorageKeyList& keys,
+			      StorageKey k=StorageKey())
   {
-    StorageKey k;
-    k.set_run_number(run_number);
-    k.set_trigger_number(trigger_number);
-    k.set_group_type(group_type);
-    return get_matching_region_numbers(k);
+    k.set_group_type("PDS");
+    return get_all_matching_keys(keys,k);
   }
-  std::set<int> get_all_element_numbers(int run_number,
-					int trigger_number,
-					StorageKey::DataRecordGroupType group_type,
-					int region_number)
+  
+  StorageKeyList get_trigger_keys(const StorageKeyList& keys,
+				  StorageKey k=StorageKey())
   {
-    StorageKey k;
-    k.set_run_number(run_number);
-    k.set_trigger_number(trigger_number);
-    k.set_group_type(group_type);
-    k.set_region_number(region_number);
-    return get_matching_element_numbers(k);
+    k.set_group_type("Trigger");
+    return get_all_matching_keys(keys,k);
   }
-  */
 
-private:
+  StorageKeyList get_tpc_tp_keys(const StorageKeyList& keys,
+				 StorageKey k=StorageKey())
+  {
+    k.set_group_type("TPC_TP");
+    return get_all_matching_keys(keys,k);
+  }
 
+  StorageKeyList get_ndlartpc_keys(const StorageKeyList& keys,
+				   StorageKey k=StorageKey())
+  {
+    k.set_group_type("NDLArTPC");
+    return get_all_matching_keys(keys,k);
+  }
 
-}; //class StorageKeyList
+  StorageKeyList get_keys_by_run_number(const StorageKeyList& keys,
+					int run)
+  {
+    StorageKey k; k.set_run_number(run);
+    return get_all_matching_keys(keys,k);
+  }
 
+  StorageKeyList get_keys_by_trigger_number(const StorageKeyList& keys,
+					    int tn)
+  {
+    StorageKey k; k.set_trigger_number(tn);
+    return get_all_matching_keys(keys,k);
+  }
 
+  StorageKeyList get_keys_by_group_name(const StorageKeyList& keys,
+					std::string gname)
+  {
+    StorageKey k; k.set_group_type(gname);
+    return get_all_matching_keys(keys,k);
+  }
+
+  StorageKeyList get_keys_by_group_id(const StorageKeyList& keys,
+				      DataRecordGroupTypeID gid)
+  {
+    StorageKey k; k.set_group_type(gid);
+    return get_all_matching_keys(keys,k);
+  }
+
+  StorageKeyList get_keys_by_region_number(const StorageKeyList& keys,
+					   int reg)
+  {
+    StorageKey k; k.set_region_number(reg);
+    return get_all_matching_keys(keys,k);
+  }
+
+  StorageKeyList get_keys_by_element_number(const StorageKeyList& keys,
+					    int elem)
+  {
+    StorageKey k; k.set_element_number(elem);
+    return get_all_matching_keys(keys,k);
+  }
+
+} // namespace keyutils
 } // namespace hdf5libs
 } // namespace dunedaq
 
