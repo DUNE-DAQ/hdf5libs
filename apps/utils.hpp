@@ -4,6 +4,7 @@
 #include "dataformats/wib/WIBFrame.hpp"
 #include "dataformats/ssp/SSPTypes.hpp"
 
+/*
 void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
   if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
     size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
@@ -15,12 +16,41 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
         std::cout << "Printout sampled timestamps in WIB headers: " ;
       }
       if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
+      for (int j=0; j<256; ++j) {
+        //std::cout << std::to_string(wfptr->get_channel(j)) + "\n";
+      }
     }
   std::cout << std::endl;
   } else {
     std::cout << "Skipping: not TPC fragment type " << std::endl;
   }
   return;
+}
+*/
+
+std::vector<int> ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
+  std::vector<int> wib_frames_vec;
+  if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
+    size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
+    std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
+    for (size_t i=0; i < raw_data_packets; ++i) {
+      auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
+      if (i==0) {
+        std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
+        std::cout << "Printout sampled timestamps in WIB headers: " ;
+      }
+      if(i%1000 == 0) std::cout << "Timestamp " << i << ": " << wfptr->get_timestamp() << " ";
+      for (int j=0; j<256; ++j) {
+        wib_frames_vec.push_back(wfptr->get_channel(j));
+        //std::cout << std::to_string(wfptr->get_channel(j)) + " ";
+      }
+      //std::cout << std::endl;
+    }
+  std::cout << std::endl;
+  } else {
+    std::cout << "Skipping: not TPC fragment type " << std::endl;
+  }
+  return wib_frames_vec;
 }
 
 /*
@@ -70,8 +100,8 @@ std::vector<int> ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> fra
 
 
     std::cout << "SSP event length: "  << ssp_event_header_ptr->length << std::endl; 
-    std::cout << "Size of event channels: " <<  ssp_event_header_ptr->length - sizeof(*ssp_event_header_ptr) << std::endl ;
-    std::cout << "Raw data packates without event header: " <<  raw_data_packets - sizeof(*ssp_event_header_ptr) << std::endl ;
+    std::cout << "Size of event channels: " <<  ssp_event_header_ptr->length - sizeof(dunedaq::dataformats::EventHeader) << std::endl ;
+    std::cout << "Raw data packates without event header: " <<  raw_data_packets - sizeof(dunedaq::dataformats::EventHeader) << std::endl ;
     std::cout << "Number of SSP events: " <<  raw_data_packets /ssp_event_header_ptr->length  << std::endl ;
 
     unsigned int nADC=((ssp_event_header_ptr->length-sizeof(dunedaq::dataformats::EventHeader))/sizeof(unsigned int))*2;
