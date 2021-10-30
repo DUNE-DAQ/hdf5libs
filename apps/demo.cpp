@@ -14,21 +14,23 @@
 #include <iostream>
 #include <string>
 
-#include "DAQDecoder.hpp" 
+#include "hdf5libs/DAQDecoder.hpp" 
 
-#include "dataformats/wib/WIBFrame.hpp"
+#include "detdataformats/wib/WIBFrame.hpp"
 
-void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
-     if(frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
+using namespace dunedaq::hdf5libs;
+
+void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag) {
+     if(frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
        std::cout << "Fragment with Run number: " << frag->get_run_number()
                  << " Trigger number: " << frag->get_trigger_number()
                  << " Sequence number: " << frag->get_sequence_number()
                  << " GeoID: " << frag->get_element_id() << std::endl;
 
-       size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
+       size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
        std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
         for (size_t i=0; i < raw_data_packets; ++i) {
-           auto wfptr = reinterpret_cast<dunedaq::dataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::dataformats::WIBFrame));
+           auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
            if (i==0) {
                std::cout << "First WIB header:"<< *(wfptr->get_wib_header());
 //               std::cout << "Printout sampled timestamps in WIB headers: " ;
@@ -60,7 +62,7 @@ int main(int argc, char** argv){
   std::vector<std::string> tr_paths = decoder.get_trh(num_trs);
   for (auto& tr : tr_paths) {
     std::cout << "=== " << tr << " ===" << std::endl;
-    std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(tr));
+    std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(tr));
     std::cout << "Trigger record with run number: " << trh_ptr->get_run_number()
               << " Trigger number: " << trh_ptr->get_trigger_number()
               << " Sequence number: " << trh_ptr->get_sequence_number() << std::endl;
