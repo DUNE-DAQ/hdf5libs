@@ -41,22 +41,10 @@ int main(int argc, char** argv){
  
  
   // Read all the fragments
-  /*
   for (auto& element : datasets_path) {
     std::cout <<" Reading fragment " << std::endl; 
     ReadWibFrag(decoder.get_frag_ptr(element));
   }
-  */
-
-  // Read only one fragment
-  auto frag = decoder.get_frag_ptr(datasets_path[3]);
-
-  // Output file to dump all the values
-  std::ofstream output_file("./wib_frames.txt");
-  std::vector<int> wib_frames = ReadWibFrag(std::move(frag));
-  for (const auto &e : wib_frames) output_file << e << "\n";
-
-
 
   std::cout << "Finished parsing all fragments" << std::endl;
 
