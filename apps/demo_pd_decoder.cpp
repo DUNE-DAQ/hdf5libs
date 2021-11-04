@@ -41,6 +41,7 @@ int main(int argc, char** argv){
  
  
   // Read all the fragments
+  
   for (auto& element : datasets_path) {
     std::cout <<" Reading fragment " << std::endl; 
     ReadSSPFrag(decoder.get_frag_ptr(element));
@@ -48,8 +49,7 @@ int main(int argc, char** argv){
   
 
   // Read only one fragment
-  //auto frag = decoder.get_frag_ptr(datasets_path[0]);
-  //ReadSSPFrag(frag);
+  //ReadSSPFrag(decoder.get_frag_ptr(datasets_path[0]));
   
 
   std::cout << "Finished parsing all fragments" << std::endl;

@@ -37,6 +37,11 @@ void rmsValue(std::vector<uint16_t> adcs, float &mean, float &rms, float &stddev
 
 void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
   if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kTPCData) {
+    std::cout << "Fragment with Run number: " << frag->get_run_number()
+                 << " Trigger number: " << frag->get_trigger_number()
+                 << " Sequence number: " << frag->get_sequence_number()
+                 << " GeoID: " << frag->get_element_id() << std::endl;
+
     size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader)) / sizeof(dunedaq::dataformats::WIBFrame);
     std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
 
@@ -78,9 +83,14 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
 
 void ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
   if (frag->get_fragment_type() == dunedaq::dataformats::FragmentType::kPDSData) {
-    auto ssp_event_header_ptr = reinterpret_cast<dunedaq::dataformats::EventHeader*>(frag->get_data()); 
-    // std::cout << ssp_event_header_ptr->group2 << std::endl; // Module ID, Channel ID
-   
+   std::cout << "Fragment with Run number: " << frag->get_run_number()
+                 << " Trigger number: " << frag->get_trigger_number()
+                 << " Sequence number: " << frag->get_sequence_number()
+                 << " GeoID: " << frag->get_element_id() << std::endl;
+
+   auto ssp_event_header_ptr = reinterpret_cast<dunedaq::dataformats::EventHeader*>(frag->get_data()); 
+    std::cout << "ModuleID ChannelID: " << ssp_event_header_ptr->group2 << std::endl; // Module ID, Channel ID
+    size_t module_channel_id = ssp_event_header_ptr->group2; 
     // Get the timestamp 
     unsigned long ts = 0;
     for (unsigned int iword = 0 ; iword <= 3; ++iword) {
@@ -92,13 +102,12 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
     size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::dataformats::FragmentHeader) );
     std::cout << "Raw data packets: " << raw_data_packets << std::endl; 
 
-
     /*
     std::cout << "SSP event length: "  << ssp_event_header_ptr->length << std::endl; 
     std::cout << "Size of event channels: " <<  ssp_event_header_ptr->length - sizeof(dunedaq::dataformats::EventHeader) << std::endl ;
     std::cout << "Raw data packates without event header: " <<  raw_data_packets - sizeof(dunedaq::dataformats::EventHeader) << std::endl ;
     std::cout << "Number of SSP events: " <<  raw_data_packets /ssp_event_header_ptr->length  << std::endl ;
-    */
+   */
     unsigned int nADC=((ssp_event_header_ptr->length-sizeof(dunedaq::dataformats::EventHeader))/sizeof(unsigned int))*2;
     std::cout << "Number of ADCs: " << nADC << std::endl;
     
@@ -113,7 +122,7 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag) {
     }
 
     std::stringstream filename;
-    filename << "./SSP_data_" << std::to_string(ts) << ".txt";
+    filename << "./SSP_data_" << std::to_string(ts) << "_" << std::to_string(module_channel_id) << ".txt";
     std::ofstream output_file(filename.str());
     for (auto entry : ssp_frames) {
       output_file << entry << std::endl;
