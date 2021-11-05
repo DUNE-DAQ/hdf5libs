@@ -40,17 +40,19 @@ int main(int argc, char** argv){
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
  
- 
+  std::cout << "Number of fragments: " << datasets_path.size() << std::endl; 
+
   // Read all the fragments
+  int dropped_fragments_per_event = 0;
   for (auto& element : datasets_path) {
-    std::cout <<" Reading fragment " << std::endl; 
-    //ReadSSPFrag(decoder.get_frag_ptr(element));
+    std::cout <<"Reading fragment " << std::endl; 
+    ReadSSPFrag(decoder.get_frag_ptr(element), dropped_fragments_per_event);
   }
   
 
   // Read only one fragment
   //auto frag = decoder.get_frag_ptr(datasets_path[0]);
-  //ReadSSPFrag(frag);
+  //ReadSSPFrag();
   
 
   std::cout << "Finished parsing all fragments" << std::endl;
