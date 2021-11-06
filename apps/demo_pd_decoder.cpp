@@ -45,13 +45,13 @@ int main(int argc, char** argv){
   std::cout << "Number of fragments: " << datasets_path.size() << std::endl; 
 
   // Read all the fragments
-  int dropped_fragments_per_event = 0;
+  int dropped_fragments = 0;
   int fragment_counter = 0; 
   for (auto& element : datasets_path) {
     fragment_counter += 1;
     std::cout << "Reading fragment " << fragment_counter << "/" << datasets_path.size() << std::endl; 
-    std::cout << "Number of dropped fragments: " << dropped_fragments_per_event << std::endl;
-    ReadSSPFrag(decoder.get_frag_ptr(element), dropped_fragments_per_event);
+    std::cout << "Number of dropped fragments: " << dropped_fragments << std::endl;
+    ReadSSPFrag(decoder.get_frag_ptr(element), dropped_fragments);
   }
   
   

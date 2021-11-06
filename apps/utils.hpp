@@ -46,38 +46,41 @@ void rmsValue(std::vector<uint16_t> adcs, float &mean, float &rms, float &stddev
 
 
 
-void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag) {
+void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& dropped_fragments) {
   if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
-    size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
-    std::cout << "Fragment contains " << raw_data_packets << " WIB frames" << std::endl;
+    if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
+      TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();
 
-    size_t n_blocks = 4;
-    size_t n_channels = 64;
+      size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
+      TLOG() << "Fragment contains " << raw_data_packets << " WIB frames";
 
-    std::map <size_t, std::vector<uint16_t> > ch_adcs_map;
-
-    for (size_t i=0; i < raw_data_packets; ++i) {
-      auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
-      for (size_t k=0 ; k < n_blocks; ++k) {
-        for (size_t j=0; j < n_channels; ++j) {
-          ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
+      // Decode WIB Frames
+      size_t n_blocks = 4;
+      size_t n_channels = 64;
+      std::map <size_t, std::vector<uint16_t> > ch_adcs_map;
+      for (size_t i=0; i < raw_data_packets; ++i) {
+        auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
+        for (size_t k=0 ; k < n_blocks; ++k) {
+          for (size_t j=0; j < n_channels; ++j) {
+            ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
+          }
         }
       }
-    }
- 
-    std::cout << "Arrays filled for link " << frag->get_element_id().element_id << std::endl;
-    std::stringstream filename;
-    filename << "./Link_" << frag->get_element_id().element_id << ".txt";
-    std::ofstream output_file(filename.str());
-    float mean,rms, stddev;
-    
-    std::cout << "Channel Mean RMS STDEV" << std::endl;
-    for (size_t k=0 ; k < n_blocks*n_channels; ++k) {
-      rmsValue(ch_adcs_map[k], mean, rms, stddev);
-      output_file << k << " " << mean << " " << rms << " " << stddev << std::endl;
-      std::cout << k << " " << mean << " " << rms << " " << stddev << std::endl;
-    }
 
+      // AAA: hack to save the output values
+      std::cout << "Arrays filled for link " << frag->get_element_id().element_id << std::endl;
+      std::stringstream filename;
+      filename << "./Link_" << frag->get_element_id().element_id << ".txt";
+      std::ofstream output_file(filename.str());
+      float mean,rms, stddev;    
+      for (size_t k=0 ; k < n_blocks*n_channels; ++k) {
+        rmsValue(ch_adcs_map[k], mean, rms, stddev);
+        output_file << k << " " << mean << " " << rms << " " << stddev << std::endl;
+        //std::cout << k << " " << mean << " " << rms << " " << stddev << std::endl;
+      }
+    } else { // payload is empty, dropping fragment 
+      dropped_fragments += 1;
+    } 
   } else {
    std::cout << "Skipping: not TPC fragment type " << std::endl;
   }
@@ -86,7 +89,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag) {
 
 
 
-void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& dropped_fragments_per_event) {
+void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& dropped_fragments) {
   if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kPDSData) {
  
     TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();  
@@ -136,8 +139,8 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& d
         output_file << entry << std::endl;
       }
     
-    } else { // payload is empty, dropped fragment 
-      dropped_fragments_per_event += 1;
+    } else { // payload is empty, dropping fragment 
+      dropped_fragments += 1;
     }  
   } else {
    std::cout << "Skipping: not PD fragment type" << std::endl;
