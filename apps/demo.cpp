@@ -71,6 +71,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag, std::shar
        uint slot = whdr->get_wib_header()->slot_no;
        uint fiber = whdr->get_wib_header()->fiber_no;
 
+       //if(slot != 3 || fiber !=1) return;
 /*      
        if(slot > 1 && fiber == 1) {
          fiber = 2;
@@ -102,6 +103,9 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag, std::shar
              std::cout << k << " " << oc << " " << mean << " " << rms << " " << stddev << std::endl;
              offline_map->emplace(oc, std::make_pair(mean, stddev)); 
        }
+
+      
+
 /*
        if (slot == 0 && fiber == 1) {
        for(size_t k=0 ; k < n_blocks*n_channels; ++k) { 
