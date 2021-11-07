@@ -90,7 +90,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag, std::shar
               }
            }
        }
-       std::cout << "Arrays filled for link " << frag->get_element_id().element_id << std::endl;
+       //std::cout << "Arrays filled for link " << frag->get_element_id().element_id << std::endl;
        std::stringstream filename;
        filename << "./Link_" << frag->get_element_id().element_id << ".txt";
        std::ofstream output_file(filename.str());
@@ -100,7 +100,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag, std::shar
              rmsValue(ch_adcs_map[k], mean, rms, stddev); 
              output_file << k << " " << mean << " " << rms << " " << stddev << std::endl;
              oc = cm->get_offline_channel_from_crate_slot_fiber_chan(crate, slot, fiber, k);
-             std::cout << k << " " << oc << " " << mean << " " << rms << " " << stddev << std::endl;
+             //std::cout << k << " " << oc << " " << mean << " " << rms << " " << stddev << std::endl;
              offline_map->emplace(oc, std::make_pair(mean, stddev)); 
        }
 
@@ -134,13 +134,13 @@ void ReadWibFrag(std::unique_ptr<dunedaq::dataformats::Fragment> frag, std::shar
 
 int main(int argc, char** argv){
   int num_trs = 1000000;
-  if(argc <2) {
-    std::cerr << "Usage: demo <fully qualified file name> [number of events to read]" << std::endl;
+  if(argc <3) {
+    std::cerr << "Usage: demo <fully qualified file name> <VDColdboxChannelMap | ProtoDUNESP1ChannelMap> [number of events to read]" << std::endl;
     return -1;
   }
 
-  if(argc == 3) {
-    num_trs = std::stoi(argv[2]);
+  if(argc == 4) {
+    num_trs = std::stoi(argv[3]);
     std::cout << "Number of events to read: " << num_trs << std::endl;
   }   
 
@@ -152,7 +152,8 @@ int main(int argc, char** argv){
     std::unique_ptr<dunedaq::dataformats::TriggerRecordHeader> trh_ptr(decoder.get_trh_ptr(tr));
     std::cout << "Trigger record with run number: " << trh_ptr->get_run_number()
               << " Trigger number: " << trh_ptr->get_trigger_number()
-              << " Sequence number: " << trh_ptr->get_sequence_number() << std::endl;
+              << " Sequence number: " << trh_ptr->get_sequence_number()
+              << " Timestamp: " << trh_ptr->get_trigger_timestamp() * 20/1000000000. << std::endl;
   }
 
   // Hack to initialise vector...
@@ -162,7 +163,7 @@ int main(int argc, char** argv){
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
   std::map<size_t, std::pair<float,float> > offline_map;
   std::vector<uint32_t> adc_channels_sums(raw_data_packets,0);
-  std::shared_ptr<TPCChannelMap> vdcb_map = make_map("VDColdboxChannelMap");
+  std::shared_ptr<TPCChannelMap> vdcb_map = make_map(argv[2]);
 
 
   for (auto& element : datasets_path) {
