@@ -53,7 +53,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, std::s
     if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();
 
-      size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
+      size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::wib::WIBFrame);
       TLOG() << "Fragment contains " << raw_data_packets << " WIB frames";
 
 
@@ -61,13 +61,13 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, std::s
      size_t n_blocks = 4;
      size_t n_channels = 64;
      std::map <size_t, std::vector<uint16_t> > ch_adcs_map;
-     auto whdr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data());
+     auto whdr = reinterpret_cast<dunedaq::detdataformats::wib::WIBFrame*>(frag->get_data());
      uint crate = 1; // hardcoded for decoders.... should be:  whdr->get_wib_header()->crate_no;
      uint slot = whdr->get_wib_header()->slot_no;
      uint fiber = whdr->get_wib_header()->fiber_no;
 
      for (size_t i=0; i < raw_data_packets; ++i) {
-       auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
+       auto wfptr = reinterpret_cast<dunedaq::detdataformats::wib::WIBFrame*>(((uint8_t*)frag->get_data())+i*sizeof(dunedaq::detdataformats::wib::WIBFrame));
        for (size_t k=0 ; k < n_blocks; ++k) {
          for (size_t j=0; j < n_channels; ++j) {
            ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
@@ -110,7 +110,7 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& d
     // If the fragment is not empty (i.e. greater than the header size)
     if (frag->get_size() > sizeof(dunedaq::daqdataformats::FragmentHeader) ) {
       // Ptr to the SSP data
-      auto ssp_event_header_ptr = reinterpret_cast<dunedaq::detdataformats::EventHeader*>(frag->get_data()); 
+      auto ssp_event_header_ptr = reinterpret_cast<dunedaq::detdataformats::ssp::EventHeader*>(frag->get_data()); 
       // Module and Channel ID
       size_t module_channel_id = ssp_event_header_ptr->group2 ;
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Module and channel ID: " << module_channel_id;  
@@ -127,12 +127,12 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& d
 
       // Start parsing the waveforms included in the fragment
 
-      unsigned int nADC=(ssp_event_header_ptr->length-sizeof(dunedaq::detdataformats::EventHeader)/sizeof(unsigned int))*2;
+      unsigned int nADC=(ssp_event_header_ptr->length-sizeof(dunedaq::detdataformats::ssp::EventHeader)/sizeof(unsigned int))*2;
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Number of ADC values: " << nADC;
 
       // Decoding SSP data 
       unsigned short* adcPointer=reinterpret_cast<unsigned short*>(frag->get_data());
-      adcPointer += sizeof(dunedaq::detdataformats::EventHeader)/sizeof(unsigned short);
+      adcPointer += sizeof(dunedaq::detdataformats::ssp::EventHeader)/sizeof(unsigned short);
       unsigned short* adc; 
 
       std::vector<int> ssp_frames; 

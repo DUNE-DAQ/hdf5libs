@@ -50,7 +50,7 @@ int main(int argc, char** argv){
   int dropped_fragments = 0;
   int fragment_counter = 0; 
 
-  size_t raw_data_packets = (decoder.get_frag_ptr(datasets_path[0])->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
+  size_t raw_data_packets = (decoder.get_frag_ptr(datasets_path[0])->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::wib::WIBFrame);
 
   std::map<size_t, std::pair<float,float> > offline_map;
   std::vector<uint32_t> adc_channels_sums(raw_data_packets,0);
