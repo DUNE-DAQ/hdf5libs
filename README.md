@@ -14,17 +14,13 @@ dbt-workarea-env
 
 # Build
 ```sh
-cd build
-
-cmake ..
-
-make -j
+dbt-build.sh
 ```
 
 # Run (example)
 
 ```sh
-./apps/demo ../swtest.hdf5 1
+./apps/hdf5_demo_tpc_decoder PATH_TO_HDF5_FILE/swtest.hdf5 1
 ```
 
 # Some links on DUNE-DAQ
@@ -33,7 +29,5 @@ make -j
 
 
 # TODO
-- Clean up
 - Add more HDF5 features
-- create a library 
-
+- ERS issues

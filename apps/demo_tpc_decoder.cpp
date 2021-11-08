@@ -18,8 +18,10 @@
 #include "hdf5libs/DAQDecoder.hpp" 
 #include "utils.hpp"
 
-using namespace dunedaq::hdf5libs;
+#include "detchannelmaps/TPCChannelMap.hpp"
 
+using namespace dunedaq::hdf5libs;
+//using namespace dunedaq::detchannelmaps;
 
 int main(int argc, char** argv){
   std::cout << "Starting TPC decoder" << std::endl;

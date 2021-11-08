@@ -6,6 +6,7 @@ find_dependency(logging)
 find_dependency(HighFive)
 find_dependency(daqdataformats)
 find_dependency(detdataformats)
+find_dependency(detchannelmaps)
 
 # Figure out whether or not this dependency is an installed package or
 # in repo form
