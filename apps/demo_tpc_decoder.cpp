@@ -63,6 +63,34 @@ int main(int argc, char** argv){
     ReadWibFrag(decoder.get_frag_ptr(element), vdcb_map, &offline_map, &adc_channels_sums, dropped_fragments);
   }
   
+
+  std::ofstream output_file_plane_0("offline_map_mean_stddev_0.txt");
+  std::ofstream output_file_plane_1("offline_map_mean_stddev_1.txt");
+  std::ofstream output_file_plane_2("offline_map_mean_stddev_2.txt");
+  int plane = 0;
+  for (auto p : offline_map) {
+    try {
+      plane = vdcb_map->get_plane_from_offline_channel(p.first);
+      if(plane == 0) {
+         output_file_plane_0 << p.first << " " << p.second.first << " " << p.second.second << std::endl;
+      } else if (plane == 1) {
+         output_file_plane_1 << p.first << " " << p.second.first << " " << p.second.second << std::endl;
+      } else {
+         output_file_plane_2 << p.first << " " << p.second.first << " " << p.second.second << std::endl;
+      }
+    }
+    catch (std::exception & e) {
+      std::cout << "Offline channel=" << p.first << " " << e.what() << std::endl;
+    }
+  }
+
+  std::ofstream output_file_2("summed_adcs.txt");
+  uint64_t ts = 0;
+  for (size_t i = 0; i < 8192 ; ++i) {
+    output_file_2 << ts << " " << adc_channels_sums[i] <<std::endl;
+    ts += 500; 
+  }
+
   
 
   std::cout << "Finished parsing all fragments" << std::endl;
