@@ -67,7 +67,7 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, std::s
      uint fiber = whdr->get_wib_header()->fiber_no;
 
      for (size_t i=0; i < raw_data_packets; ++i) {
-       auto wfptr = reinterpret_cast<dunedaq::detdataformats::wib::WIBFrame*>(((uint8_t*)frag->get_data())+i*sizeof(dunedaq::detdataformats::wib::WIBFrame));
+       auto wfptr = reinterpret_cast<dunedaq::detdataformats::wib::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::wib::WIBFrame));
        for (size_t k=0 ; k < n_blocks; ++k) {
          for (size_t j=0; j < n_channels; ++j) {
            ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
