@@ -6,7 +6,7 @@
 ```sh
 source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
 
-setup_dbt dunedaq-v2.8.0
+setup_dbt dunedaq-v2.8.1
 
 dbt-workarea-env
 ```
@@ -14,17 +14,15 @@ dbt-workarea-env
 
 # Build
 ```sh
-cd build
-
-cmake ..
-
-make -j
+dbt-build.sh
 ```
 
 # Run (example)
 
 ```sh
-./apps/demo ../swtest.hdf5 1
+./apps/hdf5_demo_tpc_decoder [PATH_TO_HDF5_FILE/file.hdf5] [VDColdboxChannelMap|ProtoDUNESP1ChannelMap] [number of events to read]
+
+./apps/hdf5_demo_pd_decoder [PATH_TO_HDF5_FILE/file.hdf5] [number of events to read]
 ```
 
 # Some links on DUNE-DAQ
@@ -33,7 +31,5 @@ make -j
 
 
 # TODO
-- Clean up
 - Add more HDF5 features
-- create a library 
-
+- ERS issues

@@ -1,29 +1,27 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-
-set(PACKAGE DAQDecoder)
-set(PACKAGE_VERSION 0.1)
-
-project(${PACKAGE} VERSION ${PACKAGE_VERSION}
-	DESCRIPTION "Decoder for the the DUNE-DAQ HDF5 files"
-        LANGUAGES C CXX)
-
-# Print version
-message(STATUS "Building ${PACKAGE} version ${PACKAGE_VERSION}")
-
+project(hdf5libs VERSION 1.0.0)
 
 find_package(daq-cmake REQUIRED)
-daq_setup_environment()
-
-
-
 find_package(logging REQUIRED)
 find_package(HighFive REQUIRED)
-find_package(dataformats REQUIRED)
+find_package(daqdataformats REQUIRED)
+find_package(detdataformats REQUIRED)
+find_package(detchannelmaps REQUIRED)
+find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 
-daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive dataformats::dataformats logging::logging )
+daq_setup_environment()
 
+##############################################################################
+# Main library
+daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps ${CETLIB} ${CETLIB_EXCEPT})
 
-# Demo
-daq_add_application(hdf5_demo_reader demo.cpp LINK_LIBRARIES DAQDecoder)
+##############################################################################
+# Python bindings
+daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME})
 
-#daq_install()
+##############################################################################
+# Applications
+daq_add_application(hdf5_demo_tpc_decoder demo_tpc_decoder.cpp LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(hdf5_demo_pd_decoder demo_pd_decoder.cpp LINK_LIBRARIES ${PROJECT_NAME})
+
+daq_install()
