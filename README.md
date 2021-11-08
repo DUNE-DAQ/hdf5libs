@@ -20,7 +20,9 @@ dbt-build.sh
 # Run (example)
 
 ```sh
-./apps/hdf5_demo_tpc_decoder PATH_TO_HDF5_FILE/swtest.hdf5 1
+./apps/hdf5_demo_tpc_decoder [PATH_TO_HDF5_FILE/file.hdf5] [VDColdboxChannelMap|ProtoDUNESP1ChannelMap] [number of events to read]
+
+./apps/hdf5_demo_pd_decoder [PATH_TO_HDF5_FILE/file.hdf5] [number of events to read]
 ```
 
 # Some links on DUNE-DAQ

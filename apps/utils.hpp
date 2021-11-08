@@ -4,8 +4,9 @@
 #include "detdataformats/wib/WIBFrame.hpp"
 #include "detdataformats/ssp/SSPTypes.hpp"
 
+#include "detchannelmaps/TPCChannelMap.hpp"
 
-
+using namespace dunedaq::detchannelmaps;
 using namespace dunedaq::hdf5libs;
 
 enum
@@ -46,7 +47,8 @@ void rmsValue(std::vector<uint16_t> adcs, float &mean, float &rms, float &stddev
 
 
 
-void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& dropped_fragments) {
+void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, std::shared_ptr<TPCChannelMap> cm, 
+		std::map<size_t, std::pair<float,float> > *offline_map, std::vector<uint32_t> *adc_sums, int& dropped_fragments) {
   if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
     if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();
@@ -54,30 +56,40 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& d
       size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::WIBFrame);
       TLOG() << "Fragment contains " << raw_data_packets << " WIB frames";
 
-      // Decode WIB Frames
-      size_t n_blocks = 4;
-      size_t n_channels = 64;
-      std::map <size_t, std::vector<uint16_t> > ch_adcs_map;
-      for (size_t i=0; i < raw_data_packets; ++i) {
-        auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
-        for (size_t k=0 ; k < n_blocks; ++k) {
-          for (size_t j=0; j < n_channels; ++j) {
-            ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
-          }
-        }
-      }
 
-      // AAA: hack to save the output values
-      std::cout << "Arrays filled for link " << frag->get_element_id().element_id << std::endl;
-      std::stringstream filename;
-      filename << "./Link_" << frag->get_element_id().element_id << ".txt";
-      std::ofstream output_file(filename.str());
-      float mean,rms, stddev;    
-      for (size_t k=0 ; k < n_blocks*n_channels; ++k) {
-        rmsValue(ch_adcs_map[k], mean, rms, stddev);
-        output_file << k << " " << mean << " " << rms << " " << stddev << std::endl;
-        //std::cout << k << " " << mean << " " << rms << " " << stddev << std::endl;
-      }
+     // Decode WIB Frames
+     size_t n_blocks = 4;
+     size_t n_channels = 64;
+     std::map <size_t, std::vector<uint16_t> > ch_adcs_map;
+     auto whdr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data());
+     uint crate = 1; // hardcoded for decoders.... should be:  whdr->get_wib_header()->crate_no;
+     uint slot = whdr->get_wib_header()->slot_no;
+     uint fiber = whdr->get_wib_header()->fiber_no;
+
+     for (size_t i=0; i < raw_data_packets; ++i) {
+       auto wfptr = reinterpret_cast<dunedaq::detdataformats::WIBFrame*>(frag->get_data()+i*sizeof(dunedaq::detdataformats::WIBFrame));
+       for (size_t k=0 ; k < n_blocks; ++k) {
+         for (size_t j=0; j < n_channels; ++j) {
+           ch_adcs_map[k*64+j].push_back(wfptr->get_channel(k,j));
+           adc_sums->at(i) += wfptr->get_channel(k,j);
+         }
+       }
+     }
+
+     // AAA: hack to save the output values
+     std::stringstream filename;
+     filename << "./Link_" << frag->get_element_id().element_id << ".txt";
+     std::ofstream output_file(filename.str());
+     float mean, rms, stddev;
+     size_t oc;
+     for (size_t k=0 ; k < n_blocks*n_channels; ++k) {
+       rmsValue(ch_adcs_map[k], mean, rms, stddev); 
+       output_file << k << " " << mean << " " << rms << " " << stddev << std::endl;
+       oc = cm->get_offline_channel_from_crate_slot_fiber_chan(crate, slot, fiber, k);
+       //std::cout << k << " " << oc << " " << mean << " " << rms << " " << stddev << std::endl;
+       offline_map->emplace(oc, std::make_pair(mean, stddev)); 
+     }
+
     } else { // payload is empty, dropping fragment 
       dropped_fragments += 1;
     } 
