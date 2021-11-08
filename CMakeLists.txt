@@ -7,12 +7,13 @@ find_package(HighFive REQUIRED)
 find_package(daqdataformats REQUIRED)
 find_package(detdataformats REQUIRED)
 find_package(detchannelmaps REQUIRED)
+find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 
 daq_setup_environment()
 
 ##############################################################################
 # Main library
-daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps)
+daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Python bindings
