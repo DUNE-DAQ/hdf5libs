@@ -6,7 +6,7 @@
 ```sh
 source /cvmfs/dunedaq.opensciencegrid.org/setup_dunedaq.sh
 
-setup_dbt dunedaq-v2.8.1
+setup_dbt dunedaq-v2.8.2
 
 dbt-workarea-env
 ```

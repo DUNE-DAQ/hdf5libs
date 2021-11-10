@@ -114,6 +114,36 @@ std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
 
 }
 
+/**
+ * @brief Return a map with all the HDF5 attributes
+ */
+std::map<std::string, std::variant<std::string, int>> DAQDecoder::get_attributes() {
+  std::map<std::string, std::variant<std::string, int>> attributes_map;  
+
+  std::vector<std::string> list_attribute_names = m_file_ptr->listAttributeNames();
+  for(std::string& attribute_name : list_attribute_names) {
+    if (m_file_ptr->hasAttribute(attribute_name.c_str())) {
+      HighFive::Attribute high_five_attribute = m_file_ptr->getAttribute(attribute_name.c_str());
+      HighFive::DataType attribute_data_type = high_five_attribute.getDataType();
+      if (attribute_data_type.string() == "String64") {
+        std::string attribute_string;
+        high_five_attribute.read(attribute_string);
+        attributes_map[attribute_name] = attribute_string; 
+      } else {
+        size_t attribute_val;
+        high_five_attribute.read(attribute_val);
+        attributes_map[attribute_name] = attribute_val;
+      }
+
+    }
+  }
+  
+  return attributes_map;
+
+}
+
+
+
 std::unique_ptr<dunedaq::daqdataformats::Fragment> DAQDecoder::get_frag_ptr(const std::string& dataset_name){
   HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);

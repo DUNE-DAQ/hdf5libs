@@ -41,6 +41,15 @@ int main(int argc, char** argv){
 
   DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
 
+  // Get and print attribute names and their values
+  auto attributes_map = decoder.get_attributes();
+  for (const auto& [k, v] : attributes_map){
+    std::cout << k << " : ";
+    std::visit([](const auto& x){ std::cout << x; }, v);
+    std::cout << '\n';
+  }
+
+
   std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
  

@@ -15,6 +15,7 @@
 // System
 #include <iostream>
 #include <string>
+#include <variant>
 
 // HighFive
 #include <highfive/H5File.hpp>
@@ -43,6 +44,8 @@ public:
   std::vector<std::string> get_datasets();
   std::vector<std::string> get_fragments(const unsigned& num_trs);
   std::vector<std::string> get_trh(const unsigned& num_trs);
+  std::map<std::string, std::variant<std::string, int>> get_attributes();
+
   //void read_fragment(std::string dataset_path);
   std::unique_ptr<dunedaq::daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
   std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
