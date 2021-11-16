@@ -71,17 +71,17 @@ std::vector<std::string> DAQDecoder::get_datasets() {
 /**
  * @brief Return a vector of datasets that correspond to a fragment
  */
-std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
+std::vector<std::string> DAQDecoder::get_fragments(const unsigned& start_tr, const unsigned& num_trs) {
 
  std::vector<std::string> fragment_path; 
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
  int trs_count = 0;
  for (auto& element : dataset_path) {
-   if (element.find("Element") != std::string::npos && trs_count < num_trs) {
+   if (element.find("Element") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
        fragment_path.push_back(element);
    }
-   else if (element.find("Link") != std::string::npos && trs_count < num_trs) {
+   else if (element.find("Link") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
        fragment_path.push_back(element);
    }
    else if (element.find("TriggerRecordHeader") != std::string::npos) {
@@ -96,7 +96,7 @@ std::vector<std::string> DAQDecoder::get_fragments(const unsigned& num_trs) {
 /**
  * @brief Return a vector of datasets that correspond to a TRH
  */
-std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
+std::vector<std::string> DAQDecoder::get_trh(const unsigned& start_tr, const unsigned& num_trs) {
 
  std::vector<std::string> trg_path; 
  
@@ -104,10 +104,10 @@ std::vector<std::string> DAQDecoder::get_trh(const unsigned& num_trs) {
 
  int trs_count = 0;
  for (auto& element : dataset_path) {
-   if (element.find("TriggerRecordHeader") != std::string::npos && trs_count < num_trs) {
-     trs_count += 1 ;
+   if (element.find("TriggerRecordHeader") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
      trg_path.push_back(element);
    }
+   trs_count += 1 ;
  }
 
  return trg_path;

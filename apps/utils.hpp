@@ -52,6 +52,11 @@ void ReadWibFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, std::s
   if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
     if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();
+ 
+      TLOG() << "Fragment with Run number: " << frag->get_run_number()
+                 << " Trigger number: " << frag->get_trigger_number()
+                 << " Sequence number: " << frag->get_sequence_number()
+                 << " GeoID: " << frag->get_element_id();
 
       size_t raw_data_packets = (frag->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::wib::WIBFrame);
       TLOG() << "Fragment contains " << raw_data_packets << " WIB frames";

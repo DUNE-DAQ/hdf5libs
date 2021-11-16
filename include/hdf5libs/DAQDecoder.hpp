@@ -42,8 +42,8 @@ public:
   DAQDecoder(const std::string& file_name, const unsigned& num_events);
 
   std::vector<std::string> get_datasets();
-  std::vector<std::string> get_fragments(const unsigned& num_trs);
-  std::vector<std::string> get_trh(const unsigned& num_trs);
+  std::vector<std::string> get_fragments(const unsigned& start_tr, const unsigned& num_trs);
+  std::vector<std::string> get_trh(const unsigned& start_tr, const unsigned& num_trs);
   std::map<std::string, std::variant<std::string, int>> get_attributes();
 
   //void read_fragment(std::string dataset_path);
