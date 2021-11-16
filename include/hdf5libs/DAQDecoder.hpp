@@ -39,7 +39,7 @@ public:
     TLVL_FILE_SIZE = 5
   };
 
-  DAQDecoder(const std::string& file_name, const unsigned& num_events);
+  DAQDecoder(const std::string& file_name);
 
   std::vector<std::string> get_datasets();
   std::vector<std::string> get_fragments(const unsigned& start_tr, const unsigned& num_trs);

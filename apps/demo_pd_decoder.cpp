@@ -41,7 +41,7 @@ int main(int argc, char** argv){
   }   
 
 
-  DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
+  DAQDecoder decoder = DAQDecoder(argv[1]);
 
   std::vector<std::string> datasets_path = decoder.get_fragments(start_tr,num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(start_tr,num_trs);

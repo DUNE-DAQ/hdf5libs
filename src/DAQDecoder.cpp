@@ -31,10 +31,9 @@ void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, st
    }
 }
 
-DAQDecoder::DAQDecoder(const std::string& file_name, const unsigned& num_events) {
+DAQDecoder::DAQDecoder(const std::string& file_name) {
 
   m_file_name = file_name; 
-  m_number_events = num_events;
   try {
     m_file_ptr.reset(new HighFive::File(m_file_name, HighFive::File::ReadOnly));
     TLOG_DEBUG(TLVL_BASIC) << "get_name()" << "Opened HDF5 file in read-only.";

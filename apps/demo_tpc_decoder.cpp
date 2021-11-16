@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 
  
 
-  DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
+  DAQDecoder decoder = DAQDecoder(argv[1]);
 
   // Get and print attribute names and their values
   auto attributes_map = decoder.get_attributes();

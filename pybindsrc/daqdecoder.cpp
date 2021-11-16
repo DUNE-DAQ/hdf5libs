@@ -22,7 +22,7 @@ register_daqdecoder(py::module& m)
 {
 
   py::class_<DAQDecoder>(m, "DAQDecoder")
-    .def(py::init<std::string, const unsigned&>())
+    .def(py::init<std::string>())
     .def("get_datasets", &DAQDecoder::get_datasets)
     .def("get_fragments", &DAQDecoder::get_fragments)
     .def("get_trh", &DAQDecoder::get_trh)
