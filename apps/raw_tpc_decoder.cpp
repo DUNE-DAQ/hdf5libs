@@ -18,7 +18,7 @@
 #include <ostream>
 #include <string>
 
-#include "CLI11.hpp"
+#include "boost/program_options.hpp"
 
 #include "hdf5libs/DAQDecoder.hpp"
 #include "logging/Logging.hpp"
@@ -32,26 +32,45 @@ using namespace dunedaq::detchannelmaps;
 int
 main(int argc, char** argv)
 {
-  CLI::App app{"Raw TPC decoder"};
+  namespace po = boost::program_options;
+  po::options_description desc("Allowed options");
+  desc.add_options()
+    ("help,h", "produce help message")
+    ("input,i", po::value<std::string>(), "Input file name")
+    ("output,o", po::value<std::string>(), "Output file name")
+    ("channelmap,c", po::value<std::string>()->default_value("daq"), "input tag (aka \"module label\") of input digits")
+    ;
 
-  std::string in_filename;
-  app.add_option("-i,--input-file", in_filename, "Input file")->required();
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);    
 
-  std::string out_filename;
-  app.add_option("-o,--output-file", out_filename, "Output file")->required();
+  if(vm.count("help") || vm.empty()) {
+    std::cout << desc << "\n";
+    return 1;
+  }
 
-  std::string channel_map_name;
-  app.add_option("-c,--channel-map", channel_map_name, "Channel map")->required()->check(CLI::IsMember({"VDColdboxChannelMap", "ProtoDUNESP1ChannelMap"}));
+  if(!vm.count("input")){
+    std::cout << "No input file specified" << std::endl;
+    std::cout << desc << std::endl;
+    return 1;
+  }
 
-  // TODO: This needs support from the utils class, to be able to read a single event
-  // int trigger_number=1;
-  // app.add_option("-t,--trigger-number", trigger_number, "Trigger number to read");
+  if(!vm.count("output")){
+    std::cout << "No output file specified" << std::endl;
+    std::cout << desc << std::endl;
+    return 1;
+  }
 
-  CLI11_PARSE(app, argc, argv);
-
-  std::ofstream fout(out_filename);
+  std::string channel_map_name=vm["channelmap"].as<std::string>();
+  if(channel_map_name!="VDColdboxChannelMap" && channel_map_name!="ProtoDUNESP1ChannelMap"){
+    std::cout << "Valid values for -c/--channelmap are ProtoDUNESP1ChannelMap and VDColdboxChannelMap" << std::endl;
+    return 1;
+  }
   
-  DAQDecoder decoder = DAQDecoder(in_filename, 1);
+  std::ofstream fout(vm["output"].as<std::string>());
+  
+  DAQDecoder decoder = DAQDecoder(vm["input"].as<std::string>(), 1);
 
   std::vector<std::string> datasets_path = decoder.get_fragments(1);
 
