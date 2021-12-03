@@ -82,9 +82,15 @@ main(int argc, char** argv)
   
   std::vector<std::unique_ptr<dunedaq::daqdataformats::Fragment>> frags;
   for (auto const& path : datasets_path) {
-    frags.push_back(decoder.get_frag_ptr(path));
+    auto frag = decoder.get_frag_ptr(path);
+    // We only decode TPC data in this application
+    if (frag->get_fragment_type() == dunedaq::daqdataformats::FragmentType::kTPCData) {
+      frags.push_back(std::move(frag));
+    }
   }
 
+  std::cout << "Number of TPC fragments to be decoded: " << frags.size() << std::endl;
+  
   size_t n_samples = (frags[0]->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) /
                     sizeof(dunedaq::detdataformats::wib::WIBFrame);
   std::cout << "There are " << n_samples << " samples" << std::endl;
