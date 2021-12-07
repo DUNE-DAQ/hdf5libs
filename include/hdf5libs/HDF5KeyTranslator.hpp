@@ -14,8 +14,6 @@
 #define DFMODULES_PLUGINS_HDF5KEYTRANSLATOR_HPP_
 
 #include "hdf5libs/StorageKey.hpp"
-//#include "dfmodules/hdf5datastore/Nljs.hpp"
-//#include "dfmodules/hdf5datastore/Structs.hpp"
 
 #include "logging/Logging.hpp"
 
@@ -31,23 +29,7 @@ namespace hdf5ds = dunedaq::dfmodules::hdf5datastore;
 
 namespace dunedaq {
 
-ERS_DECLARE_ISSUE_BASE(dfmodules,
-                       InvalidHDF5GroupTypeConfigParams,
-                       appfwk::GeneralDAQModuleIssue,
-                       "Invalid detector group type (\""
-                         << group_type << "\") found in the configuration of the HDF5 internal layout.",
-                       ((std::string)name),
-                       ((std::string)group_type))
-
-ERS_DECLARE_ISSUE_BASE(dfmodules,
-                       RequestedHDF5GroupTypeNotFound,
-                       appfwk::GeneralDAQModuleIssue,
-                       "Invalid detector group type ("
-                         << group_type << ") requested when attempting to determine the HDF5 Group and DataSet path.",
-                       ((std::string)name),
-                       ((int)group_type))
-
-namespace dfmodules {
+namespace hdf5libs {
 
 class HDF5KeyTranslator
 {
@@ -225,7 +207,7 @@ private:
   std::map<StorageKey::DataRecordGroupType, hdf5ds::PathParams> m_path_param_map;
 };
 
-} // namespace dfmodules
+} // namespace hdf5libs
 } // namespace dunedaq
 
 #endif // DFMODULES_PLUGINS_HDF5KEYTRANSLATOR_HPP_

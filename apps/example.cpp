@@ -25,7 +25,16 @@ int main(int argc, char** argv){
   std::cout << "Starting EXAMPLE code" << std::endl;
 
   nlohmann::json conf ;
-
+  conf["mode"] = "one-fragment-per-file";
+  std::string file_path = "/afs/cern.ch/user/a/aabedabu/work_public/hdf5libs_dev/work/build/hdf5libs/apps";
+  conf["directory_path"] = file_path ;
+  conf["name"] = "tempWriter" ;
+  conf["max_file_size_bytes"] = 100000000;
+  conf["filename_parameters.overall_prefix"] = "file_prefix_";
+  conf["disable_unique_filename_suffix"] = true;
+  conf["free_space_safety_factor_for_write"] = 2;
+  //conf["file_layout_parameters"] = create_file_layout_params();
+ 
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(conf);
 
 /*

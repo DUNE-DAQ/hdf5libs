@@ -41,7 +41,12 @@ size_t get_free_space(const std::string& the_path) {
     return vfs_results.f_bsize * vfs_results.f_bavail;
 }
 
-
+void HDF5RawDataFile::increment_file_index_if_needed(size_t size_of_next_write) {
+  if ((m_recorded_size + size_of_next_write) > m_max_file_size && m_recorded_size > 0) {
+    ++m_file_index;
+    m_recorded_size = 0;
+  }
+}
 
 
 HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
@@ -51,7 +56,12 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
  {
   try {
     std::cout<< "Filename: " << m_file_name << std::endl;
-/*
+ 
+
+
+ 
+    /*
+    // AAA: TO BE FIXED, HARDCODING FOR TESTING ONLY
     m_config_params = conf.get<hdf5datastore::ConfParams>();
     //m_key_translator_ptr.reset(new HDF5KeyTranslator(m_config_params));
     m_operation_mode = m_config_params.mode;
@@ -59,6 +69,15 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
     m_max_file_size = m_config_params.max_file_size_bytes;
     m_disable_unique_suffix = m_config_params.disable_unique_filename_suffix;
     m_free_space_safety_factor_for_write = m_config_params.free_space_safety_factor_for_write;
+    */
+    m_operation_mode = "one-fragment-per-file";
+    std::string file_path = "/afs/cern.ch/user/a/aabedabu/work_public/hdf5libs_dev/work/build/hdf5libs/apps";
+    m_path = file_path;
+    m_max_file_size = 100000000;
+    m_disable_unique_suffix = true;
+    m_free_space_safety_factor_for_write = 2;
+
+
     if (m_free_space_safety_factor_for_write < 1.1) {
       m_free_space_safety_factor_for_write = 1.1;
     }
@@ -78,7 +97,6 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
       std::string tmpstr(appname_ptr);
       m_application_name = tmpstr;
     }
-*/
  
   } catch (std::exception const& excpt) {
     throw "Issue with parameters";
@@ -167,12 +185,13 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
       throw msg;
     }
 
-/*
+
     // check if a new file should be opened for this data block
-    increment_file_index_if_needed(data_block.m_data_size);
+    this->increment_file_index_if_needed(data_block.m_data_size);
 
     // determine the filename from Storage Key + configuration parameters
-    std::string full_filename = m_key_translator_ptr->get_file_name(data_block.m_data_key, m_file_index);
+    std::string full_filename = "";
+    //std::string full_filename = m_key_translator_ptr->get_file_name(data_block.m_data_key, m_file_index);
 
     try {
       open_file_if_needed(full_filename, HighFive::File::OpenOrCreate);
@@ -184,7 +203,6 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
 
     // write the data block
     // do_write(data_block);
-*/
   }
 
 

@@ -29,7 +29,6 @@
 #include "daqdataformats/TriggerRecord.hpp"
 #include "nlohmann/json.hpp"
 #include "hdf5libs/StorageKey.hpp"
-
 //#include "hdf5libs/HDF5KeyTranslator.hpp"
 
 
@@ -88,7 +87,10 @@ public:
 
   HDF5RawDataFile(const nlohmann::json& conf);
   void open_file_if_needed(const std::string& file_name, unsigned open_flags);
+  void increment_file_index_if_needed(size_t size_of_next_write);
   void write(const KeyedDataBlock& data_block);
+  void write(const std::vector<KeyedDataBlock>& data_block_list);
+
 
   std::vector<std::string> get_datasets();
   std::vector<std::string> get_fragments(const unsigned& start_tr, const unsigned& num_trs);
@@ -135,6 +137,18 @@ private:
 
 
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 } // hdf5libs
 } // dunedaq
