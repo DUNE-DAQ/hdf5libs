@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-project(hdf5libs VERSION 1.0.1)
+project(hdf5libs VERSION 1.0.3)
 
 find_package(daq-cmake REQUIRED)
 
