@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-project(hdf5libs VERSION 1.0.1)
+project(hdf5libs VERSION 1.0.3)
 
 find_package(daq-cmake REQUIRED)
+
+daq_setup_environment()
+
 find_package(logging REQUIRED)
+find_package(ers REQUIRED)
 find_package(HighFive REQUIRED)
 find_package(daqdataformats REQUIRED)
 find_package(detdataformats REQUIRED)
 find_package(detchannelmaps REQUIRED)
 find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 
-daq_setup_environment()
 
 ##############################################################################
 # Main library
