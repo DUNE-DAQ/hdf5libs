@@ -37,6 +37,31 @@ int main(int argc, char** argv){
  
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(conf);
 
+  // =================
+  // DUMMY WRITE
+  // =================
+  // write several events, each with several fragments
+  constexpr int dummydata_size = 7;
+  const int run_number = 52;
+  const int trigger_count = 5;
+  const StorageKey::DataRecordGroupType group_type = StorageKey::DataRecordGroupType::kTPC;
+  const int apa_count = 3;
+  const int link_count = 1;
+
+  std::array<char, dummydata_size> dummy_data;
+  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number) {
+    for (int apa_number = 1; apa_number <= apa_count; ++apa_number) {
+      for (int link_number = 1; link_number <= link_count; ++link_number) {
+        StorageKey key(run_number, trigger_number, group_type, apa_number, link_number);
+        KeyedDataBlock data_block(key);
+        data_block.m_unowned_data_start = static_cast<void*>(&dummy_data[0]);
+        data_block.m_data_size = dummydata_size;
+        h5_raw_data_file.write(data_block);
+      }                   // link number
+    }                     // apa number
+  }                       // trigger number
+
+
 /*
   // Get and print attribute names and their values
   auto attributes_map = decoder.get_attributes();
@@ -51,23 +76,6 @@ int main(int argc, char** argv){
   //std::vector<std::string> datasets_path = decoder.get_trh(start_tr,num_trs);
  
   std::cout << "Number of fragments: " << datasets_path.size() << std::endl; 
-
-  // Read all the fragments
-  int dropped_fragments = 0;
-  int fragment_counter = 0; 
-
-  size_t raw_data_packets = (decoder.get_frag_ptr(datasets_path[0])->get_size() - sizeof(dunedaq::daqdataformats::FragmentHeader)) / sizeof(dunedaq::detdataformats::wib::WIBFrame);
-
-  std::map<size_t, std::pair<float,float> > offline_map;
-  std::vector<uint32_t> adc_channels_sums(raw_data_packets,0);
-  std::shared_ptr<TPCChannelMap> vdcb_map = make_map(argv[2]);
-
-  for (auto& element : datasets_path) {
-    fragment_counter += 1;
-    std::cout << "Reading fragment " << fragment_counter << "/" << datasets_path.size() << std::endl; 
-    std::cout << "Number of dropped fragments: " << dropped_fragments << std::endl;
-    ReadWibFrag(decoder.get_frag_ptr(element), vdcb_map, &offline_map, &adc_channels_sums, dropped_fragments);
-  }
 */  
   
 

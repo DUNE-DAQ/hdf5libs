@@ -190,7 +190,7 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
     this->increment_file_index_if_needed(data_block.m_data_size);
 
     // determine the filename from Storage Key + configuration parameters
-    std::string full_filename = "";
+    std::string full_filename = "test.txt";
     //std::string full_filename = m_key_translator_ptr->get_file_name(data_block.m_data_key, m_file_index);
 
     try {
