@@ -16,7 +16,7 @@ find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 
 ##############################################################################
 # Main library
-daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (DAQDecoder.cpp SSPDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Python bindings

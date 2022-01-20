@@ -16,7 +16,7 @@
 
 #include "logging/Logging.hpp"
 #include "hdf5libs/DAQDecoder.hpp" 
-#include "utils.hpp"
+#include "hdf5libs/utils.hpp"
 
 #include "detchannelmaps/TPCChannelMap.hpp"
 
