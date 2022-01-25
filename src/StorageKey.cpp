@@ -14,12 +14,6 @@ namespace dunedaq {
 namespace hdf5libs {
 
 int
-StorageKey::get_run_number() const
-{
-  return m_run_number;
-}
-
-int
 StorageKey::get_trigger_number() const
 {
   return m_trigger_number;

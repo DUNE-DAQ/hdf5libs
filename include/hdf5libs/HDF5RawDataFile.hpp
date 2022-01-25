@@ -88,6 +88,8 @@ public:
   HDF5RawDataFile(const nlohmann::json& conf);
   void open_file_if_needed(const std::string& file_name, unsigned open_flags);
   void increment_file_index_if_needed(size_t size_of_next_write);
+  std::vector<std::string> get_path_elements(const StorageKey& data_key); 
+  void do_write(const KeyedDataBlock& data_block);
   void write(const KeyedDataBlock& data_block);
   void write(const std::vector<KeyedDataBlock>& data_block_list);
 
@@ -125,7 +127,6 @@ private:
   size_t m_recorded_size;
 
   // Configuration
-  //hdf5datastore::ConfParams m_config_params;
   std::string m_operation_mode;
   std::string m_path;
   size_t m_max_file_size;

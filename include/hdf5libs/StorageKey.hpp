@@ -19,7 +19,6 @@ namespace hdf5libs {
 class StorageKey
 {
 public:
-  static constexpr int s_invalid_run_number = std::numeric_limits<int>::max();
   static constexpr int s_invalid_trigger_number = std::numeric_limits<int>::max();
   static constexpr int s_invalid_region_number = std::numeric_limits<int>::max();
   static constexpr int s_invalid_element_number = std::numeric_limits<int>::max();
@@ -38,13 +37,11 @@ public:
     kInvalid = 0
   };
 
-  StorageKey(int run_number,
-             int trigger_number,
+  StorageKey(int trigger_number,
              DataRecordGroupType group_type,
              int region_number,
              int element_number) noexcept
-    : m_run_number(run_number)
-    , m_trigger_number(trigger_number)
+    : m_trigger_number(trigger_number)
     , m_group_type(group_type)
     , m_region_number(region_number)
     , m_element_number(element_number)
@@ -53,7 +50,6 @@ public:
     m_max_sequence_number = 0;
   }
 
-  int get_run_number() const;
   int get_trigger_number() const;
   DataRecordGroupType get_group_type() const;
   int get_region_number() const;
@@ -63,7 +59,6 @@ public:
   int m_max_sequence_number;
 
 private:
-  int m_run_number;
   int m_trigger_number;
   DataRecordGroupType m_group_type;
   int m_region_number;
@@ -80,7 +75,6 @@ private:
 struct KeyedDataBlock
 {
 public:
-  // These data members will be made private, at some point in time.
   StorageKey m_data_key;
   size_t m_data_size;
   const void* m_unowned_data_start;

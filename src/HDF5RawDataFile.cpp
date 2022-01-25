@@ -76,7 +76,7 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
     m_max_file_size = 100000000;
     m_disable_unique_suffix = true;
     m_free_space_safety_factor_for_write = 2;
-
+    m_run_number = 666; 
 
     if (m_free_space_safety_factor_for_write < 1.1) {
       m_free_space_safety_factor_for_write = 1.1;
@@ -146,6 +146,7 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
         TLOG_DEBUG(TLVL_BASIC) << "Opened HDF5 file read-only.";
       } else {
         TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << unique_filename << ").";
+        
 
         if (!m_file_handle->get_file_ptr()->hasAttribute("run_number")) {
           m_file_handle->get_file_ptr()->createAttribute("run_number", m_run_number);
@@ -166,6 +167,130 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
     }
 
 }
+
+  /**
+   * @brief HDF5RawDataFile  get_path_elements()
+   *
+   *
+   */ 
+  std::vector<std::string> HDF5RawDataFile::get_path_elements(const StorageKey& data_key) {
+
+    std::vector<std::string> path_list;
+    // verify that the requested detector group type is in our map of parameters
+    //if (data_key.get_group_type() !=StorageKey::DataRecordGroupType::kTriggerRecordHeader) {
+    //    std::string msg = "Requested detector group type is in our map of parameters";
+    //    throw msg;
+    //}
+
+    // add trigger number to the path
+    std::ostringstream trigger_number_string;
+    trigger_number_string <<  data_key.get_trigger_number();
+
+    if (data_key.m_max_sequence_number > 0) {
+      trigger_number_string << "." << data_key.m_this_sequence_number;
+    }
+ 
+    path_list.push_back(trigger_number_string.str());
+
+    
+    // add trigger number to the path
+    trigger_number_string << data_key.get_trigger_number();
+ 
+    if (data_key.m_max_sequence_number > 0) {
+      trigger_number_string << "." << data_key.m_this_sequence_number;
+    }
+    path_list.push_back(trigger_number_string.str());
+
+/*
+    // AAA: taken from dfmodules
+
+    if (data_key.get_group_type() != StorageKey::DataRecordGroupType::kTriggerRecordHeader) {
+      // Add group type
+      path_list.push_back(m_path_param_map[data_key.get_group_type()].detector_group_name);
+
+      // next, we translate the region number
+      std::ostringstream region_number_string;
+      region_number_string << m_path_param_map[data_key.get_group_type()].region_name_prefix
+                           << std::setw(m_path_param_map[data_key.get_group_type()].digits_for_region_number)
+                           << std::setfill('0') << data_key.get_region_number();
+      path_list.push_back(region_number_string.str());
+
+      // Finally, add element number
+      std::ostringstream element_number_string;
+      element_number_string << m_path_param_map[data_key.get_group_type()].element_name_prefix
+                            << std::setw(m_path_param_map[data_key.get_group_type()].digits_for_element_number)
+                            << std::setfill('0') << data_key.get_element_number();
+      path_list.push_back(element_number_string.str());
+    } else {
+      // Add TriggerRecordHeader instead of group type
+      path_list.push_back("TriggerRecordHeader");
+    }
+
+    return path_list;
+
+
+*/
+  return path_list;
+
+  }
+
+
+
+  /**
+   * @brief HDF5RawDataFile  do_write()
+   * Method used to flush data to HDF5
+   *
+   */
+  void HDF5RawDataFile::do_write(const KeyedDataBlock& data_block) {
+
+    TLOG_DEBUG(TLVL_BASIC) << " Writing data with trigger number " << data_block.m_data_key.get_trigger_number() << " and group type "
+                           << data_block.m_data_key.get_group_type() << " and region/element number "
+                           << data_block.m_data_key.get_region_number() << " / "
+                           << data_block.m_data_key.get_element_number();
+    
+    HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+    
+    std::vector<std::string> group_and_dataset_path_elements =
+      get_path_elements(data_block.m_data_key);
+
+    //for (auto& element : group_and_dataset_path_elements) {
+    //  std::cout << element << std::endl;
+    //}
+
+    /*
+    const std::string dataset_name = group_and_dataset_path_elements.back();
+
+    HighFive::Group sub_group = HDF5FileUtils::get_subgroup(hdf_file_ptr, group_and_dataset_path_elements, true);
+
+    // Create dataset
+    HighFive::DataSpace data_space = HighFive::DataSpace({ data_block.m_data_size, 1 });
+    HighFive::DataSetCreateProps data_set_create_props;
+    HighFive::DataSetAccessProps data_set_access_props;
+
+    try {
+      auto data_set =
+        sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
+      if (data_set.isValid()) {
+        data_set.write_raw(static_cast<const char*>(data_block.get_data_start()));
+        hdf_file_ptr->flush();
+        m_recorded_size += data_block.m_data_size;
+      } else {
+        throw InvalidHDF5Dataset(ERS_HERE, get_name(), dataset_name, hdf_file_ptr->getName());
+      }
+    } catch (std::exception const& excpt) {
+      std::string description = "DataSet " + dataset_name;
+      std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+      throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg, excpt);
+    } catch (...) { // NOLINT(runtime/exceptions)
+      // NOLINT here because we *ARE* re-throwing the exception!
+      std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+      throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg);
+    }
+  */
+  }
+
+
 
 
   /**
@@ -202,7 +327,7 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
     }
 
     // write the data block
-    // do_write(data_block);
+    do_write(data_block);
   }
 
 
@@ -287,10 +412,13 @@ std::vector<std::string> HDF5RawDataFile::get_trh(const unsigned& start_tr, cons
 std::map<std::string, std::variant<std::string, int>> HDF5RawDataFile::get_attributes() {
   std::map<std::string, std::variant<std::string, int>> attributes_map;  
 
-  std::vector<std::string> list_attribute_names = m_file_ptr->listAttributeNames();
+  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+  std::vector<std::string> list_attribute_names = hdf_file_ptr->listAttributeNames();
   for(std::string& attribute_name : list_attribute_names) {
-    if (m_file_ptr->hasAttribute(attribute_name.c_str())) {
-      HighFive::Attribute high_five_attribute = m_file_ptr->getAttribute(attribute_name.c_str());
+    //std::cout << attribute_name << std::endl; 
+    if (hdf_file_ptr->hasAttribute(attribute_name.c_str())) {
+      HighFive::Attribute high_five_attribute = hdf_file_ptr->getAttribute(attribute_name.c_str());
       HighFive::DataType attribute_data_type = high_five_attribute.getDataType();
       if (attribute_data_type.string() == "String64") {
         std::string attribute_string;
@@ -303,6 +431,7 @@ std::map<std::string, std::variant<std::string, int>> HDF5RawDataFile::get_attri
       }
 
     }
+   
   }
   
   return attributes_map;

@@ -33,6 +33,7 @@ int main(int argc, char** argv){
   conf["filename_parameters.overall_prefix"] = "file_prefix_";
   conf["disable_unique_filename_suffix"] = true;
   conf["free_space_safety_factor_for_write"] = 2;
+  conf["run_number"] = 52;
   //conf["file_layout_parameters"] = create_file_layout_params();
  
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(conf);
@@ -42,7 +43,6 @@ int main(int argc, char** argv){
   // =================
   // write several events, each with several fragments
   constexpr int dummydata_size = 7;
-  const int run_number = 52;
   const int trigger_count = 5;
   const StorageKey::DataRecordGroupType group_type = StorageKey::DataRecordGroupType::kTPC;
   const int apa_count = 3;
@@ -52,7 +52,7 @@ int main(int argc, char** argv){
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number) {
     for (int apa_number = 1; apa_number <= apa_count; ++apa_number) {
       for (int link_number = 1; link_number <= link_count; ++link_number) {
-        StorageKey key(run_number, trigger_number, group_type, apa_number, link_number);
+        StorageKey key(trigger_number, group_type, apa_number, link_number);
         KeyedDataBlock data_block(key);
         data_block.m_unowned_data_start = static_cast<void*>(&dummy_data[0]);
         data_block.m_data_size = dummydata_size;
@@ -62,9 +62,8 @@ int main(int argc, char** argv){
   }                       // trigger number
 
 
-/*
   // Get and print attribute names and their values
-  auto attributes_map = decoder.get_attributes();
+  auto attributes_map = h5_raw_data_file.get_attributes();
   for (const auto& [k, v] : attributes_map){
     std::cout << k << " : ";
     std::visit([](const auto& x){ std::cout << x; }, v);
@@ -72,6 +71,7 @@ int main(int argc, char** argv){
   }
 
 
+/*
   std::vector<std::string> datasets_path = decoder.get_fragments(start_tr,num_trs);
   //std::vector<std::string> datasets_path = decoder.get_trh(start_tr,num_trs);
  

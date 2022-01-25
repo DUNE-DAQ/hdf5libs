@@ -13,7 +13,7 @@ daq_setup_environment()
 
 ##############################################################################
 # Main library
-daq_add_library (HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (HDF5RawDataFile.cpp StorageKey.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Python bindings
