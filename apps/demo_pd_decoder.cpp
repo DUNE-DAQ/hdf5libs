@@ -16,7 +16,7 @@
 
 #include "logging/Logging.hpp"
 #include "hdf5libs/DAQDecoder.hpp" 
-#include "hdf5libs/utils.hpp"
+#include "utils.hpp"
 
 using namespace dunedaq::hdf5libs;
 
@@ -27,7 +27,7 @@ int main(int argc, char** argv){
   // Default number of records to read
   int num_trs = 1;
   if(argc <2) {
-    std::cerr << "Usage: tpc_decoder <fully qualified file name> [number of events to read]" << std::endl;
+    std::cerr << "Usage: pd_decoder <fully qualified file name> [number of events to read]" << std::endl;
     return -1;
   }
 
@@ -49,14 +49,23 @@ int main(int argc, char** argv){
   int fragment_counter = 0; 
   for (auto& element : datasets_path) {
     fragment_counter += 1;
-    std::cout << "Reading fragment " << fragment_counter << "/" << datasets_path.size() << std::endl; 
-    std::cout << "Number of dropped fragments: " << dropped_fragments << std::endl;
+    //std::cout << "Reading fragment " << fragment_counter << "/" << datasets_path.size() << std::endl; 
+    //std::cout << "Number of dropped fragments: " << dropped_fragments << std::endl;
+    //debug
+    //std::unique_ptr<dunedaq::daqdataformats::Fragment> frag = decoder.get_frag_ptr(element);
+    //auto ssp_event_header_ptr = reinterpret_cast<dunedaq::detdataformats::ssp::EventHeader*>(frag->get_data());
+    //size_t module_channel_id = ssp_event_header_ptr->group2 ;
+    //std::cout << "Module channel id: " << module_channel_id << std::endl;
+    //unsigned int nADC=(ssp_event_header_ptr->length-sizeof(dunedaq::detdataformats::ssp::EventHeader)/sizeof(unsigned int))*2;
+    //std::cout << "nADC: " << nADC << std::endl;
+
     ReadSSPFrag(decoder.get_frag_ptr(element), dropped_fragments);
   }
   
   
 
   std::cout << "Finished parsing all fragments" << std::endl;
-  
+  std::cout << "Number of dropped fragments: " << dropped_fragments << std::endl;
+
  return 0;
 }

@@ -109,6 +109,8 @@ void ReadSSPFrag(std::unique_ptr<dunedaq::daqdataformats::Fragment> frag, int& d
  
     TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment size: " << frag->get_size();  
     TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment header size: " << sizeof(dunedaq::daqdataformats::FragmentHeader);  
+    //std::cout << "Fragment size: " << frag->get_size() << std::endl;
+    //std::cout <<  "Fragment header size: " << sizeof(dunedaq::daqdataformats::FragmentHeader) << std::endl;
 
     // If the fragment is not empty (i.e. greater than the header size)
     if (frag->get_size() > sizeof(dunedaq::daqdataformats::FragmentHeader) ) {
