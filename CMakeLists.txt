@@ -11,12 +11,12 @@ find_package(HighFive REQUIRED)
 find_package(daqdataformats REQUIRED)
 find_package(detdataformats REQUIRED)
 find_package(detchannelmaps REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
-
 
 ##############################################################################
 # Main library
-daq_add_library (HDF5RawDataFile.cpp StorageKey.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (HDF5RawDataFile.cpp StorageKey.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Python bindings

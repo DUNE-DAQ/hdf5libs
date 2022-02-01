@@ -20,7 +20,8 @@
 
 using namespace dunedaq::hdf5libs;
 
-int main(int argc, char** argv){
+//int main(int argc, char** argv){
+int main(int , char** ){ //since argc/argv not in use
 
   std::cout << "Starting EXAMPLE code" << std::endl;
 

@@ -49,7 +49,7 @@ void HDF5RawDataFile::increment_file_index_if_needed(size_t size_of_next_write) 
 }
 
 
-HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
+HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& )
   : m_file_name("test")
   , m_open_flags_of_open_file(0)
   , m_run_number(0)
@@ -113,7 +113,7 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
         m_open_flags_of_open_file != open_flags) {
 
       std::string unique_filename = file_name;
-      time_t now = time(0);
+      //time_t now = time(0);
       int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
       std::string file_creation_timestamp = std::to_string(timestamp);
 
@@ -248,7 +248,7 @@ void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned
                            << data_block.m_data_key.get_region_number() << " / "
                            << data_block.m_data_key.get_element_number();
     
-    HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+    //HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
 
     
     std::vector<std::string> group_and_dataset_path_elements =
@@ -368,7 +368,7 @@ std::vector<std::string> HDF5RawDataFile::get_fragments(const unsigned& start_tr
  std::vector<std::string> fragment_path; 
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
- int trs_count = 0;
+ unsigned int trs_count = 0;
  for (auto& element : dataset_path) {
    if (element.find("Element") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
        fragment_path.push_back(element);
@@ -394,7 +394,7 @@ std::vector<std::string> HDF5RawDataFile::get_trh(const unsigned& start_tr, cons
  
  std::vector<std::string> dataset_path = this->get_datasets(); 
 
- int trs_count = 0;
+ unsigned int trs_count = 0;
  for (auto& element : dataset_path) {
    if (element.find("TriggerRecordHeader") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
      trg_path.push_back(element);
