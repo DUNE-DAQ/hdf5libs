@@ -24,25 +24,41 @@ using namespace dunedaq::hdf5libs;
 using namespace dunedaq::detchannelmaps;
 
 int main(int argc, char** argv){
-  std::cout << "Starting TPC decoder" << std::endl;
- 
+
+  std::cout << "Starting TPCAAA decoder" << std::endl;
+
+  // Default trigger record to start reading
+  int start_tr = 0;
+
   // Default number of records to read
-  int num_trs = 1000000;
-  if(argc <3) {
-    std::cerr << "Usage: demo <fully qualified file name> <VDColdboxChannelMap | ProtoDUNESP1ChannelMap> [number of events to read]" << std::endl;
+  int num_trs = 1;
+  if(argc <5) {
+    std::cerr << "Usage: tpc_decoder <fully qualified file name> [event number to start] [number of events to read]" << std::endl;
     return -1;
   }
 
-  if(argc == 4) {
-    num_trs = std::stoi(argv[3]);
+  if(argc == 5) {
+    start_tr = std::stoi(argv[3]);
+    num_trs = std::stoi(argv[4]);
+    std::cout << "Starting trigger record: " << start_tr << std::endl;
     std::cout << "Number of events to read: " << num_trs << std::endl;
-  }   
+  }
+
+ 
+
+  DAQDecoder decoder = DAQDecoder(argv[1]);
+
+  // Get and print attribute names and their values
+  auto attributes_map = decoder.get_attributes();
+  for (const auto& [k, v] : attributes_map){
+    std::cout << k << " : ";
+    std::visit([](const auto& x){ std::cout << x; }, v);
+    std::cout << '\n';
+  }
 
 
-  DAQDecoder decoder = DAQDecoder(argv[1], num_trs);
-
-  std::vector<std::string> datasets_path = decoder.get_fragments(num_trs);
-  //std::vector<std::string> datasets_path = decoder.get_trh(num_trs);
+  std::vector<std::string> datasets_path = decoder.get_fragments(start_tr,num_trs);
+  //std::vector<std::string> datasets_path = decoder.get_trh(start_tr,num_trs);
  
   std::cout << "Number of fragments: " << datasets_path.size() << std::endl; 
 

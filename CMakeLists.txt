@@ -16,15 +16,14 @@ find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 
 ##############################################################################
 # Main library
-daq_add_library (DAQDecoder.cpp LINK_LIBRARIES ers::ers HighFive daqdataformats::daqdataformats logging::logging detdataformats::detdataformats detchannelmaps::detchannelmaps ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (HDF5RawDataFile.cpp StorageKey.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Python bindings
-daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME})
+#daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME})
 
 ##############################################################################
 # Applications
-daq_add_application(hdf5_demo_tpc_decoder demo_tpc_decoder.cpp LINK_LIBRARIES ${PROJECT_NAME})
-daq_add_application(hdf5_demo_pd_decoder demo_pd_decoder.cpp LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(example example.cpp LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
