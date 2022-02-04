@@ -23,6 +23,8 @@
 
 #include "daqdataformats/GeoID.hpp"
 
+#include "hdf5libs/hdf5filelayout/Structs.hpp"
+
 namespace dunedaq {
 namespace hdf5libs {
 
@@ -36,7 +38,9 @@ public:
   HDF5FileLayout(const nlohmann::json& conf)
     : m_version(1)
   {
-    //put here something for getting configuration...
+
+    m_conf_params = conf.get<hdf5filelayout::FileLayoutParams>();
+    fill_path_params(m_conf_params);
   }
 
 private:
@@ -46,29 +50,28 @@ private:
   uint32_t m_version;
 
   /**
-   * @brief digits to use in region number strings
+   * @brief FileLayout configuration parameters
    */
-  unsigned int m_digits_for_region_number;
-  /**
-   * @brief digits to use in element number strings
-   */
-  unsigned int m_digits_for_element_number;
+  hdf5filelayout::FileLayoutParams m_conf_params;
 
   /**
-   * @brief map translation for GeoID::SystemType to group name
+   * @brief map translation for GeoID::SystemType to dataset path parameters
    */
-  std::map< daqdataformats::GeoID::SystemType,std::string > m_system_name_map;
+  std::map< daqdataformats::GeoID::SystemType,hdf5filelayout::PathParams > m_path_params_map;
 
   /**
-   * @brief map translation for GeoID regions (per system type) to prefix
+   * @brief Fill path parameters map from FileLayoutParams
    */
-  std::map< daqdataformats::GeoID::SystemType,std::string > m_region_prefix_map;
+  void fill_path_params_map(hdf5filelayout::FileLayoutParams const& flp)
+  {
+    for(auto const& path_param : flp.path_param_list){
+      auto sys_type = daqdataformats::GeoID::string_to_system_type(path_param.detector_group_type);
+      if(sys_type==daqdataformats::GeoID::SystemType::kInvalid)
+	continue; //update to make it show an error
+      m_path_params_map[sys_type] = path_param;
+    }
 
-  /**
-   * @brief map translation for GeoID elements (per SystemType) to prefix
-   */
-  std::map< daqdataformats::GeoID::SystemType,std::string > m_element_prefix_map;
-
+  }
 
 };
 
