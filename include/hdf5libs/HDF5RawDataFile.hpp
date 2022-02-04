@@ -26,48 +26,16 @@
 
 // DUNE-DAQ
 #include "logging/Logging.hpp"
+#include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
 #include "nlohmann/json.hpp"
 #include "hdf5libs/StorageKey.hpp"
+#include "hdf5libs/HDF5FileHandle.hpp"
 //#include "hdf5libs/HDF5KeyTranslator.hpp"
 
 
 namespace dunedaq {
 namespace hdf5libs {
-
-
-/**
- * @brief HDF5FileHandle is a small helper class that takes care
- * of common actions on HighFive::File instances.
- */
-class HDF5FileHandle
-{
-public:
-  explicit HDF5FileHandle(const std::string& filename, unsigned open_flags)
-    : m_original_filename(filename)
-  {
-    std::string inprogress_filename = m_original_filename;
-    m_file_ptr.reset(new HighFive::File(inprogress_filename, open_flags));
-  }
-
-  ~HDF5FileHandle()
-  {
-    if (m_file_ptr.get() != nullptr) {
-      m_file_ptr->flush();
-
-      std::string open_filename = m_file_ptr->getName();
-      std::filesystem::rename(open_filename, m_original_filename);
-
-      m_file_ptr.reset(); // explicit destruction; not really needed, but nice to be clear...
-    }
-  }
-
-  HighFive::File* get_file_ptr() const { return m_file_ptr.get(); }
-
-private:
-  std::string m_original_filename;
-  std::unique_ptr<HighFive::File> m_file_ptr;
-};
 
 
 /**
@@ -100,8 +68,8 @@ public:
   std::map<std::string, std::variant<std::string, int>> get_attributes();
 
   //void read_fragment(std::string dataset_path);
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
 
 private: 
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;

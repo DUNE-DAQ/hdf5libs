@@ -440,7 +440,7 @@ std::map<std::string, std::variant<std::string, int>> HDF5RawDataFile::get_attri
 
 
 
-std::unique_ptr<dunedaq::daqdataformats::Fragment> HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name){
+std::unique_ptr<daqdataformats::Fragment> HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name){
   HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
   HighFive::DataSpace data_space = data_set.getSpace();
@@ -449,12 +449,12 @@ std::unique_ptr<dunedaq::daqdataformats::Fragment> HDF5RawDataFile::get_frag_ptr
   char* membuffer = new char[data_size];
   data_set.read(membuffer);
   //readDataset(dataset_path, membuffer);
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> frag(new dunedaq::daqdataformats::Fragment(membuffer, dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer));
+  std::unique_ptr<daqdataformats::Fragment> frag(new dunedaq::daqdataformats::Fragment(membuffer, dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer));
   //delete[] membuffer;
   return std::move(frag);
 } 
 
-std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> HDF5RawDataFile::get_trh_ptr (const std::string& dataset_name) {
+std::unique_ptr<daqdataformats::TriggerRecordHeader> HDF5RawDataFile::get_trh_ptr (const std::string& dataset_name) {
   HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
   HighFive::DataSpace data_space = data_set.getSpace();
@@ -462,7 +462,7 @@ std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> HDF5RawDataFile::g
 
   char* membuffer = new char[data_size];
   data_set.read(membuffer);
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh(new dunedaq::daqdataformats::TriggerRecordHeader(membuffer,true));
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> trh(new dunedaq::daqdataformats::TriggerRecordHeader(membuffer,true));
   delete[] membuffer;
   return std::move(trh);
 }
