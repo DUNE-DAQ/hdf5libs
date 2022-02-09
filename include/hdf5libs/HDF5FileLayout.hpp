@@ -35,13 +35,26 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriter. Version always most recent.
    */
-  HDF5FileLayout(const nlohmann::json& conf)
+  HDF5FileLayout(hdf5filelayout::FileLayoutParams conf)
     : m_version(1)
+    , m_conf_params(conf)
   {
 
-    m_conf_params = conf.get<hdf5filelayout::FileLayoutParams>();
-    fill_path_params(m_conf_params);
+    //m_conf_params = conf.get<hdf5filelayout::FileLayoutParams>();
+    fill_path_params_map(m_conf_params);
   }
+
+  std::string get_trigger_record_name_prefix() const 
+  { return m_conf_params.trigger_record_name_prefix; }
+  int         get_digits_for_trigger_number() const
+  { return m_conf_params.digits_for_trigger_number; }
+  int         get_digits_for_sequence_number() const
+  { return m_conf_params.digits_for_sequence_number; }
+  std::string get_trigger_header_dataset_name() const
+  { return m_conf_params.trigger_record_header_dataset_name; }
+
+  hdf5filelayout::PathParams get_path_params(daqdataformats::GeoID::SystemType type) const
+  { return m_path_params_map.at(type); }
 
 private:
   /**
@@ -82,6 +95,7 @@ private:
 /**
  * @brief comment
  */
+/*
 struct KeyedDataBlock
 {
 public:
@@ -105,8 +119,8 @@ public:
 
   size_t get_data_size_bytes() const { return m_data_size; }
 };
-
+*/
 } // namespace hdf5libs
 } // namespace dunedaq
 
-#endif // HDF5LIBS_INCLUDE_HDF5LIBS_STORAGEKEY_HPP_
+#endif // HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUT_HPP_

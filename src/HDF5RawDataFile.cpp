@@ -6,7 +6,9 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/hdf5filelayout/Structs.hpp"
 
+#include <sstream>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -49,11 +51,14 @@ void HDF5RawDataFile::increment_file_index_if_needed(size_t size_of_next_write) 
 }
 
 
-HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& )
+HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
   : m_file_name("test")
   , m_open_flags_of_open_file(0)
   , m_run_number(0)
  {
+
+   //m_file_layout_ptr.reset(new HDF5FileLayout(conf.get<hdf5filelayout::FileLayoutParams>()));
+
   try {
     std::cout<< "Filename: " << m_file_name << std::endl;
  
@@ -104,6 +109,95 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& )
     throw "Issue with parameters";
   } 
 
+ }
+
+void HDF5RawDataFile::write(daqdataformats::TriggerRecord& tr){
+  write(tr.get_header_ref());
+  for(auto const& frag_ptr : tr.get_fragments_ref())
+    write(*frag_ptr);
+}
+
+void HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh){
+
+  auto dataset_path = get_path_elements(trh);
+  
+  //tmp
+  if(dataset_path.size()==0)
+    return;
+
+}
+
+void HDF5RawDataFile::write(const daqdataformats::Fragment& frag){
+
+  auto dataset_path = get_path_elements(frag.get_header());
+  
+  //tmp
+  if(dataset_path.size()==0)
+    return;
+
+}
+
+std::vector<std::string> HDF5RawDataFile::get_path_elements(const daqdataformats::TriggerRecordHeader& trh){
+
+  std::vector<std::string> path_elements;
+
+  //first the Trigger string
+  path_elements.push_back(get_trigger_number_string(trh.get_trigger_number(),trh.get_sequence_number()));
+
+  //then the TriggerRecordHeader dataset name
+  path_elements.push_back(m_file_layout_ptr->get_trigger_header_dataset_name());
+
+
+  return path_elements;
+
+}
+
+std::vector<std::string> HDF5RawDataFile::get_path_elements(const daqdataformats::FragmentHeader& fh){
+
+  std::vector<std::string> path_elements;
+
+  //first the Trigger string
+  path_elements.push_back(get_trigger_number_string(fh.trigger_number,fh.sequence_number));
+
+  //then get the path params from our file layout for this type
+  auto path_params = m_file_layout_ptr->get_path_params(fh.element_id.system_type);
+
+  //next is the detector group name
+  path_elements.push_back(path_params.detector_group_name);
+  
+  //then the region
+  std::ostringstream region_string;
+  region_string << path_params.region_name_prefix
+		<< std::setw(path_params.digits_for_region_number)
+		<< std::setfill('0') << fh.element_id.region_id;
+  path_elements.push_back(region_string.str());
+  
+  //finally the element
+  std::ostringstream element_string;
+  element_string << path_params.element_name_prefix
+		 << std::setw(path_params.digits_for_element_number)
+		 << std::setfill('0') << fh.element_id.element_id;
+  path_elements.push_back(element_string.str());
+
+  return path_elements;
+
+}
+
+std::string HDF5RawDataFile::get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
+						       daqdataformats::sequence_number_t ) {
+
+  std::ostringstream trigger_number_string;
+  trigger_number_string << m_file_layout_ptr->get_trigger_record_name_prefix()
+			<< std::setw(m_file_layout_ptr->get_digits_for_trigger_number()) << std::setfill('0')
+			<< trig_num;
+
+  /* don't do this for now?
+  if (data_key.m_max_sequence_number > 0) {
+    trigger_number_string << "." << std::setw(m_data_record_params.digits_for_sequence_number) << std::setfill('0')
+			  << data_key.m_this_sequence_number;
+  }
+  */
+  return trigger_number_string.str();
 }
 
 void HDF5RawDataFile::open_file_if_needed(const std::string& file_name, unsigned open_flags = HighFive::File::ReadOnly) {

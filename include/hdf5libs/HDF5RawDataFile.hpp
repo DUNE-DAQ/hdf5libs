@@ -31,6 +31,7 @@
 #include "nlohmann/json.hpp"
 #include "hdf5libs/StorageKey.hpp"
 #include "hdf5libs/HDF5FileHandle.hpp"
+#include "hdf5libs/HDF5FileLayout.hpp"
 //#include "hdf5libs/HDF5KeyTranslator.hpp"
 
 
@@ -53,9 +54,25 @@ public:
     TLVL_FILE_SIZE = 5
   };
 
+  //constructor for writing
   HDF5RawDataFile(const nlohmann::json& conf);
-  void open_file_if_needed(const std::string& file_name, unsigned open_flags);
+
+  //constructor for reading, TBD
+  //HDF5RawDataFile(const string& file_name) {};
+
+  //basic writing methods
+  void write(daqdataformats::TriggerRecord& tr);
+  void write(const daqdataformats::TriggerRecordHeader& trh);
+  void write(const daqdataformats::Fragment& frag);
+
+  
+
+  //file handling stuff that may go away ...
+  void open_file_if_needed(const std::string& file_name, unsigned open_flags);  
   void increment_file_index_if_needed(size_t size_of_next_write);
+
+
+  //writing stuff that may be outdated soon ...
   std::vector<std::string> get_path_elements(const StorageKey& data_key); 
   void do_write(const KeyedDataBlock& data_block);
   void write(const KeyedDataBlock& data_block);
@@ -80,13 +97,14 @@ private:
   std::unique_ptr<HDF5FileHandle> m_file_handle;
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::string m_file_name;
-  unsigned m_number_events; 
   std::string m_top_level_group_name;
 
   std::string m_basic_name_of_open_file;
   unsigned m_open_flags_of_open_file;
   daqdataformats::run_number_t m_run_number;
   std::string m_application_name;
+
+  std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
 
   // Total number of generated files
   size_t m_file_index;
@@ -103,6 +121,11 @@ private:
 
   //std::unique_ptr<HDF5KeyTranslator> m_key_translator_ptr;
 
+
+  std::vector<std::string> get_path_elements(const daqdataformats::TriggerRecordHeader& trh);
+  std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh);
+  std::string get_trigger_number_string(daqdataformats::trigger_number_t,
+					daqdataformats::sequence_number_t);
 
 
 };
