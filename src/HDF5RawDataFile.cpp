@@ -6,7 +6,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
+#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include <sstream>
 
