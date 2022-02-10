@@ -53,6 +53,9 @@ public:
   std::string get_trigger_header_dataset_name() const
   { return m_conf_params.trigger_record_header_dataset_name; }
 
+  std::map< daqdataformats::GeoID::SystemType,hdf5filelayout::PathParams >
+  get_path_params_map() const
+  { return m_path_params_map; }
   hdf5filelayout::PathParams get_path_params(daqdataformats::GeoID::SystemType type) const
   { return m_path_params_map.at(type); }
 

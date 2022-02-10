@@ -22,6 +22,8 @@
 // HighFive
 #include <highfive/H5File.hpp>
 #include <highfive/H5Object.hpp>
+#include <highfive/H5Group.hpp>
+#include <highfive/H5DataSet.hpp>
 
 
 // DUNE-DAQ
@@ -60,12 +62,24 @@ public:
   //constructor for reading, TBD
   //HDF5RawDataFile(const string& file_name) {};
 
-  //basic writing methods
+  //basic data writing methods
   void write(daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
   void write(const daqdataformats::Fragment& frag);
+  size_t do_write(std::vector<std::string> const&,
+		  const char*, size_t);
 
-  
+  //attribute writers
+  template<typename T>
+  void write_attribute(std::string name, T value);
+
+  template<typename T>
+  void write_attribute(HighFive::Group* grp_ptr,std::string name, T value);
+
+  template<typename T>
+  void write_attribute(HighFive::DataSet* d_ptr,std::string name, T value);
+
+  void write_file_layout();
 
   //file handling stuff that may go away ...
   void open_file_if_needed(const std::string& file_name, unsigned open_flags);  

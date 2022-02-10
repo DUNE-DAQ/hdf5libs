@@ -119,22 +119,174 @@ void HDF5RawDataFile::write(daqdataformats::TriggerRecord& tr){
 
 void HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh){
 
-  auto dataset_path = get_path_elements(trh);
-  
-  //tmp
-  if(dataset_path.size()==0)
-    return;
-
+  m_recorded_size += do_write(get_path_elements(trh),
+			      static_cast<const char*>(trh.get_storage_location()),
+			      trh.get_total_size_bytes());
 }
 
 void HDF5RawDataFile::write(const daqdataformats::Fragment& frag){
 
-  auto dataset_path = get_path_elements(frag.get_header());
-  
-  //tmp
-  if(dataset_path.size()==0)
-    return;
+  m_recorded_size += do_write(get_path_elements(frag.get_header()),
+			      static_cast<const char*>(frag.get_storage_location()),
+			      frag.get_size());
+}
 
+template<typename T>
+void HDF5RawDataFile::write_attribute(std::string name, T value)
+{
+  if(!m_file_handle->get_file_ptr()->hasAttribute(name))
+    m_file_handle->get_file_ptr()->createAttribute(name,value);
+}
+
+template<typename T>
+void HDF5RawDataFile::write_attribute(HighFive::Group* grp_ptr,std::string name, T value)
+{
+  if(!(grp_ptr->hasAttribute(name))){
+    grp_ptr->createAttribute<T>(name,value);
+  }
+}
+
+template<typename T>
+void HDF5RawDataFile::write_attribute(HighFive::DataSet* d_ptr,std::string name, T value)
+{
+  if(!d_ptr->hasAttribute(name)){
+    d_ptr->createAttribute<T>(name,value);
+  }
+}
+
+void HDF5RawDataFile::write_file_layout()
+{
+
+  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+  //create top level group if needed
+  if (!hdf_file_ptr->exist("DUNEDAQFileLayout"))
+    hdf_file_ptr->createGroup("DUNEDAQFileLayout");
+
+  //get that group
+  HighFive::Group fl_group = hdf_file_ptr->getGroup("DUNEDAQFileLayout");
+  if (!fl_group.isValid()) {
+    //throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
+  }
+  
+  //attribute writing for the top-level group
+  write_attribute(&fl_group,
+		  "trigger_record_name_prefix",
+		  m_file_layout_ptr->get_trigger_record_name_prefix());
+  write_attribute(&fl_group,
+		  "digits_for_trigger_number",
+		  m_file_layout_ptr->get_digits_for_trigger_number());
+  write_attribute(&fl_group,
+		  "digits_for_sequence_number",
+		  m_file_layout_ptr->get_digits_for_sequence_number());
+  write_attribute(&fl_group,
+		  "trigger_record_header_dataset_name",
+		  m_file_layout_ptr->get_trigger_header_dataset_name());
+  
+  //now go through and get list of paths for subgroups
+  auto path_params_map = m_file_layout_ptr->get_path_params_map();
+
+  for(auto p_iter = path_params_map.begin(); p_iter != path_params_map.end(); ++p_iter){
+
+    std::string const& child_group_name = p_iter->second.detector_group_name;
+    if (child_group_name.empty()) {
+      //throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+    }
+    if (!fl_group.exist(child_group_name)) {
+      fl_group.createGroup(child_group_name);
+    }
+    HighFive::Group child_group = fl_group.getGroup(child_group_name);
+    write_attribute(&child_group,
+		    "detector_group_system_type",
+		    (int)p_iter->first);
+    write_attribute(&child_group,
+		    "detector_group_name",
+		    p_iter->second.detector_group_name);
+    write_attribute(&child_group,
+		    "detector_group_type",
+		    p_iter->second.detector_group_type);
+    write_attribute(&child_group,
+		    "region_name_prefix",
+		    p_iter->second.region_name_prefix);
+    write_attribute(&child_group,
+		    "digits_for_region_number",
+		    p_iter->second.digits_for_region_number);
+    write_attribute(&child_group,
+		    "element_name_prefix",
+		    p_iter->second.element_name_prefix);
+    write_attribute(&child_group,
+		    "digits_for_element_number",
+		    p_iter->second.digits_for_element_number);
+    
+  }
+
+}
+
+
+size_t HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
+				 const char* raw_data_ptr,
+				 size_t raw_data_size_bytes)
+{
+  const std::string dataset_name = group_and_dataset_path_elements.back();
+
+  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+  //create top level group if needed
+  std::string const& top_level_group_name = group_and_dataset_path_elements.at(0);
+  if (!hdf_file_ptr->exist(top_level_group_name))
+    hdf_file_ptr->createGroup(top_level_group_name);
+  
+  //setup sub_group to work with
+  HighFive::Group sub_group = hdf_file_ptr->getGroup(top_level_group_name);
+  if (!sub_group.isValid()) {
+    //throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
+  }
+
+  // Create the remaining subgroups
+  for (size_t idx = 1; idx < group_and_dataset_path_elements.size() - 1; ++idx) {
+    // group_dataset.size()-1 because the last element is the dataset
+    std::string const& child_group_name = group_and_dataset_path_elements[idx];
+    if (child_group_name.empty()) {
+      //throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+    }
+    if (!sub_group.exist(child_group_name)) {
+      sub_group.createGroup(child_group_name);
+    }
+    HighFive::Group child_group = sub_group.getGroup(child_group_name);
+    if (!child_group.isValid()) {
+      //throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+    }
+    sub_group = child_group;
+  }
+
+  // Create dataset
+  HighFive::DataSpace data_space = HighFive::DataSpace({ raw_data_size_bytes, 1 });
+  HighFive::DataSetCreateProps data_set_create_props;
+  HighFive::DataSetAccessProps data_set_access_props;
+  
+  try {
+      auto data_set =
+        sub_group.createDataSet<char>(dataset_name, data_space, 
+				      data_set_create_props, data_set_access_props);
+      if (data_set.isValid()) {
+        data_set.write_raw(raw_data_ptr);
+        hdf_file_ptr->flush();
+	return raw_data_size_bytes;
+      } 
+      else {
+        //throw InvalidHDF5Dataset(ERS_HERE, get_name(), dataset_name, hdf_file_ptr->getName());
+      }
+  } catch (std::exception const& excpt) {
+    //std::string description = "DataSet " + dataset_name;
+    //std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+    //throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg, excpt);
+  } catch (...) { // NOLINT(runtime/exceptions)
+    // NOLINT here because we *ARE* re-throwing the exception!
+    //std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+    //throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg);
+  }
+
+  return 0;
 }
 
 std::vector<std::string> HDF5RawDataFile::get_path_elements(const daqdataformats::TriggerRecordHeader& trh){
