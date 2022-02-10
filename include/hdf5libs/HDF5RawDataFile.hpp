@@ -63,7 +63,7 @@ public:
   //HDF5RawDataFile(const string& file_name) {};
 
   //basic data writing methods
-  void write(daqdataformats::TriggerRecord& tr);
+  void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
   void write(const daqdataformats::Fragment& frag);
   size_t do_write(std::vector<std::string> const&,

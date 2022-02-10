@@ -111,10 +111,19 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
 
  }
 
-void HDF5RawDataFile::write(daqdataformats::TriggerRecord& tr){
-  write(tr.get_header_ref());
-  for(auto const& frag_ptr : tr.get_fragments_ref())
+void HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr){
+
+  // We can use const_cast here since we're about to call non-const
+  // functions on the trigger record object but not actually modifying
+  // its contents
+  
+  auto& tr_fake_nonconst = const_cast<daqdataformats::TriggerRecord&>(tr);
+
+  write(tr_fake_nonconst.get_header_ref());
+
+  for(auto const& frag_ptr : tr_fake_nonconst.get_fragments_ref()) {
     write(*frag_ptr);
+  }
 }
 
 void HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh){
