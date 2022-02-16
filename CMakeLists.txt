@@ -26,6 +26,6 @@ daq_add_library (HDF5RawDataFile.cpp StorageKey.cpp LINK_LIBRARIES stdc++fs ers:
 
 ##############################################################################
 # Applications
-daq_add_application(example example.cpp LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
