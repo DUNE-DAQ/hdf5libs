@@ -95,34 +95,6 @@ private:
 
 
 
-/**
- * @brief comment
- */
-/*
-struct KeyedDataBlock
-{
-public:
-  HDF5FileLayout m_data_key;
-  size_t m_data_size;
-  const void* m_unowned_data_start;
-  std::unique_ptr<char> m_owned_data_start;
-
-  explicit KeyedDataBlock(const HDF5FileLayout& theKey) noexcept
-    : m_data_key(theKey)
-  {}
-
-  const void* get_data_start() const
-  {
-    if (m_owned_data_start.get() != nullptr) {
-      return static_cast<const void*>(m_owned_data_start.get());
-    } else {
-      return m_unowned_data_start;
-    }
-  }
-
-  size_t get_data_size_bytes() const { return m_data_size; }
-};
-*/
 } // namespace hdf5libs
 } // namespace dunedaq
 

@@ -59,7 +59,7 @@ public:
   //constructor for writing
   HDF5RawDataFile(const nlohmann::json& conf);
 
-  //constructor for reading, TBD
+  //constructor for reading
   //HDF5RawDataFile(const string& file_name) {};
 
   //basic data writing methods
@@ -69,17 +69,25 @@ public:
   size_t do_write(std::vector<std::string> const&,
 		  const char*, size_t);
 
-  //attribute writers
+  //attribute writers/getters
   template<typename T>
   void write_attribute(std::string name, T value);
-
   template<typename T>
   void write_attribute(HighFive::Group* grp_ptr,std::string name, T value);
-
   template<typename T>
   void write_attribute(HighFive::DataSet* d_ptr,std::string name, T value);
 
+  template<typename T>
+  T get_attribute(std::string name);
+  template<typename T>
+  T get_attribute(HighFive::Group* grp_ptr,std::string name);
+  template<typename T>
+  T get_attribute(HighFive::DataSet* d_ptr,std::string name);
+
+  //file layour writing/reading
   void write_file_layout();
+  void read_file_layout();
+
 
   //file handling stuff that may go away ...
   void open_file_if_needed(const std::string& file_name, unsigned open_flags);  

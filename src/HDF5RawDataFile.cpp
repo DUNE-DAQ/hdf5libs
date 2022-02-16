@@ -57,7 +57,7 @@ HDF5RawDataFile::HDF5RawDataFile(const nlohmann::json& conf)
   , m_run_number(0)
  {
 
-   //m_file_layout_ptr.reset(new HDF5FileLayout(conf.get<hdf5filelayout::FileLayoutParams>()));
+   m_file_layout_ptr.reset(new HDF5FileLayout(conf.get<hdf5filelayout::FileLayoutParams>()));
 
   try {
     std::cout<< "Filename: " << m_file_name << std::endl;
@@ -163,6 +163,42 @@ void HDF5RawDataFile::write_attribute(HighFive::DataSet* d_ptr,std::string name,
   }
 }
 
+template<typename T>
+T HDF5RawDataFile::get_attribute(std::string name)
+{
+  if(!m_file_handle->get_file_ptr()->hasAttribute(name)){
+    //throw that we don't have that attribute
+  }
+  auto attr = m_file_handle->get_file_ptr()->getAttribute(name);
+  T value;
+  attr.read(&value);
+  return value;
+}
+
+template<typename T>
+T HDF5RawDataFile::get_attribute(HighFive::Group* grp_ptr,std::string name)
+{
+  if(!(grp_ptr->hasAttribute(name))){
+    //throw that we don't have that attribute
+  }
+  auto attr = grp_ptr->getAttribute(name);
+  T value;
+  attr.read(&value);
+  return value;
+}
+
+template<typename T>
+T HDF5RawDataFile::get_attribute(HighFive::DataSet* d_ptr,std::string name)
+{
+  if(!d_ptr->hasAttribute(name)){
+    //throw that we don't have that attribute
+  }
+  auto attr = d_ptr->getAttribute(name);
+  T value;
+  attr.read(&value);
+  return value;
+}
+
 void HDF5RawDataFile::write_file_layout()
 {
 
@@ -228,6 +264,50 @@ void HDF5RawDataFile::write_file_layout()
 		    p_iter->second.digits_for_element_number);
     
   }
+
+}
+
+void HDF5RawDataFile::read_file_layout()
+{
+  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+  //get that group
+  HighFive::Group fl_group = hdf_file_ptr->getGroup("DUNEDAQFileLayout");
+  if (!fl_group.isValid()) {
+    //warning message that we must be reading an old file?
+    return;
+  }
+
+  hdf5filelayout::FileLayoutParams fl_params;
+  fl_params.trigger_record_name_prefix = get_attribute<std::string>(&fl_group,"trigger_record_name_prefix");
+  fl_params.digits_for_trigger_number  = get_attribute<int32_t>(&fl_group,"digits_for_trigger_number");
+  fl_params.digits_for_sequence_number = get_attribute<int32_t>(&fl_group,"digits_for_sequence_number");
+  fl_params.trigger_record_header_dataset_name = get_attribute<std::string>(&fl_group,"trigger_record_header_dataset_name");
+
+  //following code is to get the subgroups of fl_group, and then fill path_params for them
+
+  //get list of objects that the fl_group has
+  auto object_names = fl_group.listObjectNames();
+  
+  //now loop through groups
+  for(auto const& oname : object_names){
+    if(fl_group.getObjectType(oname)!=HighFive::ObjectType::Group) continue;
+    HighFive::Group child_group = fl_group.getGroup(oname);
+
+    hdf5filelayout::PathParams path_params;
+    path_params.detector_group_type       = get_attribute<std::string>(&child_group,"detector_group_type");
+    path_params.detector_group_name       = get_attribute<std::string>(&child_group,"detector_group_name");
+    path_params.region_name_prefix        = get_attribute<std::string>(&child_group,"region_name_prefix");
+    path_params.digits_for_region_number  = get_attribute<int32_t>(&child_group,"digits_for_region_number");
+    path_params.element_name_prefix       = get_attribute<std::string>(&child_group,"element_name_prefix");
+    path_params.digits_for_element_number = get_attribute<int32_t>(&child_group,"digits_for_element_number");
+
+    fl_params.path_param_list.push_back(path_params);
+  }
+
+  //now reset the HDF5Filelayout object
+  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
+  
 
 }
 
