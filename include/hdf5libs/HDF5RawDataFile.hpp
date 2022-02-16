@@ -57,7 +57,12 @@ public:
   };
 
   //constructor for writing
-  HDF5RawDataFile(const nlohmann::json& conf);
+  HDF5RawDataFile(std::string file_name,
+		  daqdataformats::run_number_t run_number,
+		  size_t file_index,
+		  std::string application_name,
+		  const nlohmann::json& fl_params_conf,
+		  unsigned open_flags = HighFive::File::Create);
 
   //constructor for reading
   //HDF5RawDataFile(const string& file_name) {};
@@ -87,18 +92,6 @@ public:
   //file layour writing/reading
   void write_file_layout();
   void read_file_layout();
-
-
-  //file handling stuff that may go away ...
-  void open_file_if_needed(const std::string& file_name, unsigned open_flags);  
-  void increment_file_index_if_needed(size_t size_of_next_write);
-
-
-  //writing stuff that may be outdated soon ...
-  std::vector<std::string> get_path_elements(const StorageKey& data_key); 
-  void do_write(const KeyedDataBlock& data_block);
-  void write(const KeyedDataBlock& data_block);
-  void write(const std::vector<KeyedDataBlock>& data_block_list);
 
 
   std::vector<std::string> get_datasets();

@@ -37,8 +37,12 @@ int main(int , char** ){ //since argc/argv not in use
   conf["run_number"] = 52;
   //conf["file_layout_parameters"] = create_file_layout_params();
  
-  HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(conf);
-
+  HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile("test_file_name.hdf",
+						     conf["run_number"],//run_number
+						     0,//file_index,
+						     "HDF5LIBS_TestWriter"
+						     ,conf);
+  /*
   // =================
   // DUMMY WRITE
   // =================
@@ -62,7 +66,7 @@ int main(int , char** ){ //since argc/argv not in use
     }                     // apa number
   }                       // trigger number
 
-
+  */
   // Get and print attribute names and their values
   auto attributes_map = h5_raw_data_file.get_attributes();
   for (const auto& [k, v] : attributes_map){
