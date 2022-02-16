@@ -65,14 +65,12 @@ public:
 		  unsigned open_flags = HighFive::File::Create);
 
   //constructor for reading
-  //HDF5RawDataFile(const string& file_name) {};
+  HDF5RawDataFile(const std::string& file_name);
 
   //basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
   void write(const daqdataformats::Fragment& frag);
-  size_t do_write(std::vector<std::string> const&,
-		  const char*, size_t);
 
   //attribute writers/getters
   template<typename T>
@@ -88,10 +86,6 @@ public:
   T get_attribute(HighFive::Group* grp_ptr,std::string name);
   template<typename T>
   T get_attribute(HighFive::DataSet* d_ptr,std::string name);
-
-  //file layour writing/reading
-  void write_file_layout();
-  void read_file_layout();
 
 
   std::vector<std::string> get_datasets();
@@ -134,9 +128,15 @@ private:
   bool m_disable_unique_suffix;
   float m_free_space_safety_factor_for_write;
 
-  //std::unique_ptr<HDF5KeyTranslator> m_key_translator_ptr;
+  //file layout writing/reading
+  void write_file_layout();
+  void read_file_layout();
 
+  //writing to datasets
+  size_t do_write(std::vector<std::string> const&,
+		  const char*, size_t);
 
+  //helper functions for the path elements
   std::vector<std::string> get_path_elements(const daqdataformats::TriggerRecordHeader& trh);
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh);
   std::string get_trigger_number_string(daqdataformats::trigger_number_t,
