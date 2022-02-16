@@ -35,14 +35,18 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriter. Version always most recent.
    */
-  HDF5FileLayout(hdf5filelayout::FileLayoutParams conf)
-    : m_version(1)
-    , m_conf_params(conf)
+  HDF5FileLayout(hdf5filelayout::FileLayoutParams conf,
+		 uint32_t version = 1)
+    : m_conf_params(conf)
+    , m_version(version)
   {
 
     //m_conf_params = conf.get<hdf5filelayout::FileLayoutParams>();
     fill_path_params_map(m_conf_params);
   }
+
+  uint32_t get_version() const
+  { return m_version; }
 
   std::string get_trigger_record_name_prefix() const 
   { return m_conf_params.trigger_record_name_prefix; }
@@ -61,14 +65,14 @@ public:
 
 private:
   /**
-   * @brief version number
-   */
-  uint32_t m_version;
-
-  /**
    * @brief FileLayout configuration parameters
    */
   hdf5filelayout::FileLayoutParams m_conf_params;
+
+  /**
+   * @brief version number
+   */
+  uint32_t m_version;
 
   /**
    * @brief map translation for GeoID::SystemType to dataset path parameters

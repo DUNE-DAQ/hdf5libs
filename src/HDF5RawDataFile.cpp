@@ -170,6 +170,9 @@ void HDF5RawDataFile::write_file_layout()
   
   //attribute writing for the top-level group
   write_attribute(&fl_group,
+		  "version_number",
+		  m_file_layout_ptr->get_version());
+  write_attribute(&fl_group,
 		  "trigger_record_name_prefix",
 		  m_file_layout_ptr->get_trigger_record_name_prefix());
   write_attribute(&fl_group,
@@ -437,14 +440,20 @@ void HDF5RawDataFile::read_file_layout()
 {
   HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
 
+  hdf5filelayout::FileLayoutParams fl_params;
+  uint32_t version = 0;
+
   //get that group
   HighFive::Group fl_group = hdf_file_ptr->getGroup("DUNEDAQFileLayout");
   if (!fl_group.isValid()) {
     //warning message that we must be reading an old file?
+    //now reset the HDF5Filelayout object, version 0
+    m_file_layout_ptr.reset(new HDF5FileLayout(fl_params,version));
     return;
   }
 
-  hdf5filelayout::FileLayoutParams fl_params;
+  version = get_attribute<uint32_t>(&fl_group,"version_number");
+
   fl_params.trigger_record_name_prefix = get_attribute<std::string>(&fl_group,"trigger_record_name_prefix");
   fl_params.digits_for_trigger_number  = get_attribute<int32_t>(&fl_group,"digits_for_trigger_number");
   fl_params.digits_for_sequence_number = get_attribute<int32_t>(&fl_group,"digits_for_sequence_number");
@@ -472,10 +481,8 @@ void HDF5RawDataFile::read_file_layout()
   }
 
   //now reset the HDF5Filelayout object
-  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
+  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params,version));
 }
-
-
 
 
 
@@ -487,9 +494,11 @@ std::vector<std::string> HDF5RawDataFile::get_datasets() {
   // Vector containing the path list to the HDF5 datasets
   std::vector<std::string> path_list;
 
-  std::string top_level_group_name = m_file_ptr->getPath();
-  if (m_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
-    HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
+  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
+
+  std::string top_level_group_name = hdf_file_ptr->getPath();
+  if (hdf_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
+    HighFive::Group parent_group = hdf_file_ptr->getGroup(top_level_group_name);
     exploreSubGroup(parent_group, top_level_group_name, path_list);
   }
 
@@ -503,19 +512,27 @@ std::vector<std::string> HDF5RawDataFile::get_datasets() {
 std::vector<std::string> HDF5RawDataFile::get_fragments(const unsigned& start_tr, const unsigned& num_trs) {
 
  std::vector<std::string> fragment_path; 
- std::vector<std::string> dataset_path = this->get_datasets(); 
 
- unsigned int trs_count = 0;
- for (auto& element : dataset_path) {
-   if (element.find("Element") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
+ if(m_file_layout_ptr->get_version() < 1){
+
+   std::vector<std::string> dataset_path = this->get_datasets(); 
+   
+   unsigned int trs_count = 0;
+   for (auto& element : dataset_path) {
+     if (element.find("Element") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
        fragment_path.push_back(element);
-   }
-   else if (element.find("Link") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
+     }
+     else if (element.find("Link") != std::string::npos && trs_count < start_tr+num_trs && trs_count >= start_tr) {
        fragment_path.push_back(element);
+     }
+     else if (element.find("TriggerRecordHeader") != std::string::npos) {
+       trs_count += 1 ;
+     }
    }
-   else if (element.find("TriggerRecordHeader") != std::string::npos) {
-     trs_count += 1 ;
-   }
+ }
+
+ else{
+   //use file layout ...
  }
 
  return fragment_path;
