@@ -21,15 +21,6 @@
 
 // HighFive
 #include <highfive/H5File.hpp>
-//#include <highfive/H5Object.hpp>
-
-
-// DUNE-DAQ
-//#include "logging/Logging.hpp"
-//#include "daqdataformats/TriggerRecord.hpp"
-//#include "nlohmann/json.hpp"
-//#include "hdf5libs/StorageKey.hpp"
-//#include "hdf5libs/HDF5KeyTranslator.hpp"
 
 
 namespace dunedaq {

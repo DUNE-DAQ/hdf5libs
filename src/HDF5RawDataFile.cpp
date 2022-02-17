@@ -23,17 +23,18 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 				 std::string application_name,
 				 const nlohmann::json& fl_params_conf,
 				 unsigned open_flags)
+  : m_open_flags(open_flags)
 {
 
   //check and make sure that the file isn't ReadOnly
-  if (open_flags == HighFive::File::ReadOnly) {
+  if (m_open_flags == HighFive::File::ReadOnly) {
     //throw wrong accessor
     return;
   }
   
   //do the file open
   try {
-    m_file_handle.reset(new HDF5FileHandle(file_name, open_flags));
+    m_file_ptr.reset(new HighFive::File(file_name,m_open_flags));
   } catch (std::exception const& excpt) {
     throw "Issue when opening file a file";
   } catch (...) { // NOLINT(runtime/exceptions)
@@ -59,6 +60,24 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 }
 
+
+HDF5RawDataFile::~HDF5RawDataFile()
+{
+  if (m_file_ptr.get() != nullptr && m_open_flags!=HighFive::File::ReadOnly) {
+    write_attribute("recorded_size",m_recorded_size);
+
+    int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+    std::string file_closing_timestamp = std::to_string(timestamp);
+    write_attribute("closing_timestamp",file_closing_timestamp);
+
+    m_file_ptr->flush();
+  }
+
+  // explicit destruction; not really needed, but nice to be clear...
+  m_file_ptr.reset(); 
+  m_file_layout_ptr.reset();
+}
+  
 /*
  * @brief Write a TriggerRecord to the file.
  */
@@ -103,8 +122,8 @@ void HDF5RawDataFile::write(const daqdataformats::Fragment& frag){
 template<typename T>
 void HDF5RawDataFile::write_attribute(std::string name, T value)
 {
-  if(!m_file_handle->get_file_ptr()->hasAttribute(name))
-    m_file_handle->get_file_ptr()->createAttribute(name,value);
+  if(!m_file_ptr->hasAttribute(name))
+    m_file_ptr->createAttribute(name,value);
 }
 
 /*
@@ -134,11 +153,12 @@ void HDF5RawDataFile::write_attribute(HighFive::DataSet* d_ptr,std::string name,
  * @brief Constructor for reading a file
  */
 HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
+  : m_open_flags(HighFive::File::ReadOnly)
 {
 
   //do the file open
   try {
-    m_file_handle.reset(new HDF5FileHandle(file_name, HighFive::File::ReadOnly));
+    m_file_ptr.reset(new HighFive::File(file_name,m_open_flags));
   } catch (std::exception const& excpt) {
     throw "Issue when opening file a file";
   } catch (...) { // NOLINT(runtime/exceptions)
@@ -156,14 +176,12 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
 void HDF5RawDataFile::write_file_layout()
 {
 
-  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
-
   //create top level group if needed
-  if (!hdf_file_ptr->exist("DUNEDAQFileLayout"))
-    hdf_file_ptr->createGroup("DUNEDAQFileLayout");
+  if (!m_file_ptr->exist("DUNEDAQFileLayout"))
+    m_file_ptr->createGroup("DUNEDAQFileLayout");
 
   //get that group
-  HighFive::Group fl_group = hdf_file_ptr->getGroup("DUNEDAQFileLayout");
+  HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
   if (!fl_group.isValid()) {
     //throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
   }
@@ -234,15 +252,13 @@ size_t HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_datas
 {
   const std::string dataset_name = group_and_dataset_path_elements.back();
 
-  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
-
   //create top level group if needed
   std::string const& top_level_group_name = group_and_dataset_path_elements.at(0);
-  if (!hdf_file_ptr->exist(top_level_group_name))
-    hdf_file_ptr->createGroup(top_level_group_name);
+  if (!m_file_ptr->exist(top_level_group_name))
+    m_file_ptr->createGroup(top_level_group_name);
   
   //setup sub_group to work with
-  HighFive::Group sub_group = hdf_file_ptr->getGroup(top_level_group_name);
+  HighFive::Group sub_group = m_file_ptr->getGroup(top_level_group_name);
   if (!sub_group.isValid()) {
     //throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
   }
@@ -275,19 +291,19 @@ size_t HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_datas
 				      data_set_create_props, data_set_access_props);
       if (data_set.isValid()) {
         data_set.write_raw(raw_data_ptr);
-        hdf_file_ptr->flush();
+        m_file_ptr->flush();
 	return raw_data_size_bytes;
       } 
       else {
-        //throw InvalidHDF5Dataset(ERS_HERE, get_name(), dataset_name, hdf_file_ptr->getName());
+        //throw InvalidHDF5Dataset(ERS_HERE, get_name(), dataset_name, m_file_ptr->getName());
       }
   } catch (std::exception const& excpt) {
     //std::string description = "DataSet " + dataset_name;
-    //std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+    //std::string msg = "writing DataSet " + dataset_name + " to file " + m_file_ptr->getName();
     //throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg, excpt);
   } catch (...) { // NOLINT(runtime/exceptions)
     // NOLINT here because we *ARE* re-throwing the exception!
-    //std::string msg = "writing DataSet " + dataset_name + " to file " + hdf_file_ptr->getName();
+    //std::string msg = "writing DataSet " + dataset_name + " to file " + m_file_ptr->getName();
     //throw GeneralDataStoreProblem(ERS_HERE, get_name(), msg);
   }
 
@@ -402,10 +418,10 @@ size_t get_free_space(const std::string& the_path) {
 template<typename T>
 T HDF5RawDataFile::get_attribute(std::string name)
 {
-  if(!m_file_handle->get_file_ptr()->hasAttribute(name)){
+  if(!m_file_ptr->hasAttribute(name)){
     //throw that we don't have that attribute
   }
-  auto attr = m_file_handle->get_file_ptr()->getAttribute(name);
+  auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(&value);
   return value;
@@ -438,13 +454,11 @@ T HDF5RawDataFile::get_attribute(HighFive::DataSet* d_ptr,std::string name)
 
 void HDF5RawDataFile::read_file_layout()
 {
-  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
-
   hdf5filelayout::FileLayoutParams fl_params;
   uint32_t version = 0;
 
   //get that group
-  HighFive::Group fl_group = hdf_file_ptr->getGroup("DUNEDAQFileLayout");
+  HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
   if (!fl_group.isValid()) {
     //warning message that we must be reading an old file?
     //now reset the HDF5Filelayout object, version 0
@@ -494,11 +508,9 @@ std::vector<std::string> HDF5RawDataFile::get_datasets() {
   // Vector containing the path list to the HDF5 datasets
   std::vector<std::string> path_list;
 
-  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
-
-  std::string top_level_group_name = hdf_file_ptr->getPath();
-  if (hdf_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
-    HighFive::Group parent_group = hdf_file_ptr->getGroup(top_level_group_name);
+  std::string top_level_group_name = m_file_ptr->getPath();
+  if (m_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
+    HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
     exploreSubGroup(parent_group, top_level_group_name, path_list);
   }
 
@@ -566,13 +578,11 @@ std::vector<std::string> HDF5RawDataFile::get_trh(const unsigned& start_tr, cons
 std::map<std::string, std::variant<std::string, int>> HDF5RawDataFile::get_attributes() {
   std::map<std::string, std::variant<std::string, int>> attributes_map;  
 
-  HighFive::File* hdf_file_ptr = m_file_handle->get_file_ptr();
-
-  std::vector<std::string> list_attribute_names = hdf_file_ptr->listAttributeNames();
+  std::vector<std::string> list_attribute_names = m_file_ptr->listAttributeNames();
   for(std::string& attribute_name : list_attribute_names) {
     //std::cout << attribute_name << std::endl; 
-    if (hdf_file_ptr->hasAttribute(attribute_name.c_str())) {
-      HighFive::Attribute high_five_attribute = hdf_file_ptr->getAttribute(attribute_name.c_str());
+    if (m_file_ptr->hasAttribute(attribute_name.c_str())) {
+      HighFive::Attribute high_five_attribute = m_file_ptr->getAttribute(attribute_name.c_str());
       HighFive::DataType attribute_data_type = high_five_attribute.getDataType();
       if (attribute_data_type.string() == "String64") {
         std::string attribute_string;
@@ -595,7 +605,8 @@ std::map<std::string, std::variant<std::string, int>> HDF5RawDataFile::get_attri
 
 
 std::unique_ptr<daqdataformats::Fragment> HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name){
-  HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
+
+  HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
   HighFive::DataSpace data_space = data_set.getSpace();
   size_t data_size = data_set.getStorageSize();
@@ -609,7 +620,8 @@ std::unique_ptr<daqdataformats::Fragment> HDF5RawDataFile::get_frag_ptr(const st
 } 
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader> HDF5RawDataFile::get_trh_ptr (const std::string& dataset_name) {
-  HighFive::Group parent_group = m_file_ptr->getGroup(m_top_level_group_name);
+
+  HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_name);
   HighFive::DataSpace data_space = data_set.getSpace();
   size_t data_size = data_set.getStorageSize();

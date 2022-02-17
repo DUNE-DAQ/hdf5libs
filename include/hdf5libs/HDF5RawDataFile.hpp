@@ -31,8 +31,6 @@
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
 #include "nlohmann/json.hpp"
-#include "hdf5libs/StorageKey.hpp"
-#include "hdf5libs/HDF5FileHandle.hpp"
 #include "hdf5libs/HDF5FileLayout.hpp"
 //#include "hdf5libs/HDF5KeyTranslator.hpp"
 
@@ -66,6 +64,15 @@ public:
 
   //constructor for reading
   HDF5RawDataFile(const std::string& file_name);
+
+  //destructor
+  ~HDF5RawDataFile();
+
+  std::string get_file_name() const
+  { return m_file_ptr->getName(); }
+  
+  size_t get_recorded_size() const
+  { return m_recorded_size; }
 
   //basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
@@ -103,30 +110,12 @@ private:
   HDF5RawDataFile(HDF5RawDataFile&&) = delete;
   HDF5RawDataFile& operator=(HDF5RawDataFile&&) = delete;
 
-  std::unique_ptr<HDF5FileHandle> m_file_handle;
   std::unique_ptr<HighFive::File> m_file_ptr;
-  std::string m_file_name;
-  std::string m_top_level_group_name;
-
-  std::string m_basic_name_of_open_file;
-  unsigned m_open_flags_of_open_file;
-  daqdataformats::run_number_t m_run_number;
-  std::string m_application_name;
-
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
-
-  // Total number of generated files
-  size_t m_file_index;
+  const unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
-
-  // Configuration
-  std::string m_operation_mode;
-  std::string m_path;
-  size_t m_max_file_size;
-  bool m_disable_unique_suffix;
-  float m_free_space_safety_factor_for_write;
 
   //file layout writing/reading
   void write_file_layout();
@@ -144,18 +133,6 @@ private:
 
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 } // hdf5libs
 } // dunedaq
