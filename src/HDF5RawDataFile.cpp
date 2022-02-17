@@ -63,7 +63,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
 HDF5RawDataFile::~HDF5RawDataFile()
 {
-  if (m_file_ptr.get() != nullptr && m_open_flags!=HighFive::File::ReadOnly) {
+  if (m_file_ptr.get()!=nullptr && m_open_flags!=HighFive::File::ReadOnly) {
     write_attribute("recorded_size",m_recorded_size);
 
     int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
