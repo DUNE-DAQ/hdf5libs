@@ -7,7 +7,8 @@
 
 #include "hdf5libs/SSPDecoder.hpp"
 #include "hdf5libs/DAQDecoder.hpp"
-#include "hdf5libs/utils.hpp"
+#include "detdataformats/ssp/SSPTypes.hpp"
+//#include "hdf5libs/utils.hpp"
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -15,25 +16,15 @@ namespace hdf5libs {
 //using namespace dunedaq::detchannelmaps;
 //using namespace dunedaq::hdf5libs;
 
+enum
+{
+  TLVL_ENTER_EXIT_METHODS = 5,
+  TLVL_CONFIG = 7,
+  TLVL_WORK_STEPS = 10,
+  TLVL_SEQNO_MAP_CONTENTS = 13,
+  TLVL_FRAGMENT_HEADER_DUMP = 17
+};
 
-//HDF5 Utility function to recursively traverse a file
-// void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, std::vector<std::string>& path_list){
-//    std::vector<std::string> childNames = parent_group.listObjectNames();
-//    for (auto& child_name : childNames) {
-//      std::string full_path = relative_path + "/" + child_name;
-//      HighFive::ObjectType child_type = parent_group.getObjectType(child_name);
-//      if (child_type == HighFive::ObjectType::Dataset) {
-//        //std::cout << "Dataset: " << child_name << std::endl;       
-//        path_list.push_back(full_path);
-//      } else if (child_type == HighFive::ObjectType::Group) {
-//        //std::cout << "Group: " << child_name << std::endl;
-//        HighFive::Group child_group = parent_group.getGroup(child_name);
-//        // start the recusion
-//        std::string new_path = relative_path + "/" + child_name;
-//        exploreSubGroup(child_group, new_path, path_list);
-//      }
-//    }
-// }
 SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events) {
 
   m_file_name = file_name; 
@@ -58,13 +49,14 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
     if (frag->get_size() > sizeof(dunedaq::daqdataformats::FragmentHeader) ) {
       // Ptr to the SSP data
       auto ssp_event_header_ptr = reinterpret_cast<dunedaq::detdataformats::ssp::EventHeader*>(frag->get_data()); 
+      
+      // Parse header info
       // Module and Channel ID
       size_t module_channel_id = ssp_event_header_ptr->group2 ;
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Module and channel ID: " << module_channel_id;  
-     
-      // Convert module and channel id to the right SiPM element
-      //unsigned int channel = ((trunc(module_channel_id/10) -1 )*4 + module_channel_id%10 -1 )*12 ;//+ trig.channel_id;
-    
+      unsigned short module_id = ((module_channel_id & 0xFFF0) >> 4);
+      unsigned short channel_id = ((module_channel_id & 0x000F) >> 0);
+ 
       // Get the timestamp 
       unsigned long ts = 0;
       for (unsigned int iword = 0 ; iword <= 3; ++iword) {
@@ -72,9 +64,25 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
       }
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Fragment timestamp: " << ts << std::endl;
 
+      uint32_t peaksum = ((ssp_event_header_ptr->group3 & 0x00FF) >> 16) + ssp_event_header_ptr->peakSumLow;  // peak sum
+      if(peaksum & 0x00800000) {
+        peaksum |= 0xFF000000;
+      }
+      unsigned short peaktime = ((ssp_event_header_ptr->group3 & 0xFF00) >> 8);                                  // peak time
+      unsigned int prerise = ((ssp_event_header_ptr->group4 & 0x00FF) << 16) + ssp_event_header_ptr->preriseLow;          // prerise
+      unsigned int intsum = ((unsigned int)(ssp_event_header_ptr->intSumHigh) << 8) + (((unsigned int)(ssp_event_header_ptr->group4) & 0xFF00) >> 8);  // integrated sum
+      unsigned long baseline = ssp_event_header_ptr->baseline;                                                  // baseline
+      unsigned long baselinesum = ((ssp_event_header_ptr->group4 & 0x00FF) << 16) + ssp_event_header_ptr->preriseLow;      // baselinesum
+      //std::vector<unsigned long> cfd_interpol;
+      //for(unsigned int i_cfdi = 0; i_cfdi < 4; i_cfdi++)                                   // CFD timestamp interpolation points
+      //  cfd_interpol.push_back(ssp_event_header_ptr->cfdPoint[i_cfdi]);
+      unsigned long internal_interpol = ssp_event_header_ptr->intTimestamp[0];                                  // internal interpolation point
+      uint64_t internal_ts = ((uint64_t)((uint64_t)ssp_event_header_ptr->intTimestamp[3] << 32)) + ((uint64_t)((uint64_t)ssp_event_header_ptr->intTimestamp[2]) << 16) + ((uint64_t)((uint64_t)ssp_event_header_ptr->intTimestamp[1]));  // internal timestamp
+
+
       // Start parsing the waveforms included in the fragment
 
-      unsigned int nADC=(ssp_event_header_ptr->length-sizeof(dunedaq::detdataformats::ssp::EventHeader)/sizeof(unsigned int))*2;
+      unsigned int nADC=(ssp_event_header_ptr->length)/2-sizeof(dunedaq::detdataformats::ssp::EventHeader)/sizeof(unsigned short);
       TLOG_DEBUG(TLVL_ENTER_EXIT_METHODS) << "Number of ADC values: " << nADC;
 
       // Decoding SSP data 
@@ -90,30 +98,26 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
       }    
       adcPointer += nADC;    
     
-      // AAA: hack to save the output ADC values
-      //std::stringstream filename;
-      //filename << "./SSP_data_ts_" << std::to_string(ts) << "_module_channel_"  << std::to_string(module_channel_id) << ".txt";
-      //std::ofstream output_file(filename.str());
-      //for (auto entry : ssp_frames) {
-      //  output_file << entry << std::endl;
-      //}
-
       // Store SSP data
       m_frag_size.push_back( frag->get_size() );
       m_frag_header_size.push_back( sizeof(dunedaq::daqdataformats::FragmentHeader) );
-      m_module_channel_id.push_back( module_channel_id );
       m_frag_timestamp.push_back( ts );
-      m_nADC.push_back( nADC );
       m_ssp_frames.push_back( ssp_frames );
-    
+      m_module_id.push_back( module_id );
+      m_channel_id.push_back( channel_id );
+      m_peaksum.push_back( peaksum );
+      m_peaktime.push_back( peaktime );
+      m_prerise.push_back( prerise );
+      m_intsum.push_back( intsum );
+      m_baseline.push_back( baseline );
+      m_baselinesum.push_back( baselinesum );
+      //m_cfd_interpol.push_back( cfd_interpol );
+      m_internal_interpol.push_back( internal_interpol );
+      m_internal_ts.push_back( internal_ts );
+
     } else { // payload is empty, dropping fragment 
       dropped_fragments += 1;
 
-      //debugging
-      std::vector<int> a = {1,2,3};
-      m_frag_size.push_back( frag->get_size() );
-      m_frag_header_size.push_back( sizeof(dunedaq::daqdataformats::FragmentHeader) );
-      m_ssp_frames.push_back( a ); 
     }  
   } else {
    std::cout << "Skipping: not PD fragment type" << std::endl;
@@ -123,6 +127,8 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
 
 }
 
+// Property getter functions
+// 
 
 std::vector<int> SSPDecoder::get_frag_size() {
   return m_frag_size;
@@ -134,8 +140,13 @@ std::vector<int> SSPDecoder::get_frag_header_size() {
 }
 
 
-std::vector<int> SSPDecoder::get_module_channel_id() {
-  return m_module_channel_id;
+std::vector<int> SSPDecoder::get_module_id() {
+  return m_module_id;
+}
+
+
+std::vector<int> SSPDecoder::get_channel_id() {
+  return m_channel_id;
 }
 
 
@@ -144,16 +155,47 @@ std::vector<unsigned long> SSPDecoder::get_frag_timestamp() {
 }
 
 
-std::vector<unsigned int> SSPDecoder::get_nADC() {
-  return m_nADC;
-}
-
-
 std::vector<std::vector<int>> SSPDecoder::get_ssp_frames() {
   return m_ssp_frames;
 }
 
 
+std::vector<uint32_t> SSPDecoder::get_peaksum() {
+  return m_peaksum;
+}
+
+
+std::vector<short> SSPDecoder::get_peaktime() {
+  return m_peaktime;
+}
+
+std::vector<int> SSPDecoder::get_prerise() {
+  return m_prerise;
+}
+
+std::vector<int> SSPDecoder::get_intsum() {
+  return m_intsum;
+}
+
+std::vector<long> SSPDecoder::get_baseline() {
+  return m_baseline;
+}
+
+std::vector<long> SSPDecoder::get_baselinesum() {
+  return m_baselinesum;
+}
+
+//std::vector<std::vector<long>> SSPDecoder::get_cfd_interpol() {
+//  return m_cfd_interpol;
+//}
+
+std::vector<long> SSPDecoder::get_internal_interpol() {
+  return m_internal_interpol;
+}
+
+std::vector<uint64_t> SSPDecoder::get_internal_ts() {
+  return m_internal_ts;
+}
 
 } // hdf5libs
 } // dunedaq

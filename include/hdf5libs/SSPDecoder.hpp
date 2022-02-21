@@ -44,10 +44,19 @@ public:
 
   std::vector<int> get_frag_size();
   std::vector<int> get_frag_header_size();
-  std::vector<int> get_module_channel_id();
+  std::vector<int> get_module_id();
+  std::vector<int> get_channel_id();
   std::vector<unsigned long> get_frag_timestamp();
-  std::vector<unsigned int> get_nADC();
   std::vector<std::vector<int>> get_ssp_frames();
+  std::vector<uint32_t> get_peaksum();
+  std::vector<short> get_peaktime();
+  std::vector<int> get_prerise();
+  std::vector<int> get_intsum();
+  std::vector<long> get_baseline();
+  std::vector<long> get_baselinesum();
+  //std::vector<std::vector<long>> get_cfd_interpol();
+  std::vector<long> get_internal_interpol();
+  std::vector<uint64_t> get_internal_ts();
 
 private: 
   SSPDecoder(const SSPDecoder&) = delete;
@@ -62,11 +71,19 @@ private:
 
   std::vector<int> m_frag_size;
   std::vector<int> m_frag_header_size;
-  std::vector<int> m_module_channel_id;
+  std::vector<int> m_module_id;
+  std::vector<int> m_channel_id;
   std::vector<unsigned long> m_frag_timestamp;
-  std::vector<unsigned int> m_nADC;
   std::vector<std::vector<int>> m_ssp_frames;
-
+  std::vector<uint32_t> m_peaksum;
+  std::vector<short> m_peaktime;
+  std::vector<int> m_prerise;
+  std::vector<int> m_intsum;
+  std::vector<long> m_baseline;
+  std::vector<long> m_baselinesum;
+  //std::vector<std::vector<long>> m_cfd_interpol;
+  std::vector<long> m_internal_interpol;
+  std::vector<uint64_t> m_internal_ts;
 
 };
 
