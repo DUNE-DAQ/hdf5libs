@@ -11,6 +11,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <string>
+
 namespace py = pybind11;
 
 namespace dunedaq {
@@ -29,8 +31,7 @@ register_hdf5rawdatafile(py::module& m)
     .def("get_frag_ptr", &HDF5RawDataFile::get_frag_ptr)
     .def("get_trh_ptr", &HDF5RawDataFile::get_trh_ptr)
 
-  ;
-
+    ;
 }
 
 } // namespace python
