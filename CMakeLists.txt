@@ -26,6 +26,7 @@ daq_add_library (HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive d
 
 ##############################################################################
 # Applications
+daq_add_application(HDF5LIBS_TestReader HDF5LIBS_TestReader.cpp LINK_LIBRARIES ${PROJECT_NAME})
 daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
