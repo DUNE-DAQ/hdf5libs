@@ -15,6 +15,8 @@
 // System
 #include <iostream>
 #include <string>
+#include <vector>
+#include <set>
 #include <variant>
 #include <filesystem>
 #include <sys/statvfs.h>
@@ -74,6 +76,9 @@ public:
   size_t get_recorded_size() const
   { return m_recorded_size; }
 
+  HDF5FileLayout get_file_layout() const
+  { return *(m_file_layout_ptr.get()); } 
+
   //basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
@@ -81,28 +86,92 @@ public:
 
   //attribute writers/getters
   template<typename T>
-  void write_attribute(std::string name, T value);
+  void write_attribute(std::string name, T value)
+  {
+    if(!m_file_ptr->hasAttribute(name))
+      m_file_ptr->createAttribute(name,value);
+  }
   template<typename T>
-  void write_attribute(HighFive::Group* grp_ptr,std::string name, T value);
+  void write_attribute(HighFive::Group* grp_ptr,std::string name, T value)
+  {
+    if(!(grp_ptr->hasAttribute(name))){
+      grp_ptr->createAttribute<T>(name,value);
+    }
+  }
   template<typename T>
-  void write_attribute(HighFive::DataSet* d_ptr,std::string name, T value);
+  void write_attribute(HighFive::DataSet* d_ptr,std::string name, T value)
+  {
+    if(!d_ptr->hasAttribute(name)){
+      d_ptr->createAttribute<T>(name,value);
+    }
+  }
 
   template<typename T>
-  T get_attribute(std::string name);
+  T get_attribute(std::string name)
+  {
+    if(!m_file_ptr->hasAttribute(name)){
+      //throw that we don't have that attribute
+    }
+    auto attr = m_file_ptr->getAttribute(name);
+    T value;
+    attr.read(value);
+    return value;
+  }
   template<typename T>
-  T get_attribute(HighFive::Group* grp_ptr,std::string name);
+  T get_attribute(HighFive::Group* grp_ptr,std::string name)
+  {
+    if(!(grp_ptr->hasAttribute(name))){
+      //throw that we don't have that attribute
+    }
+    auto attr = grp_ptr->getAttribute(name);
+    T value;
+    attr.read(value);
+    return value;
+  }
+  
   template<typename T>
-  T get_attribute(HighFive::DataSet* d_ptr,std::string name);
+  T get_attribute(HighFive::DataSet* d_ptr,std::string name)
+  {
+    if(!d_ptr->hasAttribute(name)){
+      //throw that we don't have that attribute
+    }
+    auto attr = d_ptr->getAttribute(name);
+    T value;
+    attr.read(value);
+    return value;
+  }
+  
+  void exploreSubGroup(HighFive::Group parent_group,
+		       std::string relative_path,
+		       std::vector<std::string>& path_list);
 
+  std::vector<std::string> get_dataset_paths(std::string top_level_group_name="");
+  std::set<daqdataformats::trigger_number_t> get_all_record_numbers();
+  std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
 
-  std::vector<std::string> get_datasets();
-  std::vector<std::string> get_fragments(const unsigned& start_tr, const unsigned& num_trs);
-  std::vector<std::string> get_trh(const unsigned& start_tr, const unsigned& num_trs);
-  std::map<std::string, std::variant<std::string, int>> get_attributes();
+  std::vector<std::string> get_trigger_record_header_dataset_paths(int max_trigger_records=-1);
+  std::vector<std::string> get_all_fragment_dataset_paths(int max_trigger_records=-1);
 
-  //void read_fragment(std::string dataset_path);
+  std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
+
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
+							 const daqdataformats::GeoID element_id,
+							 const daqdataformats::sequence_number_t seq_num = 0);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
+							 const daqdataformats::GeoID::SystemType type,
+							 const uint16_t region_id,
+							 const uint32_t element_id,
+							 const daqdataformats::sequence_number_t seq_num = 0);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
+							 const std::string typestring,
+							 const uint16_t region_id,
+							 const uint32_t element_id,
+							 const daqdataformats::sequence_number_t seq_num = 0);
+
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr (const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr (const daqdataformats::trigger_number_t trig_num,
+								    const daqdataformats::sequence_number_t seq_num = 0);
 
 private: 
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
@@ -124,12 +193,6 @@ private:
   //writing to datasets
   size_t do_write(std::vector<std::string> const&,
 		  const char*, size_t);
-
-  //helper functions for the path elements
-  std::vector<std::string> get_path_elements(const daqdataformats::TriggerRecordHeader& trh);
-  std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh);
-  std::string get_trigger_number_string(daqdataformats::trigger_number_t,
-					daqdataformats::sequence_number_t);
 
 
 };
