@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
@@ -83,8 +84,7 @@ main(int argc, char** argv)
                                                      fl_conf,                    // file_layout_confs
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 
-  // setup our dummy_data
-  char* dummy_data = new char[fragment_size];
+  std::vector<char> dummy_data(fragment_size);
 
   // loop over desired number of triggers
   for (int trig_num = 1; trig_num <= trigger_count; ++trig_num) {
@@ -124,7 +124,7 @@ main(int argc, char** argv)
         fh.fragment_type = 0;
         fh.element_id = GeoID(gtype_to_use, reg_num, ele_num);
 
-        std::unique_ptr<Fragment> frag_ptr(new Fragment(dummy_data, fragment_size));
+	auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
         frag_ptr->set_header_fields(fh);
 
         // add fragment to TriggerRecord
@@ -137,8 +137,6 @@ main(int argc, char** argv)
     h5_raw_data_file.write(tr);
 
   } // end loop over triggers
-
-  delete[] dummy_data;
 
   TLOG() << "Finished writing to file " << h5_raw_data_file.get_file_name();
   TLOG() << "Recorded size: " << h5_raw_data_file.get_recorded_size();

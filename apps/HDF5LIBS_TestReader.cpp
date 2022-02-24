@@ -41,7 +41,7 @@ main(int argc, char** argv)
   const std::string ifile_name = std::string(argv[1]);
 
   // open our file reading
-  HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ifile_name);
+  HDF5RawDataFile h5_raw_data_file(ifile_name);
 
   TLOG() << "File name: " << h5_raw_data_file.get_file_name();
   TLOG() << "\tRecorded size from class: " << h5_raw_data_file.get_recorded_size();

@@ -50,14 +50,14 @@ public:
     fill_path_params_map(m_conf_params);
   }
 
-  uint32_t get_version() const { return m_version; } // NOLINT(build/unsigned)
+  uint32_t get_version() const noexcept { return m_version; } // NOLINT(build/unsigned)
 
-  std::string get_trigger_record_name_prefix() const { return m_conf_params.trigger_record_name_prefix; }
-  int get_digits_for_trigger_number() const { return m_conf_params.digits_for_trigger_number; }
-  int get_digits_for_sequence_number() const { return m_conf_params.digits_for_sequence_number; }
-  std::string get_trigger_header_dataset_name() const { return m_conf_params.trigger_record_header_dataset_name; }
+  std::string get_trigger_record_name_prefix() const noexcept { return m_conf_params.trigger_record_name_prefix; }
+  int get_digits_for_trigger_number() const noexcept { return m_conf_params.digits_for_trigger_number; }
+  int get_digits_for_sequence_number() const noexcept { return m_conf_params.digits_for_sequence_number; }
+  std::string get_trigger_header_dataset_name() const noexcept { return m_conf_params.trigger_record_header_dataset_name; }
 
-  std::map<daqdataformats::GeoID::SystemType, hdf5filelayout::PathParams> get_path_params_map() const
+  std::map<daqdataformats::GeoID::SystemType, hdf5filelayout::PathParams> get_path_params_map() const 
   {
     return m_path_params_map;
   }
@@ -142,8 +142,8 @@ public:
   std::string get_trigger_record_header_path(daqdataformats::trigger_number_t trig_num,
                                              daqdataformats::sequence_number_t seq_num = 0) const
   {
-    return std::string(get_trigger_number_string(trig_num, seq_num) + "/" +
-                       m_conf_params.trigger_record_header_dataset_name);
+    return get_trigger_number_string(trig_num, seq_num) + "/" +
+      m_conf_params.trigger_record_header_dataset_name;
   }
 
   /**
@@ -181,7 +181,7 @@ public:
    * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
-                                std::string typestring,
+                                const std::string& typestring,
                                 uint16_t region_id, // NOLINT(build/unsigned)
                                 uint32_t element_id, // NOLINT(build/unsigned)
                                 daqdataformats::sequence_number_t seq_num = 0) const

@@ -71,12 +71,11 @@ public:
   // constructor for reading
   explicit HDF5RawDataFile(const std::string& file_name);
 
-  // destructor
   ~HDF5RawDataFile();
 
   std::string get_file_name() const { return m_file_ptr->getName(); }
 
-  size_t get_recorded_size() const { return m_recorded_size; }
+  size_t get_recorded_size() const noexcept { return m_recorded_size; }
 
   HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
 
@@ -93,25 +92,26 @@ public:
       m_file_ptr->createAttribute(name, value);
   }
   template<typename T>
-  void write_attribute(HighFive::Group* grp_ptr, std::string name, T value)
+  void write_attribute(HighFive::Group& grp, const std::string& name, T value)
   {
-    if (!(grp_ptr->hasAttribute(name))) {
-      grp_ptr->createAttribute<T>(name, value);
+    if (!(grp.hasAttribute(name))) {
+      grp.createAttribute<T>(name, value);
     }
   }
   template<typename T>
-  void write_attribute(HighFive::DataSet* d_ptr, std::string name, T value)
+  void write_attribute(HighFive::DataSet& dset, const std::string& name, T value)
   {
-    if (!d_ptr->hasAttribute(name)) {
-      d_ptr->createAttribute<T>(name, value);
+    if (!dset.hasAttribute(name)) {
+      dset.createAttribute<T>(name, value);
     }
   }
 
   template<typename T>
-  T get_attribute(std::string name)
+  T get_attribute(const std::string& name)
   {
     if (!m_file_ptr->hasAttribute(name)) {
       // throw that we don't have that attribute
+      throw "Placeholder for yet-to-be-implemented exception";
     }
     auto attr = m_file_ptr->getAttribute(name);
     T value;
@@ -119,30 +119,31 @@ public:
     return value;
   }
   template<typename T>
-  T get_attribute(HighFive::Group* grp_ptr, std::string name)
+  T get_attribute(const HighFive::Group& grp, const std::string& name)
   {
-    if (!(grp_ptr->hasAttribute(name))) {
+    if (!(grp.hasAttribute(name))) {
       // throw that we don't have that attribute
+      throw "Placeholder for yet-to-be-implemented exception";
     }
-    auto attr = grp_ptr->getAttribute(name);
+    auto attr = grp.getAttribute(name);
     T value;
     attr.read(value);
     return value;
   }
 
   template<typename T>
-  T get_attribute(HighFive::DataSet* d_ptr, std::string name)
+  T get_attribute(const HighFive::DataSet& dset, std::string name)
   {
-    if (!d_ptr->hasAttribute(name)) {
-      // throw that we don't have that attribute
+    if (!dset.hasAttribute(name)) {
+      throw "Placeholder for yet-to-be-implemented exception";
     }
-    auto attr = d_ptr->getAttribute(name);
+    auto attr = dset.getAttribute(name);
     T value;
     attr.read(value);
     return value;
   }
 
-  void exploreSubGroup(HighFive::Group parent_group, std::string relative_path, std::vector<std::string>& path_list);
+  void explore_subgroup(const HighFive::Group& parent_group, std::string relative_path, std::vector<std::string>& path_list);
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
   std::set<daqdataformats::trigger_number_t> get_all_record_numbers();

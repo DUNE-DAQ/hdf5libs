@@ -35,7 +35,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   // check and make sure that the file isn't ReadOnly
   if (m_open_flags == HighFive::File::ReadOnly) {
     // throw wrong accessor
-    return;
+    throw "Placeholder for yet-to-be-implemented exception";
   }
 
   // do the file open
@@ -88,16 +88,9 @@ HDF5RawDataFile::~HDF5RawDataFile()
 void
 HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 {
+  write(tr.get_header_ref());
 
-  // We can use const_cast here since we're about to call non-const
-  // functions on the trigger record object but not actually modifying
-  // its contents
-
-  auto& tr_fake_nonconst = const_cast<daqdataformats::TriggerRecord&>(tr);
-
-  write(tr_fake_nonconst.get_header_ref());
-
-  for (auto const& frag_ptr : tr_fake_nonconst.get_fragments_ref()) {
+  for (auto const& frag_ptr : tr.get_fragments_ref()) {
     write(*frag_ptr);
   }
 }
@@ -135,7 +128,7 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
 
   // do the file open
   try {
-    m_file_ptr.reset(new HighFive::File(file_name, m_open_flags));
+    m_file_ptr = std::make_unique<HighFive::File>(file_name, m_open_flags);
   } catch (std::exception const& excpt) {
     throw FileOpenFailed(ERS_HERE, file_name, excpt.what());
   }
@@ -166,12 +159,12 @@ HDF5RawDataFile::write_file_layout()
   }
 
   // attribute writing for the top-level group
-  write_attribute(&fl_group, "version_number", m_file_layout_ptr->get_version());
-  write_attribute(&fl_group, "trigger_record_name_prefix", m_file_layout_ptr->get_trigger_record_name_prefix());
-  write_attribute(&fl_group, "digits_for_trigger_number", m_file_layout_ptr->get_digits_for_trigger_number());
-  write_attribute(&fl_group, "digits_for_sequence_number", m_file_layout_ptr->get_digits_for_sequence_number());
+  write_attribute(fl_group, "version_number", m_file_layout_ptr->get_version());
+  write_attribute(fl_group, "trigger_record_name_prefix", m_file_layout_ptr->get_trigger_record_name_prefix());
+  write_attribute(fl_group, "digits_for_trigger_number", m_file_layout_ptr->get_digits_for_trigger_number());
+  write_attribute(fl_group, "digits_for_sequence_number", m_file_layout_ptr->get_digits_for_sequence_number());
   write_attribute(
-    &fl_group, "trigger_record_header_dataset_name", m_file_layout_ptr->get_trigger_header_dataset_name());
+		  fl_group, "trigger_record_header_dataset_name", m_file_layout_ptr->get_trigger_header_dataset_name());
 
   // now go through and get list of paths for subgroups
   auto path_params_map = m_file_layout_ptr->get_path_params_map();
@@ -186,13 +179,13 @@ HDF5RawDataFile::write_file_layout()
       fl_group.createGroup(child_group_name);
     }
     HighFive::Group child_group = fl_group.getGroup(child_group_name);
-    write_attribute(&child_group, "detector_group_system_type", static_cast<int>(p_iter->first));
-    write_attribute(&child_group, "detector_group_name", p_iter->second.detector_group_name);
-    write_attribute(&child_group, "detector_group_type", p_iter->second.detector_group_type);
-    write_attribute(&child_group, "region_name_prefix", p_iter->second.region_name_prefix);
-    write_attribute(&child_group, "digits_for_region_number", p_iter->second.digits_for_region_number);
-    write_attribute(&child_group, "element_name_prefix", p_iter->second.element_name_prefix);
-    write_attribute(&child_group, "digits_for_element_number", p_iter->second.digits_for_element_number);
+    write_attribute(child_group, "detector_group_system_type", static_cast<int>(p_iter->first));
+    write_attribute(child_group, "detector_group_name", p_iter->second.detector_group_name);
+    write_attribute(child_group, "detector_group_type", p_iter->second.detector_group_type);
+    write_attribute(child_group, "region_name_prefix", p_iter->second.region_name_prefix);
+    write_attribute(child_group, "digits_for_region_number", p_iter->second.digits_for_region_number);
+    write_attribute(child_group, "element_name_prefix", p_iter->second.element_name_prefix);
+    write_attribute(child_group, "digits_for_element_number", p_iter->second.digits_for_element_number);
   }
 }
 
@@ -278,13 +271,13 @@ HDF5RawDataFile::read_file_layout()
     return;
   }
 
-  version = get_attribute<uint32_t>(&fl_group, "version_number"); // NOLINT(build/unsigned)
+  version = get_attribute<uint32_t>(fl_group, "version_number"); // NOLINT(build/unsigned)
 
-  fl_params.trigger_record_name_prefix = get_attribute<std::string>(&fl_group, "trigger_record_name_prefix");
-  fl_params.digits_for_trigger_number = get_attribute<int32_t>(&fl_group, "digits_for_trigger_number");
-  fl_params.digits_for_sequence_number = get_attribute<int32_t>(&fl_group, "digits_for_sequence_number");
+  fl_params.trigger_record_name_prefix = get_attribute<std::string>(fl_group, "trigger_record_name_prefix");
+  fl_params.digits_for_trigger_number = get_attribute<int32_t>(fl_group, "digits_for_trigger_number");
+  fl_params.digits_for_sequence_number = get_attribute<int32_t>(fl_group, "digits_for_sequence_number");
   fl_params.trigger_record_header_dataset_name =
-    get_attribute<std::string>(&fl_group, "trigger_record_header_dataset_name");
+    get_attribute<std::string>(fl_group, "trigger_record_header_dataset_name");
 
   // following code is to get the subgroups of fl_group, and then fill path_params for them
 
@@ -298,12 +291,12 @@ HDF5RawDataFile::read_file_layout()
     HighFive::Group child_group = fl_group.getGroup(oname);
 
     hdf5filelayout::PathParams path_params;
-    path_params.detector_group_type = get_attribute<std::string>(&child_group, "detector_group_type");
-    path_params.detector_group_name = get_attribute<std::string>(&child_group, "detector_group_name");
-    path_params.region_name_prefix = get_attribute<std::string>(&child_group, "region_name_prefix");
-    path_params.digits_for_region_number = get_attribute<int32_t>(&child_group, "digits_for_region_number");
-    path_params.element_name_prefix = get_attribute<std::string>(&child_group, "element_name_prefix");
-    path_params.digits_for_element_number = get_attribute<int32_t>(&child_group, "digits_for_element_number");
+    path_params.detector_group_type = get_attribute<std::string>(child_group, "detector_group_type");
+    path_params.detector_group_name = get_attribute<std::string>(child_group, "detector_group_name");
+    path_params.region_name_prefix = get_attribute<std::string>(child_group, "region_name_prefix");
+    path_params.digits_for_region_number = get_attribute<int32_t>(child_group, "digits_for_region_number");
+    path_params.element_name_prefix = get_attribute<std::string>(child_group, "element_name_prefix");
+    path_params.digits_for_element_number = get_attribute<int32_t>(child_group, "digits_for_element_number");
 
     fl_params.path_param_list.push_back(path_params);
   }
@@ -314,9 +307,9 @@ HDF5RawDataFile::read_file_layout()
 
 // HDF5 Utility function to recursively traverse a file
 void
-HDF5RawDataFile::exploreSubGroup(HighFive::Group parent_group,
-                                 std::string relative_path,
-                                 std::vector<std::string>& path_list)
+HDF5RawDataFile::explore_subgroup(const HighFive::Group& parent_group,
+				  std::string relative_path,
+				  std::vector<std::string>& path_list)
 {
   if (relative_path.size() > 0 && relative_path.compare(relative_path.size() - 1, 1, "/") == 0)
     relative_path.pop_back();
@@ -333,7 +326,7 @@ HDF5RawDataFile::exploreSubGroup(HighFive::Group parent_group,
       HighFive::Group child_group = parent_group.getGroup(child_name);
       // start the recusion
       std::string new_path = relative_path + "/" + child_name;
-      exploreSubGroup(child_group, new_path, path_list);
+      explore_subgroup(child_group, new_path, path_list);
     }
   }
 }
@@ -352,7 +345,7 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
 
   if (m_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
     HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
-    exploreSubGroup(parent_group, top_level_group_name, path_list);
+    explore_subgroup(parent_group, top_level_group_name, path_list);
   }
 
   return path_list;
