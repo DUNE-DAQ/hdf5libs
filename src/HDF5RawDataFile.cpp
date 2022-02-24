@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -255,10 +256,11 @@ get_free_space(const std::string& the_path)
 {
   struct statvfs vfs_results;
   int retval = statvfs(the_path.c_str(), &vfs_results);
-  if (retval != 0) {
+  if (retval < 0) {
     return 0;
   }
-}
+
+  return vfs_results.f_bfree * vfs_results.f_bsize;
 }
 
 void
@@ -473,8 +475,8 @@ HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
                               const daqdataformats::GeoID::SystemType type,
-                              const uint16_t region_id,
-                              const uint32_t element_id,
+                              const uint16_t region_id, // NOLINT(build/unsigned)
+                              const uint32_t element_id, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num)
 {
   return get_frag_ptr(m_file_layout_ptr->get_fragment_path(trig_num, type, region_id, element_id, seq_num));
@@ -483,8 +485,8 @@ HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
                               const std::string typestring,
-                              const uint16_t region_id,
-                              const uint32_t element_id,
+                              const uint16_t region_id, // NOLINT(build/unsigned)
+                              const uint32_t element_id, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num)
 {
   return get_frag_ptr(m_file_layout_ptr->get_fragment_path(trig_num, typestring, region_id, element_id, seq_num));

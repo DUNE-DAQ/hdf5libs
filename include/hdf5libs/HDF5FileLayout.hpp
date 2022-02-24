@@ -29,6 +29,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -67,7 +68,7 @@ public:
 
   hdf5filelayout::FileLayoutParams get_file_layout_params() const { return m_conf_params; }
 
-  /*
+  /**
    * @brief get string for Trigger number
    */
   std::string get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
@@ -86,7 +87,7 @@ public:
     return trigger_number_string.str();
   }
 
-  /*
+  /**
    * @brief get the correct path for the TriggerRecordHeader
    */
   std::vector<std::string> get_path_elements(const daqdataformats::TriggerRecordHeader& trh) const
@@ -103,7 +104,7 @@ public:
     return path_elements;
   }
 
-  /*
+  /**
    * @brief get the correct path for the Fragment
    */
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const
@@ -168,8 +169,8 @@ public:
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
                                 daqdataformats::GeoID::SystemType type,
-                                uint16_t region_id,
-                                uint32_t element_id,
+                                uint16_t region_id, // NOLINT(build/unsigned)
+                                uint32_t element_id, // NOLINT(build/unsigned)
                                 daqdataformats::sequence_number_t seq_num = 0) const
   {
     daqdataformats::GeoID gid{ type, region_id, element_id };
@@ -181,8 +182,8 @@ public:
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
                                 std::string typestring,
-                                uint16_t region_id,
-                                uint32_t element_id,
+                                uint16_t region_id, // NOLINT(build/unsigned)
+                                uint32_t element_id, // NOLINT(build/unsigned)
                                 daqdataformats::sequence_number_t seq_num = 0) const
   {
     daqdataformats::GeoID gid{ daqdataformats::GeoID::string_to_system_type(typestring), region_id, element_id };
@@ -218,7 +219,7 @@ public:
    */
   std::string get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
                                        daqdataformats::GeoID::SystemType type,
-                                       uint16_t region_id,
+                                       uint16_t region_id, // NOLINT(build/unsigned)
                                        daqdataformats::sequence_number_t seq_num = 0) const
   {
     auto const& path_params = get_path_params(type);
@@ -235,7 +236,7 @@ public:
    */
   std::string get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
                                        std::string typestring,
-                                       uint16_t region_id,
+                                       uint16_t region_id, // NOLINT(build/unsigned)
                                        daqdataformats::sequence_number_t seq_num = 0) const
   {
     return get_fragment_region_path(
