@@ -128,7 +128,7 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 
 This version is the initial version of `hdf5libs` after significant restructuring of many of the existing utilities, including the introduction of the `HDF5FileLayout` class, and separation of the `HDF5RawDataFile` class from `dfmodules`. 
 
-Please see the notes in (Version 0)[#version0notes]
+Please see the notes in [Version 0](#version0notes)
 
 #### Version 0 Notes
 This version refers to files that were written before the introduction of the `HDF5FileLayout` class. Currently, on reading a file, if there is no file layout attributes found in the file, it assumes a file layout parameter set as such:
