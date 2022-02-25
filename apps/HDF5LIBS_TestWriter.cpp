@@ -122,6 +122,7 @@ main(int argc, char** argv)
         fh.window_end = ts;
         fh.run_number = run_number;
         fh.fragment_type = 0;
+	fh.sequence_number = 0;
         fh.element_id = GeoID(gtype_to_use, reg_num, ele_num);
 
 	auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
