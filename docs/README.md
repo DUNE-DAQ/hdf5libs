@@ -133,7 +133,7 @@ Please see the notes in (Version 0)[#version0notes]
 #### <details><summary>Version 0 Notes</summary>
 <p>
 This version refers to files that were written before the introduction of the `HDF5FileLayout` class. Currently, on reading a file, if there is no file layout attributes found in the file, it assumes a file layout parameter set as such:
-```
+
 hdf5filelayout::FileLayoutParams flp;
     flp.trigger_record_name_prefix = "TriggerRecord";
     flp.digits_for_trigger_number = 6;
@@ -181,7 +181,7 @@ hdf5filelayout::FileLayoutParams flp;
     pp.element_name_prefix = "Link";
     pp.digits_for_element_number = 2;
     flp.path_param_list.push_back(pp);
-```
+
 Note that for all previously written files, `get_dataset_paths()` will work to retrieve a list of all proper dataset paths, and `get_trh_ptr(path_name)` and `get_frag_ptr(path_name)` will work for data access to `TriggerRecordHeader`s and `Fragment`s, respectively, where `path_name` is the full dataset path name.
 </p>
 </details>
