@@ -13,12 +13,18 @@ find_package(detdataformats REQUIRED)
 find_package(detchannelmaps REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
+find_package(Boost COMPONENTS iostreams unit_test_framework REQUIRED)
 
 daq_codegen( *.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2 )
 
 ##############################################################################
 # Main library
 daq_add_library (HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
+
+##############################################################################
+# Unit tests
+daq_add_unit_test( HDF5WriteRead_test           LINK_LIBRARIES hdf5libs )
+#add_dependencies(  HDF5Write_test dfmodules_HDF5DataStore_duneDataStore )
 
 ##############################################################################
 # Python bindings

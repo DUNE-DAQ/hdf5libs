@@ -27,7 +27,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  daqdataformats::run_number_t run_number,
                                  size_t file_index,
                                  std::string application_name,
-                                 const nlohmann::json& fl_params_conf,
+                                 const hdf5filelayout::FileLayoutParams& fl_params,
                                  unsigned open_flags)
   : m_open_flags(open_flags)
 {
@@ -60,8 +60,23 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_attribute("application_name", application_name);
 
   // set the file layout contents
-  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params_conf.get<hdf5filelayout::FileLayoutParams>()));
+  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
   write_file_layout();
+}
+
+/**
+ * @brief Constructor for writing a new file, json input for file_layout_params
+ */
+HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
+                                 daqdataformats::run_number_t run_number,
+                                 size_t file_index,
+                                 std::string application_name,
+                                 const nlohmann::json& fl_params_conf,
+                                 unsigned open_flags)
+  : HDF5RawDataFile(file_name,run_number,file_index,application_name,
+		    fl_params_conf.get<hdf5filelayout::FileLayoutParams>(),
+		    open_flags)
+{  
 }
 
 HDF5RawDataFile::~HDF5RawDataFile()

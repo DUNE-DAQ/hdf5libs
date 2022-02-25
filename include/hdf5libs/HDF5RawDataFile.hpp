@@ -13,6 +13,7 @@
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5RAWDATAFILE_HPP_
 
 // DUNE-DAQ
+#include "hdf5libs/hdf5filelayout/Structs.hpp"
 #include "hdf5libs/HDF5FileLayout.hpp"
 
 #include "daqdataformats/Fragment.hpp"
@@ -61,6 +62,12 @@ public:
   };
 
   // constructor for writing
+  HDF5RawDataFile(std::string file_name,
+                  daqdataformats::run_number_t run_number,
+                  size_t file_index,
+                  std::string application_name,
+                  const hdf5filelayout::FileLayoutParams& fl_params,
+                  unsigned open_flags = HighFive::File::Create);
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
