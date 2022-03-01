@@ -17,10 +17,11 @@
 #include <utility>
 #include <vector>
 
-#define MAX_FILELAYOUT_VERSION 4294967295
 
 namespace dunedaq {
 namespace hdf5libs {
+
+constexpr uint32_t MAX_FILELAYOUT_VERSION=4294967295; // NOLINT(build/unsigned)
 
 /**
  * @brief Constructor for writing a new file
@@ -235,7 +236,7 @@ HDF5RawDataFile::read_file_layout()
 
     version = get_attribute<uint32_t>("filelayout_version"); // NOLINT(build/unsigned)
 
-  }catch(InvalidHDF5Attribute){
+  }catch(InvalidHDF5Attribute const&){
     ers::info(MissingFileLayout(ERS_HERE,version));
   }
   
