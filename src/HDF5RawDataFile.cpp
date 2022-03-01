@@ -64,21 +64,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 }
 
-/**
- * @brief Constructor for writing a new file, json input for file_layout_params
- */
-HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
-                                 daqdataformats::run_number_t run_number,
-                                 size_t file_index,
-                                 std::string application_name,
-                                 const nlohmann::json& fl_params_conf,
-                                 unsigned open_flags)
-  : HDF5RawDataFile(file_name,run_number,file_index,application_name,
-		    fl_params_conf.get<hdf5filelayout::FileLayoutParams>(),
-		    open_flags)
-{  
-}
-
 HDF5RawDataFile::~HDF5RawDataFile()
 {
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {

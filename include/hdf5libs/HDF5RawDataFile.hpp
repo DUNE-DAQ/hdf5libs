@@ -68,12 +68,6 @@ public:
                   std::string application_name,
                   const hdf5filelayout::FileLayoutParams& fl_params,
                   unsigned open_flags = HighFive::File::Create);
-  HDF5RawDataFile(std::string file_name,
-                  daqdataformats::run_number_t run_number,
-                  size_t file_index,
-                  std::string application_name,
-                  const nlohmann::json& fl_params_conf,
-                  unsigned open_flags = HighFive::File::Create);
 
   // constructor for reading
   explicit HDF5RawDataFile(const std::string& file_name);
@@ -93,62 +87,18 @@ public:
 
   // attribute writers/getters
   template<typename T>
-  void write_attribute(std::string name, T value)
-  {
-    if (!m_file_ptr->hasAttribute(name))
-      m_file_ptr->createAttribute(name, value);
-  }
+  void write_attribute(std::string name, T value);
   template<typename T>
-  void write_attribute(HighFive::Group& grp, const std::string& name, T value)
-  {
-    if (!(grp.hasAttribute(name))) {
-      grp.createAttribute<T>(name, value);
-    }
-  }
+  void write_attribute(HighFive::Group& grp, const std::string& name, T value);
   template<typename T>
-  void write_attribute(HighFive::DataSet& dset, const std::string& name, T value)
-  {
-    if (!dset.hasAttribute(name)) {
-      dset.createAttribute<T>(name, value);
-    }
-  }
+  void write_attribute(HighFive::DataSet& dset, const std::string& name, T value);
 
   template<typename T>
-  T get_attribute(const std::string& name)
-  {
-    if (!m_file_ptr->hasAttribute(name)) {
-      // throw that we don't have that attribute
-      throw "Placeholder for yet-to-be-implemented exception";
-    }
-    auto attr = m_file_ptr->getAttribute(name);
-    T value;
-    attr.read(value);
-    return value;
-  }
+  T get_attribute(const std::string& name);
   template<typename T>
-  T get_attribute(const HighFive::Group& grp, const std::string& name)
-  {
-    if (!(grp.hasAttribute(name))) {
-      // throw that we don't have that attribute
-      throw "Placeholder for yet-to-be-implemented exception";
-    }
-    auto attr = grp.getAttribute(name);
-    T value;
-    attr.read(value);
-    return value;
-  }
-
+  T get_attribute(const HighFive::Group& grp, const std::string& name);
   template<typename T>
-  T get_attribute(const HighFive::DataSet& dset, std::string name)
-  {
-    if (!dset.hasAttribute(name)) {
-      throw "Placeholder for yet-to-be-implemented exception";
-    }
-    auto attr = dset.getAttribute(name);
-    T value;
-    attr.read(value);
-    return value;
-  }
+  T get_attribute(const HighFive::DataSet& dset, std::string name);
 
   void explore_subgroup(const HighFive::Group& parent_group, std::string relative_path, std::vector<std::string>& path_list);
 
@@ -200,6 +150,70 @@ private:
   // writing to datasets
   size_t do_write(std::vector<std::string> const&, const char*, size_t);
 };
+
+
+// HDF5RawDataFile attribute writers/getters definitions
+template<typename T>
+void HDF5RawDataFile::write_attribute(std::string name, T value)
+{
+  if (!m_file_ptr->hasAttribute(name))
+    m_file_ptr->createAttribute(name, value);
+}
+  
+template<typename T>
+void HDF5RawDataFile::write_attribute(HighFive::Group& grp, const std::string& name, T value)
+{
+  if (!(grp.hasAttribute(name))) {
+    grp.createAttribute<T>(name, value);
+  }
+}
+  
+template<typename T>
+void HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& name, T value)
+{
+  if (!dset.hasAttribute(name)) {
+    dset.createAttribute<T>(name, value);
+  }
+}
+
+template<typename T>
+T HDF5RawDataFile::get_attribute(const std::string& name)
+{
+  if (!m_file_ptr->hasAttribute(name)) {
+    // throw that we don't have that attribute
+    throw "Placeholder for yet-to-be-implemented exception";
+  }
+  auto attr = m_file_ptr->getAttribute(name);
+  T value;
+  attr.read(value);
+  return value;
+}
+  
+template<typename T>
+T HDF5RawDataFile::get_attribute(const HighFive::Group& grp, const std::string& name)
+{
+  if (!(grp.hasAttribute(name))) {
+    // throw that we don't have that attribute
+    throw "Placeholder for yet-to-be-implemented exception";
+  }
+  auto attr = grp.getAttribute(name);
+  T value;
+  attr.read(value);
+  return value;
+}
+
+template<typename T>
+T HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
+{
+  if (!dset.hasAttribute(name)) {
+    throw "Placeholder for yet-to-be-implemented exception";
+  }
+  auto attr = dset.getAttribute(name);
+  T value;
+  attr.read(value);
+  return value;
+}
+
 
 } // namespace hdf5libs
 } // namespace dunedaq
