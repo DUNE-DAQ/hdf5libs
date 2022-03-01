@@ -94,7 +94,7 @@ Upon opening the file -- at object construction -- the following attributes are 
 - "run_number" (`daqdataformats::run_number_t`)
 - "file_index" (`size_t`)
 - "creation_timestamp" (`std::string`, string translation of the number of milliseconds since epoch)
-- "application_nam" (`std::string)
+- "application_name" (`std::string)
 
 alongside the file layout paramters as described [above](#hdf5filelayout).
 
@@ -177,5 +177,5 @@ hdf5filelayout::FileLayoutParams flp;
     pp.digits_for_element_number = 2;
     flp.path_param_list.push_back(pp);
 ```
-Note that for all previously written files, `get_dataset_paths()` will work to retrieve a list of all proper dataset paths, and `get_trh_ptr(path_name)` and `get_frag_ptr(path_name)` will work for data access to `TriggerRecordHeader`s and `Fragment`s, respectively, where `path_name` is the full dataset path name.
+Note that for all previously written files, `get_dataset_paths()` will work to retrieve a list of all proper dataset paths, and `get_trh_ptr(path_name)` and `get_frag_ptr(path_name)` will work for data access to `TriggerRecordHeader`s and `Fragment`s, respectively, where `path_name` is the full dataset path name. Other accessors to retrieving underlying data will throw an exception.
 
