@@ -27,7 +27,7 @@ GROUP Top-Level-Record
 ```
 Note that except for the "DUNEDAQFileLayout", the names of datasets and groups are not as shown, and instead are configurable on writing, and later determined by the attributes of the DUNEDAQFileLayout Group.
 
-There are example programs in `app` -- `HDF5LIBS_TestWriter` and `HDF5LIBS_TestReader` -- that show how to use these classes in simple applications.
+There are example programs in `app` -- `HDF5LIBS_TestWriter` and `HDF5LIBS_TestReader` -- that show how to use these classes in simple C++ applications. `HDF5LIBS_TestReader.py` shows how to read files using HDF5RawDataFile from a python interface.
 
 ### HDF5FileLayout
 This class defines the file layout of _dunedaq_ raw data files. It receives a `hdf5filelayout::FileLayoutParams` object for configuration, which looks like the following in json:
