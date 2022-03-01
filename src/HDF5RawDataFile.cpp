@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#define MAX_FILELAYOUT_VERSION 4294967295
+
 namespace dunedaq {
 namespace hdf5libs {
 
@@ -34,8 +36,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   // check and make sure that the file isn't ReadOnly
   if (m_open_flags == HighFive::File::ReadOnly) {
-    // throw wrong accessor
-    throw "Placeholder for yet-to-be-implemented exception";
+    throw IncompatibleOpenFlags(ERS_HERE,file_name,m_open_flags);
   }
 
   // do the file open
@@ -154,17 +155,16 @@ HDF5RawDataFile::write_file_layout()
 
   // get that group
   HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
-  if (!fl_group.isValid()) {
-    // throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
-  }
+  if (!fl_group.isValid())
+    throw InvalidHDF5Group(ERS_HERE, "DUNEDAQFileLayout");
+  
 
   // attribute writing for the top-level group
   write_attribute(fl_group, "version_number", m_file_layout_ptr->get_version());
   write_attribute(fl_group, "trigger_record_name_prefix", m_file_layout_ptr->get_trigger_record_name_prefix());
   write_attribute(fl_group, "digits_for_trigger_number", m_file_layout_ptr->get_digits_for_trigger_number());
   write_attribute(fl_group, "digits_for_sequence_number", m_file_layout_ptr->get_digits_for_sequence_number());
-  write_attribute(
-		  fl_group, "trigger_record_header_dataset_name", m_file_layout_ptr->get_trigger_header_dataset_name());
+  write_attribute(fl_group, "trigger_record_header_dataset_name", m_file_layout_ptr->get_trigger_header_dataset_name());
 
   // now go through and get list of paths for subgroups
   auto path_params_map = m_file_layout_ptr->get_path_params_map();
@@ -173,7 +173,7 @@ HDF5RawDataFile::write_file_layout()
 
     std::string const& child_group_name = p_iter->second.detector_group_name;
     if (child_group_name.empty()) {
-      // throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+      throw InvalidHDF5Group(ERS_HERE, child_group_name);
     }
     if (!fl_group.exist(child_group_name)) {
       fl_group.createGroup(child_group_name);
@@ -207,7 +207,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   // setup sub_group to work with
   HighFive::Group sub_group = m_file_ptr->getGroup(top_level_group_name);
   if (!sub_group.isValid()) {
-    // throw InvalidHDF5Group(ERS_HERE, top_level_group_name, top_level_group_name);
+    throw InvalidHDF5Group(ERS_HERE, top_level_group_name);
   }
 
   // Create the remaining subgroups
@@ -215,14 +215,14 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     // group_dataset.size()-1 because the last element is the dataset
     std::string const& child_group_name = group_and_dataset_path_elements[idx];
     if (child_group_name.empty()) {
-      // throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+      throw InvalidHDF5Group(ERS_HERE, child_group_name);
     }
     if (!sub_group.exist(child_group_name)) {
       sub_group.createGroup(child_group_name);
     }
     HighFive::Group child_group = sub_group.getGroup(child_group_name);
     if (!child_group.isValid()) {
-      // throw InvalidHDF5Group(ERS_HERE, child_group_name, child_group_name);
+      throw InvalidHDF5Group(ERS_HERE, child_group_name);
     }
     sub_group = child_group;
   }
@@ -238,7 +238,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     m_file_ptr->flush();
     return raw_data_size_bytes;
   } else {
-    // throw InvalidHDF5Dataset(ERS_HERE, get_name(), dataset_name, m_file_ptr->getName());
+    throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
 
   return 0;
@@ -265,10 +265,12 @@ HDF5RawDataFile::read_file_layout()
   // get that group
   HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
   if (!fl_group.isValid()) {
-    // warning message that we must be reading an old file?
+
     // now reset the HDF5Filelayout object, version 0
+    ers::info(MissingFileLayout(ERS_HERE,version));
     m_file_layout_ptr.reset(new HDF5FileLayout(fl_params, version));
     return;
+
   }
 
   version = get_attribute<uint32_t>(fl_group, "version_number"); // NOLINT(build/unsigned)
@@ -343,10 +345,11 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
   // Vector containing the path list to the HDF5 datasets
   std::vector<std::string> path_list;
 
-  if (m_file_ptr->getObjectType(top_level_group_name) == HighFive::ObjectType::Group) {
-    HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
-    explore_subgroup(parent_group, top_level_group_name, path_list);
-  }
+  HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
+  if(!parent_group.isValid())
+    throw InvalidHDF5Group(ERS_HERE,top_level_group_name);
+
+  explore_subgroup(parent_group, top_level_group_name, path_list);
 
   return path_list;
 }
@@ -361,8 +364,7 @@ HDF5RawDataFile::get_all_record_numbers()
 
   // records are at the top level
 
-  std::string top_level_group_name = m_file_ptr->getPath();
-  HighFive::Group parent_group = m_file_ptr->getGroup(top_level_group_name);
+  HighFive::Group parent_group = m_file_ptr->getGroup(m_file_ptr->getPath());
 
   std::vector<std::string> childNames = parent_group.listObjectNames();
   const std::string record_prefix = m_file_layout_ptr->get_trigger_record_name_prefix();
@@ -370,9 +372,13 @@ HDF5RawDataFile::get_all_record_numbers()
 
   for (auto const& name : childNames) {
     auto loc = name.find(record_prefix);
-    if (loc == std::string::npos) {
+
+    if (loc == std::string::npos)
       continue;
-    }
+
+    if (name.find(".") && get_version() < 2)
+      throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
+
     record_numbers.insert(std::stoi(name.substr(loc + record_prefix_size)));
   }
 
@@ -430,13 +436,19 @@ HDF5RawDataFile::get_all_fragment_dataset_paths()
 std::unique_ptr<char[]>
 HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 {
+
   HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
-  size_t data_size = data_set.getStorageSize();
+  
+  if(!data_set.isValid())
+    throw InvalidHDF5Dataset(ERS_HERE,dataset_path,get_file_name());
 
+  size_t data_size = data_set.getStorageSize();
+    
   auto membuffer = std::make_unique<char[]>(data_size);
   data_set.read(membuffer.get());
   return std::move(membuffer);
+
 }
 
 std::unique_ptr<daqdataformats::Fragment>
@@ -453,6 +465,9 @@ HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
                               const daqdataformats::GeoID element_id,
                               const daqdataformats::sequence_number_t seq_num)
 {
+  if(get_version() < 2)
+    throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
+
   return get_frag_ptr(m_file_layout_ptr->get_fragment_path(trig_num, element_id, seq_num));
 }
 
@@ -463,6 +478,9 @@ HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
                               const uint32_t element_id, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num)
 {
+  if(get_version() < 2)
+    throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
+
   return get_frag_ptr(m_file_layout_ptr->get_fragment_path(trig_num, type, region_id, element_id, seq_num));
 }
 
@@ -473,6 +491,9 @@ HDF5RawDataFile::get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
                               const uint32_t element_id, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num)
 {
+  if(get_version() < 2)
+    throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
+
   return get_frag_ptr(m_file_layout_ptr->get_fragment_path(trig_num, typestring, region_id, element_id, seq_num));
 }
 
@@ -488,6 +509,9 @@ std::unique_ptr<daqdataformats::TriggerRecordHeader>
 HDF5RawDataFile::get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                              const daqdataformats::sequence_number_t seq_num)
 {
+  if(get_version() < 2)
+    throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
+
   return get_trh_ptr(m_file_layout_ptr->get_trigger_record_header_path(trig_num, seq_num));
 }
 

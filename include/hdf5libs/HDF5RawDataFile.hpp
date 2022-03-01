@@ -45,6 +45,36 @@ ERS_DECLARE_ISSUE(hdf5libs,
                   "Issue when opening file " << file << ": " << message,
                   ((std::string)file)((std::string)message))
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  IncompatibleOpenFlags,
+                  "Issue when opening file " << file << ": " 
+		  << "bad open flags " << open_flags,
+                  ((std::string)file)((unsigned)open_flags))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  MissingFileLayout,
+		  "No DUNEDAQ FileLayout information available."
+		  << " Assigning version " << version,
+		  ((uint32_t)version)) // NOLINT(build/unsigned)
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  IncompatibleFileLayoutVersion,
+		  "FileLayout version incompatibility. Found version " << version
+		  << " but min allowed version is " << min_allowed
+		  << " and max allowed version is " << max_allowed,
+		  ((uint32_t)version)((uint32_t)min_allowed)((uint32_t)max_allowed)) // NOLINT(build/unsigned)
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  InvalidHDF5Group,
+		  "Group " << name << " is invalid.",
+		  ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+                  InvalidHDF5Dataset,
+		  "The HDF5 Dataset associated with name \"" << data_set << "\" is invalid. (file = " << filename
+		  << ")",
+		  ((std::string)data_set)((std::string)filename))
+
 namespace hdf5libs {
 
 /**
@@ -79,6 +109,8 @@ public:
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
 
   HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
+
+  uint32_t get_version() const { return m_file_layout_ptr->get_version(); } // NOLINT(build/unsigned)
 
   // basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
