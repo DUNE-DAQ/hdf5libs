@@ -14,9 +14,6 @@ The general structure of written files is as follows:
 ```
 <File-Level-Attributes>
 
-GROUP "DUNEDAQFileLayout" <Attributes>
-  GROUP System-Type-Path-Parameters <Attributes>
-
 GROUP Top-Level-Record
   
   DATASET Record-Header
@@ -25,7 +22,7 @@ GROUP Top-Level-Record
     GROUP Region-Group
       DATASET Element-Data
 ```
-Note that except for the "DUNEDAQFileLayout", the names of datasets and groups are not as shown, and instead are configurable on writing, and later determined by the attributes of the DUNEDAQFileLayout Group.
+Note that names of datasets and groups are not as shown, and instead are configurable on writing, and later determined by the attributes "filelayout_params".
 
 There are example programs in `app` -- `HDF5LIBS_TestWriter` and `HDF5LIBS_TestReader` -- that show how to use these classes in simple C++ applications. `HDF5LIBS_TestReader.py` shows how to read files using HDF5RawDataFile from a python interface.
 
@@ -56,9 +53,8 @@ Under this configuration, the general file structure will look something like th
 ```
 <File-Level-Attributes>
 
-GROUP "DUNEDAQFileLayout" <Attributes>
-  GROUP "TPC" <Attributes>
-  GROUP "PDS" <Attributes>
+ATTRIBUTE: "filelayout_params" <std::string>
+ATTRIBUTE: "filelayout_version" <uint32_3>
 
 GROUP "TriggerRecord000001"
   
@@ -80,7 +76,7 @@ GROUP "TriggerRecord000001"
     ...
 ```
 
-The configuration information for the file layout are written as attributes to the DUNEDAQFileLayout group and subgroups when a file is created. When a file is later opened to be read, the file layout parameters are automatically extracted from the attributes, and used to populate an `HDF5FileLayout` member of the `HDF5RawDataFile`. If no attributes exist, currently a set of defaults are used.
+The configuration information for the file layout are written as the attribute "filelayout_params" as JSON-formatted `std::string`. When a file is later opened to be read, the file layout parameters are automatically extracted from the attribute, and used to populate an `HDF5FileLayout` member of the `HDF5RawDataFile`. If no attributes exist, currently a set of defaults are used.
 
 ### HDF5RawDataFile
 
