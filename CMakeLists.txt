@@ -9,8 +9,6 @@ find_package(logging REQUIRED)
 find_package(ers REQUIRED)
 find_package(HighFive REQUIRED)
 find_package(daqdataformats REQUIRED)
-find_package(detdataformats REQUIRED)
-find_package(detchannelmaps REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 find_package(Boost COMPONENTS iostreams unit_test_framework REQUIRED)
@@ -23,8 +21,7 @@ daq_add_library (HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive d
 
 ##############################################################################
 # Unit tests
-daq_add_unit_test( HDF5WriteRead_test           LINK_LIBRARIES hdf5libs )
-#add_dependencies(  HDF5Write_test dfmodules_HDF5DataStore_duneDataStore )
+daq_add_unit_test( HDF5WriteRead_test LINK_LIBRARIES hdf5libs )
 
 ##############################################################################
 # Python bindings
@@ -32,7 +29,7 @@ daq_add_unit_test( HDF5WriteRead_test           LINK_LIBRARIES hdf5libs )
 
 ##############################################################################
 # Applications
-daq_add_application(HDF5LIBS_TestReader HDF5LIBS_TestReader.cpp LINK_LIBRARIES ${PROJECT_NAME})
-daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(HDF5LIBS_TestReader HDF5LIBS_TestReader.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
