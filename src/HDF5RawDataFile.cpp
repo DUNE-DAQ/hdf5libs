@@ -148,45 +148,10 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
 void
 HDF5RawDataFile::write_file_layout()
 {
-
-  // create top level group if needed
-  if (!m_file_ptr->exist("DUNEDAQFileLayout"))
-    m_file_ptr->createGroup("DUNEDAQFileLayout");
-
-  // get that group
-  HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
-  if (!fl_group.isValid())
-    throw InvalidHDF5Group(ERS_HERE, "DUNEDAQFileLayout");
-  
-
-  // attribute writing for the top-level group
-  write_attribute(fl_group, "version_number", m_file_layout_ptr->get_version());
-  write_attribute(fl_group, "trigger_record_name_prefix", m_file_layout_ptr->get_trigger_record_name_prefix());
-  write_attribute(fl_group, "digits_for_trigger_number", m_file_layout_ptr->get_digits_for_trigger_number());
-  write_attribute(fl_group, "digits_for_sequence_number", m_file_layout_ptr->get_digits_for_sequence_number());
-  write_attribute(fl_group, "trigger_record_header_dataset_name", m_file_layout_ptr->get_trigger_header_dataset_name());
-
-  // now go through and get list of paths for subgroups
-  auto path_params_map = m_file_layout_ptr->get_path_params_map();
-
-  for (auto p_iter = path_params_map.begin(); p_iter != path_params_map.end(); ++p_iter) {
-
-    std::string const& child_group_name = p_iter->second.detector_group_name;
-    if (child_group_name.empty()) {
-      throw InvalidHDF5Group(ERS_HERE, child_group_name);
-    }
-    if (!fl_group.exist(child_group_name)) {
-      fl_group.createGroup(child_group_name);
-    }
-    HighFive::Group child_group = fl_group.getGroup(child_group_name);
-    write_attribute(child_group, "detector_group_system_type", static_cast<int>(p_iter->first));
-    write_attribute(child_group, "detector_group_name", p_iter->second.detector_group_name);
-    write_attribute(child_group, "detector_group_type", p_iter->second.detector_group_type);
-    write_attribute(child_group, "region_name_prefix", p_iter->second.region_name_prefix);
-    write_attribute(child_group, "digits_for_region_number", p_iter->second.digits_for_region_number);
-    write_attribute(child_group, "element_name_prefix", p_iter->second.element_name_prefix);
-    write_attribute(child_group, "digits_for_element_number", p_iter->second.digits_for_element_number);
-  }
+  hdf5filelayout::data_t fl_json;
+  hdf5filelayout::to_json(fl_json,m_file_layout_ptr->get_file_layout_params());
+  write_attribute("filelayout_params",fl_json.dump());
+  write_attribute("filelayout_version",m_file_layout_ptr->get_version());
 }
 
 /**
@@ -262,47 +227,18 @@ HDF5RawDataFile::read_file_layout()
   hdf5filelayout::FileLayoutParams fl_params;
   uint32_t version = 0; // NOLINT(build/unsigned)
 
-  // get that group
-  HighFive::Group fl_group = m_file_ptr->getGroup("DUNEDAQFileLayout");
-  if (!fl_group.isValid()) {
+  std::string fl_str;
+  try{
+    fl_str = get_attribute<std::string>("filelayout_params");
+    hdf5filelayout::data_t fl_json = nlohmann::json::parse(fl_str);
+    hdf5filelayout::from_json(fl_json,fl_params);
 
-    // now reset the HDF5Filelayout object, version 0
+    version = get_attribute<uint32_t>("filelayout_version"); // NOLINT(build/unsigned)
+
+  }catch(InvalidHDF5Attribute){
     ers::info(MissingFileLayout(ERS_HERE,version));
-    m_file_layout_ptr.reset(new HDF5FileLayout(fl_params, version));
-    return;
-
   }
-
-  version = get_attribute<uint32_t>(fl_group, "version_number"); // NOLINT(build/unsigned)
-
-  fl_params.trigger_record_name_prefix = get_attribute<std::string>(fl_group, "trigger_record_name_prefix");
-  fl_params.digits_for_trigger_number = get_attribute<int32_t>(fl_group, "digits_for_trigger_number");
-  fl_params.digits_for_sequence_number = get_attribute<int32_t>(fl_group, "digits_for_sequence_number");
-  fl_params.trigger_record_header_dataset_name =
-    get_attribute<std::string>(fl_group, "trigger_record_header_dataset_name");
-
-  // following code is to get the subgroups of fl_group, and then fill path_params for them
-
-  // get list of objects that the fl_group has
-  auto object_names = fl_group.listObjectNames();
-
-  // now loop through groups
-  for (auto const& oname : object_names) {
-    if (fl_group.getObjectType(oname) != HighFive::ObjectType::Group)
-      continue;
-    HighFive::Group child_group = fl_group.getGroup(oname);
-
-    hdf5filelayout::PathParams path_params;
-    path_params.detector_group_type = get_attribute<std::string>(child_group, "detector_group_type");
-    path_params.detector_group_name = get_attribute<std::string>(child_group, "detector_group_name");
-    path_params.region_name_prefix = get_attribute<std::string>(child_group, "region_name_prefix");
-    path_params.digits_for_region_number = get_attribute<int32_t>(child_group, "digits_for_region_number");
-    path_params.element_name_prefix = get_attribute<std::string>(child_group, "element_name_prefix");
-    path_params.digits_for_element_number = get_attribute<int32_t>(child_group, "digits_for_element_number");
-
-    fl_params.path_param_list.push_back(path_params);
-  }
-
+  
   // now reset the HDF5Filelayout object
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params, version));
 }

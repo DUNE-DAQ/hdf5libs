@@ -75,6 +75,16 @@ ERS_DECLARE_ISSUE(hdf5libs,
 		  << ")",
 		  ((std::string)data_set)((std::string)filename))
 
+ERS_DECLARE_ISSUE(hdf5libs,
+		  InvalidHDF5Attribute,
+		  "Attribute " << name << " not found.",
+		  ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  HDF5AttributeExists,
+		  "Attribute " << name << " already exists.",
+		  ((std::string)name))
+
 namespace hdf5libs {
 
 /**
@@ -190,43 +200,45 @@ void HDF5RawDataFile::write_attribute(std::string name, T value)
 {
   if (!m_file_ptr->hasAttribute(name))
     m_file_ptr->createAttribute(name, value);
+  else
+    ers::warning(HDF5AttributeExists(ERS_HERE,name));
 }
-  
+
 template<typename T>
 void HDF5RawDataFile::write_attribute(HighFive::Group& grp, const std::string& name, T value)
 {
-  if (!(grp.hasAttribute(name))) {
+  if (!(grp.hasAttribute(name)))
     grp.createAttribute<T>(name, value);
-  }
+  else
+    ers::warning(HDF5AttributeExists(ERS_HERE,name));
 }
   
 template<typename T>
 void HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& name, T value)
 {
-  if (!dset.hasAttribute(name)) {
+  if (!dset.hasAttribute(name))
     dset.createAttribute<T>(name, value);
-  }
-}
+  else
+    ers::warning(HDF5AttributeExists(ERS_HERE,name));
 
+}
 template<typename T>
 T HDF5RawDataFile::get_attribute(const std::string& name)
 {
   if (!m_file_ptr->hasAttribute(name)) {
-    // throw that we don't have that attribute
-    throw "Placeholder for yet-to-be-implemented exception";
+    throw InvalidHDF5Attribute(ERS_HERE,name);
   }
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
   return value;
 }
-  
+
 template<typename T>
 T HDF5RawDataFile::get_attribute(const HighFive::Group& grp, const std::string& name)
 {
   if (!(grp.hasAttribute(name))) {
-    // throw that we don't have that attribute
-    throw "Placeholder for yet-to-be-implemented exception";
+    throw InvalidHDF5Attribute(ERS_HERE,name);
   }
   auto attr = grp.getAttribute(name);
   T value;
@@ -238,14 +250,13 @@ template<typename T>
 T HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
 {
   if (!dset.hasAttribute(name)) {
-    throw "Placeholder for yet-to-be-implemented exception";
+    throw InvalidHDF5Attribute(ERS_HERE,name);
   }
   auto attr = dset.getAttribute(name);
   T value;
   attr.read(value);
   return value;
 }
-
 
 } // namespace hdf5libs
 } // namespace dunedaq
