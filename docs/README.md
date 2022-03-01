@@ -124,7 +124,7 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 -  `get_trh_ptr(...)` members return a unique ptr to a `TriggerRecordHeader`, with inputs either being a full path as you may get from `get_trigger_record_header_dataset_paths()`, or with an input specifying the desired trigger number;
 -  `get_frag_ptr(...)` members return a unique ptr to a `Fragment`, with inputs either being a full path as you would get from `get_all_fragment_dataset_paths()`, or by specifying the trigger number and `GeoID` of the desired data (or also the elements of the `GeoID`). 
 
-### Version 1 (Latest) Notes
+### Version 2 (Latest) Notes
 
 This version is the initial version of `hdf5libs` after significant restructuring of many of the existing utilities, including the introduction of the `HDF5FileLayout` class, and separation of the `HDF5RawDataFile` class from `dfmodules`. 
 
