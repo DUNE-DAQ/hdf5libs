@@ -156,8 +156,8 @@ public:
   std::set<daqdataformats::trigger_number_t> get_all_record_numbers();
   std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
 
-  std::vector<std::string> get_trigger_record_header_dataset_paths(int max_trigger_records = -1);
-  std::vector<std::string> get_all_fragment_dataset_paths(int max_trigger_records = -1);
+  std::vector<std::string> get_trigger_record_header_dataset_paths();
+  std::vector<std::string> get_all_fragment_dataset_paths();
 
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 

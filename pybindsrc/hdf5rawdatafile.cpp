@@ -25,11 +25,31 @@ register_hdf5rawdatafile(py::module& m)
 
   py::class_<HDF5RawDataFile>(m, "HDF5RawDataFile")
     .def(py::init<std::string>())
-    .def("get_datasets", &HDF5RawDataFile::get_datasets)
-    .def("get_fragments", &HDF5RawDataFile::get_fragments)
-    .def("get_trh", &HDF5RawDataFile::get_trh)
-    .def("get_frag_ptr", &HDF5RawDataFile::get_frag_ptr)
-    .def("get_trh_ptr", &HDF5RawDataFile::get_trh_ptr)
+    .def("get_file_name", &HDF5RawDataFile::get_file_name,
+	 "Get file name")
+    .def("get_recorded_size", &HDF5RawDataFile::get_recorded_size,
+	 "Get recorded size")
+    .def("get_dataset_paths", &HDF5RawDataFile::get_dataset_paths,
+	 "Get all dataset paths under specified top group in file",
+	 py::arg("top_level_group_name")="")
+    .def("get_all_record_numbers", &HDF5RawDataFile::get_all_record_numbers,
+	 "Get all record numbers in file")
+    .def("get_all_trigger_record_numbers", &HDF5RawDataFile::get_all_trigger_record_numbers,
+	 "Get all trigger record numbers in file")
+    .def("get_trigger_record_header_dataset_paths", 
+	 &HDF5RawDataFile::get_trigger_record_header_dataset_paths,
+	 "Get all paths to TriggerRecordHeader datasets")
+    .def("get_all_fragment_dataset_paths",
+	 &HDF5RawDataFile::get_all_fragment_dataset_paths,
+	 "Get all paths to Fragment datasets")
+    .def("get_frag_ptr", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_frag_ptr),
+	 "Get Fragment from dataset")
+    .def("get_frag", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_frag_ptr),
+	 "Get Fragment from dataset")
+    .def("get_trh_ptr", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_trh_ptr),
+	 "Get TriggerRecordHeader from datset")
+    .def("get_trh", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_trh_ptr),
+	 "Get TriggerRecordHeader from datset")
 
     ;
 }

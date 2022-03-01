@@ -404,19 +404,15 @@ HDF5RawDataFile::get_all_trigger_record_numbers()
  * @brief Return a vector of dataset names that correspond to TriggerRecordHeaders
  */
 std::vector<std::string>
-HDF5RawDataFile::get_trigger_record_header_dataset_paths(int max_trigger_records)
+HDF5RawDataFile::get_trigger_record_header_dataset_paths()
 {
 
   std::vector<std::string> trh_paths;
   auto record_numbers = get_all_trigger_record_numbers();
-  int record_count = 0;
 
-  for (auto const& trig_num : record_numbers) {
-    if (record_count == max_trigger_records)
-      break;
+  for (auto const& trig_num : get_all_trigger_record_numbers())
     trh_paths.push_back(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_record_header_path(trig_num));
-    ++record_count;
-  }
+
   return trh_paths;
 }
 
@@ -427,17 +423,12 @@ HDF5RawDataFile::get_trigger_record_header_dataset_paths(int max_trigger_records
  *       however, probably that's more time consuming
  */
 std::vector<std::string>
-HDF5RawDataFile::get_all_fragment_dataset_paths(int max_trigger_records)
+HDF5RawDataFile::get_all_fragment_dataset_paths()
 {
   std::vector<std::string> frag_paths;
   auto record_numbers = get_all_trigger_record_numbers();
-  int record_count = 0;
 
-  // auto trigger_header_dataset_name = m_file_layout_ptr->get_trigger_header_dataset_name();
-
-  for (auto const& trig_num : record_numbers) {
-    if (record_count == max_trigger_records)
-      break;
+  for (auto const& trig_num : get_all_trigger_record_numbers()) {
 
     auto dataset_paths =
       get_dataset_paths(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_number_string(trig_num));
