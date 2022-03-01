@@ -7,7 +7,6 @@
  */
 
 #include "hdf5libs/SSPDecoder.hpp"
-//#include "hdf5libs/utils.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -24,8 +23,6 @@ register_sspdecoder(py::module& m)
 
     py::class_<SSPDecoder>(m, "SSPDecoder")
         .def(py::init<std::string, const unsigned&>())
-        .def_property_readonly("frag_size", &SSPDecoder::get_frag_size)
-        .def_property_readonly("frag_header_size", &SSPDecoder::get_frag_header_size)
         .def_property_readonly("module_id", &SSPDecoder::get_module_id)
         .def_property_readonly("channel_id", &SSPDecoder::get_channel_id)
         .def_property_readonly("frag_timestamp", &SSPDecoder::get_frag_timestamp)

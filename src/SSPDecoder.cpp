@@ -8,13 +8,9 @@
 #include "hdf5libs/SSPDecoder.hpp"
 #include "hdf5libs/DAQDecoder.hpp"
 #include "detdataformats/ssp/SSPTypes.hpp"
-//#include "hdf5libs/utils.hpp"
 
 namespace dunedaq {
 namespace hdf5libs {
-
-//using namespace dunedaq::detchannelmaps;
-//using namespace dunedaq::hdf5libs;
 
 enum
 {
@@ -93,18 +89,15 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
       std::vector<int> ssp_frames; 
       for (size_t idata=0; idata < nADC; idata++) { 
         adc = adcPointer + idata;
-        //std::cout << "Value of ADC: " << *adc << std::endl;
         ssp_frames.push_back(*adc);  
       }    
       adcPointer += nADC;    
     
       // Store SSP data
-      m_frag_size.push_back( frag->get_size() );
-      m_frag_header_size.push_back( sizeof(dunedaq::daqdataformats::FragmentHeader) );
+      m_module_id.push_back( module_id );
+      m_channel_id.push_back( channel_id );      
       m_frag_timestamp.push_back( ts );
       m_ssp_frames.push_back( ssp_frames );
-      m_module_id.push_back( module_id );
-      m_channel_id.push_back( channel_id );
       m_peaksum.push_back( peaksum );
       m_peaktime.push_back( peaktime );
       m_prerise.push_back( prerise );
@@ -129,16 +122,6 @@ SSPDecoder::SSPDecoder(const std::string& file_name, const unsigned& num_events)
 
 // Property getter functions
 // 
-
-std::vector<int> SSPDecoder::get_frag_size() {
-  return m_frag_size;
-}
-
-
-std::vector<int> SSPDecoder::get_frag_header_size() {
-  return m_frag_header_size;
-}
-
 
 std::vector<int> SSPDecoder::get_module_id() {
   return m_module_id;
