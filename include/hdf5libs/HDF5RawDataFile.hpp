@@ -18,6 +18,7 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
+#include "daqdataformats/TimeSlice.hpp"
 #include "logging/Logging.hpp"
 
 // External Packages
@@ -125,6 +126,8 @@ public:
   // basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
+  void write(const daqdataformats::TimeSlice& ts);
+  void write(const daqdataformats::TimeSliceHeader& tsh);
   void write(const daqdataformats::Fragment& frag);
 
   // attribute writers/getters

@@ -98,6 +98,19 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 }
 
 /**
+ * @brief Write a TimeSlice to the file.
+ */
+void
+HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
+{
+  write(ts.get_header());
+
+  for (auto const& frag_ptr : ts.get_fragments_ref()) {
+    write(*frag_ptr);
+  }
+}
+
+/**
  * @brief Write a TriggerRecordHeader to the file.
  */
 void
@@ -107,6 +120,18 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh)
   m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(trh),
                               static_cast<const char*>(trh.get_storage_location()),
                               trh.get_total_size_bytes());
+}
+
+/**
+ * @brief Write a TimeSliceHeader to the file.
+ */
+void
+HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh)
+{
+
+  m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(tsh),
+                              reinterpret_cast<const char*>(&tsh),
+                              sizeof(daqdataformats::TimeSliceHeader));
 }
 
 /**
