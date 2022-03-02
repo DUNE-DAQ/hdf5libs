@@ -336,12 +336,23 @@ HDF5RawDataFile::get_trigger_record_header_dataset_paths()
 {
 
   std::vector<std::string> trh_paths;
-  auto record_numbers = get_all_trigger_record_numbers();
 
-  for (auto const& trig_num : get_all_trigger_record_numbers())
-    trh_paths.push_back(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_record_header_path(trig_num));
+  if(get_version()>=2){
+  
+    auto record_numbers = get_all_trigger_record_numbers();
+    
+    for (auto const& trig_num : get_all_trigger_record_numbers())
+      trh_paths.push_back(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_record_header_path(trig_num));
+    
+  }
+  else{
+    for(auto const& path : get_dataset_paths())
+      if(path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) != std::string::npos)
+	trh_paths.push_back(path);
+  }
 
   return trh_paths;
+
 }
 
 /**
@@ -354,17 +365,10 @@ std::vector<std::string>
 HDF5RawDataFile::get_all_fragment_dataset_paths()
 {
   std::vector<std::string> frag_paths;
-  auto record_numbers = get_all_trigger_record_numbers();
 
-  for (auto const& trig_num : get_all_trigger_record_numbers()) {
-
-    auto dataset_paths =
-      get_dataset_paths(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_number_string(trig_num));
-
-    for (auto const& path : dataset_paths) {
+  for (auto const& path : get_dataset_paths()) {
       if (path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) == std::string::npos)
         frag_paths.push_back(path);
-    }
   }
 
   return frag_paths;
