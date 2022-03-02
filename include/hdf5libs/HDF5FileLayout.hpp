@@ -20,6 +20,7 @@
 #include "daqdataformats/GeoID.hpp"
 #include "daqdataformats/TriggerRecordHeader.hpp"
 #include "daqdataformats/TimeSliceHeader.hpp"
+#include "logging/Logging.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -33,6 +34,20 @@
 #include <vector>
 
 namespace dunedaq {
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  InvalidRecordName,
+		  "Record name " << name
+		  << " is unknown.",
+		  ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  InvalidSequenceDigits,
+		  "Record name of type " << name
+		  << " must have sequence digits" << static_cast<int>(digits)
+		  << ". Resetting that now.",
+		  ((std::string)name)((int)digits))
+
 namespace hdf5libs {
 
 class HDF5FileLayout

@@ -24,12 +24,12 @@ HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t v
 
   if(m_conf_params.trigger_record_name_prefix.compare("TimeSlice")==0){
     if(m_conf_params.digits_for_sequence_number!=0){
-      //put ERS warning message here
+      ers::warning(InvalidSequenceDigits(ERS_HERE,m_conf_params.trigger_record_name_prefix,0));
       m_conf_params.digits_for_sequence_number=0;
     }
   }
   else if(m_conf_params.trigger_record_name_prefix.compare("TriggerRecord")!=0){
-    //throw ERS exception here
+    throw InvalidRecordName(ERS_HERE,m_conf_params.trigger_record_name_prefix);
   }
 }
 

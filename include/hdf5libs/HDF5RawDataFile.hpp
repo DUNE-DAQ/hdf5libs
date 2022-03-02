@@ -66,6 +66,12 @@ ERS_DECLARE_ISSUE(hdf5libs,
 		  ((uint32_t)version)((uint32_t)min_allowed)((uint32_t)max_allowed)) // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs,
+		  BadRecordType,
+		  "Record type attribute " << rt_attr
+		  << " does not match file layout config record name prefix " << rt_fl,
+		  ((std::string)rt_attr)((std::string)rt_fl))
+
+ERS_DECLARE_ISSUE(hdf5libs,
 		  InvalidHDF5Group,
 		  "Group " << name << " is invalid.",
 		  ((std::string)name))
@@ -191,7 +197,8 @@ private:
   // file layout writing/reading
   void write_file_layout();
   void read_file_layout();
-
+  void check_file_layout();
+  
   // writing to datasets
   size_t do_write(std::vector<std::string> const&, const char*, size_t);
 };

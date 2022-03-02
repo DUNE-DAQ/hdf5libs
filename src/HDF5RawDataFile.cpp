@@ -61,9 +61,14 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_attribute("creation_timestamp", file_creation_timestamp);
   write_attribute("application_name", application_name);
 
+  
   // set the file layout contents
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
   write_file_layout();
+
+  //write the record type
+  write_attribute("record_type",fl_params.trigger_record_name_prefix);
+
 }
 
 HDF5RawDataFile::~HDF5RawDataFile()
@@ -130,7 +135,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh)
 {
 
   m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(tsh),
-                              reinterpret_cast<const char*>(&tsh),
+                              (const char*)(&tsh),
                               sizeof(daqdataformats::TimeSliceHeader));
 }
 
@@ -166,6 +171,7 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
     m_recorded_size = 0;
 
   read_file_layout();
+  check_file_layout();
 }
 
 /**
@@ -247,8 +253,7 @@ get_free_space(const std::string& the_path)
   return vfs_results.f_bfree * vfs_results.f_bsize;
 }
 
-void
-HDF5RawDataFile::read_file_layout()
+void HDF5RawDataFile::read_file_layout()
 {
   hdf5filelayout::FileLayoutParams fl_params;
   uint32_t version = 0; // NOLINT(build/unsigned)
@@ -269,6 +274,17 @@ HDF5RawDataFile::read_file_layout()
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params, version));
 }
 
+void HDF5RawDataFile::check_file_layout()
+{
+  if(get_version() < 2)
+    return;
+
+  auto record_type = get_attribute<std::string>("record_type");
+  if(record_type.compare(m_file_layout_ptr->get_trigger_record_name_prefix())!=0)
+    throw BadRecordType(ERS_HERE,record_type,m_file_layout_ptr->get_trigger_record_name_prefix());
+  
+}
+  
 // HDF5 Utility function to recursively traverse a file
 void
 HDF5RawDataFile::explore_subgroup(const HighFive::Group& parent_group,
@@ -370,10 +386,14 @@ HDF5RawDataFile::get_trigger_record_header_dataset_paths()
       trh_paths.push_back(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_record_header_path(trig_num));
     
   }
+
   else{
-    for(auto const& path : get_dataset_paths())
-      if(path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) != std::string::npos)
+
+    for(auto const& path : get_dataset_paths()){
+      if(path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) != std::string::npos){
 	trh_paths.push_back(path);
+      }
+    }
   }
 
   return trh_paths;
