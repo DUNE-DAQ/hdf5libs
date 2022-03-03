@@ -27,8 +27,9 @@ HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t v
       ers::warning(InvalidSequenceDigits(ERS_HERE,m_conf_params.trigger_record_name_prefix,0));
       m_conf_params.digits_for_sequence_number=0;
     }
-  }
-  else if(m_conf_params.trigger_record_name_prefix.compare("TriggerRecord")!=0){
+  } else if(m_conf_params.trigger_record_name_prefix.compare("TriggerRecord")==0){
+    //do nothing
+  } else{
     throw InvalidRecordName(ERS_HERE,m_conf_params.trigger_record_name_prefix);
   }
 }
@@ -167,7 +168,7 @@ std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
-std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLLINT(build/unsigned)
+std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build/unsigned)
 					      daqdataformats::GeoID::SystemType type,
 					      uint16_t region_id, // NOLINT(build/unsigned)
 					      uint32_t element_id, // NOLINT(build/unsigned)

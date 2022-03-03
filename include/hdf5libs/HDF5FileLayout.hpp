@@ -44,9 +44,9 @@ ERS_DECLARE_ISSUE(hdf5libs,
 ERS_DECLARE_ISSUE(hdf5libs,
 		  InvalidSequenceDigits,
 		  "Record name of type " << name
-		  << " must have sequence digits" << static_cast<int>(digits)
+		  << " must have sequence digits" << digits
 		  << ". Resetting that now.",
-		  ((std::string)name)((int)digits))
+		  ((std::string)name)((int32_t)digits))
 
 namespace hdf5libs {
 
