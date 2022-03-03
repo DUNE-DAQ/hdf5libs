@@ -36,9 +36,17 @@ register_hdf5rawdatafile(py::module& m)
 	 "Get all record numbers in file")
     .def("get_all_trigger_record_numbers", &HDF5RawDataFile::get_all_trigger_record_numbers,
 	 "Get all trigger record numbers in file")
+    .def("get_all_timeslice_numbers", &HDF5RawDataFile::get_all_timeslice_numbers,
+	 "Get all timeslice numbers in file")
+    .def("get_trigger_record_header_dataset_paths", 
+	 &HDF5RawDataFile::get_record_header_dataset_paths,
+	 "Get all paths to record header datasets")
     .def("get_trigger_record_header_dataset_paths", 
 	 &HDF5RawDataFile::get_trigger_record_header_dataset_paths,
 	 "Get all paths to TriggerRecordHeader datasets")
+    .def("get_trigger_record_header_dataset_paths", 
+	 &HDF5RawDataFile::get_timeslice_header_dataset_paths,
+	 "Get all paths to TimeSliceHeader datasets")
     .def("get_all_fragment_dataset_paths",
 	 &HDF5RawDataFile::get_all_fragment_dataset_paths,
 	 "Get all paths to Fragment datasets")
@@ -50,6 +58,10 @@ register_hdf5rawdatafile(py::module& m)
 	 "Get TriggerRecordHeader from datset")
     .def("get_trh", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_trh_ptr),
 	 "Get TriggerRecordHeader from datset")
+    .def("get_tsh_ptr", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_tsh_ptr),
+	 "Get TimeSliceHeader from datset")
+    .def("get_tsh", py::overload_cast<const std::string & >(&HDF5RawDataFile::get_tsh_ptr),
+	 "Get TimeSliceHeader from datset")
 
     ;
 }
