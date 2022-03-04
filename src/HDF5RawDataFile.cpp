@@ -102,8 +102,8 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
  */
 void
 HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh)
-{
-
+{  
+  
   m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(trh),
                               static_cast<const char*>(trh.get_storage_location()),
                               trh.get_total_size_bytes());
@@ -317,7 +317,11 @@ HDF5RawDataFile::get_all_record_numbers()
       throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
     auto trstring = name.substr(loc + record_prefix_size);
-    trstring.resize(m_file_layout_ptr->get_digits_for_trigger_number());
+
+    loc = trstring.find(".");
+    if(loc!=std::string::npos)
+      trstring.resize(loc); //remove anything from '.' onwards
+
     record_numbers.insert(std::stoi(trstring));
   }
 

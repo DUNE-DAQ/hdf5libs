@@ -42,14 +42,27 @@ void HDF5FileLayout::check_config()
 std::string HDF5FileLayout::get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
 						      daqdataformats::sequence_number_t seq_num) const
 {
-  
+
   std::ostringstream trigger_number_string;
-  trigger_number_string << m_conf_params.trigger_record_name_prefix
-			<< std::setw(m_conf_params.digits_for_trigger_number) << std::setfill('0') << trig_num;
+
+  int width=m_conf_params.digits_for_trigger_number;
   
+  if(trig_num > m_powers_ten[m_conf_params.digits_for_trigger_number]){
+    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,trig_num,m_conf_params.digits_for_trigger_number));
+    width=0; // tells it to revert to normal width
+  }
+        
+  trigger_number_string << m_conf_params.trigger_record_name_prefix
+			<< std::setw(width) << std::setfill('0') << trig_num;
+
   if (m_conf_params.digits_for_sequence_number > 0) {
-    trigger_number_string << "." << std::setw(m_conf_params.digits_for_sequence_number) << std::setfill('0')
-			  << seq_num;
+
+      width=m_conf_params.digits_for_sequence_number;
+      if(seq_num > m_powers_ten[m_conf_params.digits_for_sequence_number]){
+	ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,seq_num,m_conf_params.digits_for_sequence_number));
+	width=0; // tells it to revert to normal width
+      }
+      trigger_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
   }
   
   return trigger_number_string.str();
@@ -91,13 +104,27 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
   
   // then the region
   std::ostringstream region_string;
-  region_string << path_params.region_name_prefix << std::setw(path_params.digits_for_region_number)
+
+  int width=path_params.digits_for_region_number;  
+  if(fh.element_id.region_id > m_powers_ten[path_params.digits_for_region_number]){
+    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.region_id,path_params.digits_for_region_number));
+    width=0; // tells it to revert to normal width
+  }
+
+  region_string << path_params.region_name_prefix << std::setw(width)
 		<< std::setfill('0') << fh.element_id.region_id;
   path_elements.push_back(region_string.str());
   
   // finally the element
   std::ostringstream element_string;
-  element_string << path_params.element_name_prefix << std::setw(path_params.digits_for_element_number)
+
+  width=path_params.digits_for_element_number;
+  if(fh.element_id.element_id > m_powers_ten[path_params.digits_for_element_number]){
+    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.element_id,path_params.digits_for_element_number));
+    width=0; // tells it to revert to normal width
+  }
+
+  element_string << path_params.element_name_prefix << std::setw(width)
 		 << std::setfill('0') << fh.element_id.element_id;
   path_elements.push_back(element_string.str());
   
