@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -21,6 +22,17 @@ HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t v
     m_conf_params = get_v0_file_layout_params();
   
   fill_path_params_map(m_conf_params);
+}
+
+hdf5filelayout::PathParams 
+HDF5FileLayout::get_path_params(daqdataformats::GeoID::SystemType type) const
+{
+  try{
+    return m_path_params_map.at(type);
+  }catch(std::out_of_range&){
+    throw FileLayoutUnconfiguredSystemType(ERS_HERE,
+					   type,daqdataformats::GeoID::system_type_to_string(type));
+  }
 }
 
 std::string HDF5FileLayout::get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
@@ -191,16 +203,20 @@ std::string HDF5FileLayout::get_fragment_region_path(daqdataformats::trigger_num
 						     uint16_t region_id, // NOLINT(build/unsigned)
 						     daqdataformats::sequence_number_t seq_num) const
 {
-  return get_fragment_region_path(
-				  trig_num, daqdataformats::GeoID::string_to_system_type(typestring), region_id, seq_num);
+  return get_fragment_region_path(trig_num,
+				  daqdataformats::GeoID::string_to_system_type(typestring),
+				  region_id,
+				  seq_num);
 }
   
 void HDF5FileLayout::fill_path_params_map(hdf5filelayout::FileLayoutParams const& flp)
 {
   for (auto const& path_param : flp.path_param_list) {
     auto sys_type = daqdataformats::GeoID::string_to_system_type(path_param.detector_group_type);
+
     if (sys_type == daqdataformats::GeoID::SystemType::kInvalid)
-      continue; // update to make it show an error
+      throw FileLayoutInvalidSystemType(ERS_HERE,path_param.detector_group_type);
+
     m_path_params_map[sys_type] = path_param;
   }
 }
@@ -242,19 +258,11 @@ hdf5filelayout::FileLayoutParams HDF5FileLayout::get_v0_file_layout_params()
   pp.digits_for_element_number = 2;
   flp.path_param_list.push_back(pp);
   
-  pp.detector_group_type = "Trigger";
+  pp.detector_group_type = "DataSelection";
   pp.detector_group_name = "Trigger";
   pp.region_name_prefix = "Region";
   pp.digits_for_region_number = 3;
   pp.element_name_prefix = "Element";
-  pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
-  
-  pp.detector_group_type = "TPC_TP";
-  pp.detector_group_name = "TPC";
-  pp.region_name_prefix = "APA";
-  pp.digits_for_region_number = 3;
-  pp.element_name_prefix = "Link";
   pp.digits_for_element_number = 2;
   flp.path_param_list.push_back(pp);
   
