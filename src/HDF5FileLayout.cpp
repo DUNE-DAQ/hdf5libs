@@ -47,7 +47,7 @@ std::string HDF5FileLayout::get_trigger_number_string(daqdataformats::trigger_nu
 
   int width=m_conf_params.digits_for_trigger_number;
   
-  if(trig_num > m_powers_ten[m_conf_params.digits_for_trigger_number]){
+  if(trig_num >= m_powers_ten[m_conf_params.digits_for_trigger_number]){
     ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,trig_num,m_conf_params.digits_for_trigger_number));
     width=0; // tells it to revert to normal width
   }
@@ -58,7 +58,7 @@ std::string HDF5FileLayout::get_trigger_number_string(daqdataformats::trigger_nu
   if (m_conf_params.digits_for_sequence_number > 0) {
 
       width=m_conf_params.digits_for_sequence_number;
-      if(seq_num > m_powers_ten[m_conf_params.digits_for_sequence_number]){
+      if(seq_num >= m_powers_ten[m_conf_params.digits_for_sequence_number]){
 	ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,seq_num,m_conf_params.digits_for_sequence_number));
 	width=0; // tells it to revert to normal width
       }
@@ -106,7 +106,7 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
   std::ostringstream region_string;
 
   int width=path_params.digits_for_region_number;  
-  if(fh.element_id.region_id > m_powers_ten[path_params.digits_for_region_number]){
+  if(fh.element_id.region_id >= m_powers_ten[path_params.digits_for_region_number]){
     ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.region_id,path_params.digits_for_region_number));
     width=0; // tells it to revert to normal width
   }
@@ -119,7 +119,7 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
   std::ostringstream element_string;
 
   width=path_params.digits_for_element_number;
-  if(fh.element_id.element_id > m_powers_ten[path_params.digits_for_element_number]){
+  if(fh.element_id.element_id >= m_powers_ten[path_params.digits_for_element_number]){
     ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.element_id,path_params.digits_for_element_number));
     width=0; // tells it to revert to normal width
   }
