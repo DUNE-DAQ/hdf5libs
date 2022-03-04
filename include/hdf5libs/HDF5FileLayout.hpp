@@ -19,6 +19,7 @@
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/GeoID.hpp"
 #include "daqdataformats/TriggerRecordHeader.hpp"
+#include "logging/Logging.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -32,6 +33,12 @@
 #include <vector>
 
 namespace dunedaq {
+
+ERS_DECLARE_ISSUE(hdf5libs,
+                  FileLayoutSequenceIDsCannotBeZero,
+                  "Cannot specify 0 digits for sequence IDs in TriggerRecords. Reverting to " << digits,
+                  ((int)digits))
+
 namespace hdf5libs {
 
 class HDF5FileLayout
@@ -95,55 +102,55 @@ public:
    * @brief get the full path for a Fragment dataset based on trig/seq number and element ID
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
-                                daqdataformats::GeoID element_id,
-                                daqdataformats::sequence_number_t seq_num = 0) const;
+                                daqdataformats::sequence_number_t seq_num,
+                                daqdataformats::GeoID element_id) const;
   /**
    * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
+                                daqdataformats::sequence_number_t seq_num,
                                 daqdataformats::GeoID::SystemType type,
                                 uint16_t region_id, // NOLINT(build/unsigned)
-                                uint32_t element_id, // NOLINT(build/unsigned)
-                                daqdataformats::sequence_number_t seq_num = 0) const;
+                                uint32_t element_id) const; // NOLINT(build/unsigned)
 
   /**
    * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
    */
   std::string get_fragment_path(daqdataformats::trigger_number_t trig_num,
+                                daqdataformats::sequence_number_t seq_num,
                                 const std::string& typestring,
                                 uint16_t region_id, // NOLINT(build/unsigned)
-                                uint32_t element_id, // NOLINT(build/unsigned)
-                                daqdataformats::sequence_number_t seq_num = 0) const;
+                                uint32_t element_id) const; // NOLINT(build/unsigned)
 
   /**
    * @brief get the path for a Fragment type group based on trig/seq number and type
    */
   std::string get_fragment_type_path(daqdataformats::trigger_number_t trig_num,
-                                     daqdataformats::GeoID::SystemType type,
-                                     daqdataformats::sequence_number_t seq_num = 0) const;
+                                     daqdataformats::sequence_number_t seq_num,
+                                     daqdataformats::GeoID::SystemType type) const;
 
   /**
    * @brief get the path for a Fragment type group based on trig/seq number and type
    */
   std::string get_fragment_type_path(daqdataformats::trigger_number_t trig_num,
-                                     std::string typestring,
-                                     daqdataformats::sequence_number_t seq_num = 0) const;
+                                     daqdataformats::sequence_number_t seq_num,
+                                     std::string typestring) const;
 
   /**
    * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
    */
   std::string get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
+                                       daqdataformats::sequence_number_t seq_num,
                                        daqdataformats::GeoID::SystemType type,
-                                       uint16_t region_id, // NOLINT(build/unsigned)
-                                       daqdataformats::sequence_number_t seq_num = 0) const;
+                                       uint16_t region_id) const; // NOLINT(build/unsigned)
 
   /**
    * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
    */
   std::string get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
+                                       daqdataformats::sequence_number_t seq_num,
                                        std::string typestring,
-                                       uint16_t region_id, // NOLINT(build/unsigned)
-                                       daqdataformats::sequence_number_t seq_num = 0) const;
+                                       uint16_t region_id) const; // NOLINT(build/unsigned)
 
 private:
   /**
@@ -170,6 +177,12 @@ private:
    * @brief Version0 FileLayout parameters, for backward compatibility
    */
   hdf5filelayout::FileLayoutParams get_v0_file_layout_params();
+
+  /**
+   * @brief Check configuration for any errors.
+   */  
+  void check_config();
+  
 };
 
 } // namespace hdf5libs

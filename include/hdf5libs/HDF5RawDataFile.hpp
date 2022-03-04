@@ -155,18 +155,18 @@ public:
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                         const daqdataformats::GeoID element_id,
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                         const daqdataformats::GeoID::SystemType type,
+                                                         const daqdataformats::sequence_number_t seq_num,
+                                                         const daqdataformats::GeoID element_id);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num, 
+                                                         const daqdataformats::sequence_number_t seq_num,
+							 const daqdataformats::GeoID::SystemType type,
                                                          const uint16_t region_id, // NOLINT(build/unsigned)
-                                                         const uint32_t element_id, // NOLINT(build/unsigned)
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
+                                                         const uint32_t element_id); // NOLINT(build/unsigned)
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
+                                                         const daqdataformats::sequence_number_t seq_num,
                                                          const std::string typestring,
                                                          const uint16_t region_id, // NOLINT(build/unsigned)
-                                                         const uint32_t element_id, // NOLINT(build/unsigned)
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
+                                                         const uint32_t element_id); // NOLINT(build/unsigned)
 
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,

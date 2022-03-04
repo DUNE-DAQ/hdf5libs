@@ -21,8 +21,24 @@ HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t v
     m_conf_params = get_v0_file_layout_params();
   
   fill_path_params_map(m_conf_params);
+
+  check_config();
 }
 
+void HDF5FileLayout::check_config()
+{
+  //for now, don't do additional config checks for old versions
+  if( m_version < 2 )
+    return;
+
+  if(m_conf_params.trigger_record_name_prefix.compare("TriggerRecord") &&
+     m_conf_params.digits_for_sequence_number==0)
+    {
+      ers::error(FileLayoutSequenceIDsCannotBeZero(ERS_HERE,4));
+      m_conf_params.digits_for_sequence_number=4;
+    }
+}
+  
 std::string HDF5FileLayout::get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
 						      daqdataformats::sequence_number_t seq_num) const
 {
@@ -102,8 +118,8 @@ std::string HDF5FileLayout::get_trigger_record_header_path(daqdataformats::trigg
  * @brief get the full path for a Fragment dataset based on trig/seq number and element ID
  */
 std::string HDF5FileLayout::get_fragment_path(daqdataformats::trigger_number_t trig_num,
-					      daqdataformats::GeoID element_id,
-					      daqdataformats::sequence_number_t seq_num) const
+					      daqdataformats::sequence_number_t seq_num,
+					      daqdataformats::GeoID element_id) const
 {
   
   auto const& path_params = get_path_params(element_id.system_type);
@@ -120,34 +136,34 @@ std::string HDF5FileLayout::get_fragment_path(daqdataformats::trigger_number_t t
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string HDF5FileLayout::get_fragment_path(daqdataformats::trigger_number_t trig_num,
+					      daqdataformats::sequence_number_t seq_num,
 					      daqdataformats::GeoID::SystemType type,
 					      uint16_t region_id, // NOLINT(build/unsigned)
-					      uint32_t element_id, // NOLINT(build/unsigned)
-					      daqdataformats::sequence_number_t seq_num) const
+					      uint32_t element_id) const // NOLINT(build/unsigned)
 {
   daqdataformats::GeoID gid{ type, region_id, element_id };
-  return get_fragment_path(trig_num, gid, seq_num);
+  return get_fragment_path(trig_num, seq_num, gid);
 }
   
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string HDF5FileLayout::get_fragment_path(daqdataformats::trigger_number_t trig_num,
+					      daqdataformats::sequence_number_t seq_num,
 					      const std::string& typestring,
 					      uint16_t region_id, // NOLINT(build/unsigned)
-					      uint32_t element_id, // NOLINT(build/unsigned)
-					      daqdataformats::sequence_number_t seq_num) const
+					      uint32_t element_id) const // NOLINT(build/unsigned)
 {
   daqdataformats::GeoID gid{ daqdataformats::GeoID::string_to_system_type(typestring), region_id, element_id };
-  return get_fragment_path(trig_num, gid, seq_num);
+  return get_fragment_path(trig_num, seq_num, gid);
 }
   
 /**
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string HDF5FileLayout::get_fragment_type_path(daqdataformats::trigger_number_t trig_num,
-						   daqdataformats::GeoID::SystemType type,
-						   daqdataformats::sequence_number_t seq_num) const
+						   daqdataformats::sequence_number_t seq_num,
+						   daqdataformats::GeoID::SystemType type) const
 {
   auto const& path_params = get_path_params(type);
   
@@ -160,19 +176,19 @@ std::string HDF5FileLayout::get_fragment_type_path(daqdataformats::trigger_numbe
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string HDF5FileLayout::get_fragment_type_path(daqdataformats::trigger_number_t trig_num,
-						   std::string typestring,
-						   daqdataformats::sequence_number_t seq_num) const
+						   daqdataformats::sequence_number_t seq_num,
+						   std::string typestring) const
 {
-  return get_fragment_type_path(trig_num, daqdataformats::GeoID::string_to_system_type(typestring), seq_num);
+  return get_fragment_type_path(trig_num, seq_num, daqdataformats::GeoID::string_to_system_type(typestring));
 }
   
 /**
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string HDF5FileLayout::get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
+						     daqdataformats::sequence_number_t seq_num,
 						     daqdataformats::GeoID::SystemType type,
-						     uint16_t region_id, // NOLINT(build/unsigned)
-						     daqdataformats::sequence_number_t seq_num) const
+						     uint16_t region_id) const // NOLINT(build/unsigned)
 {
   auto const& path_params = get_path_params(type);
   
@@ -187,12 +203,12 @@ std::string HDF5FileLayout::get_fragment_region_path(daqdataformats::trigger_num
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string HDF5FileLayout::get_fragment_region_path(daqdataformats::trigger_number_t trig_num,
+						     daqdataformats::sequence_number_t seq_num,
 						     std::string typestring,
-						     uint16_t region_id, // NOLINT(build/unsigned)
-						     daqdataformats::sequence_number_t seq_num) const
+						     uint16_t region_id) const // NOLINT(build/unsigned)
 {
-  return get_fragment_region_path(
-				  trig_num, daqdataformats::GeoID::string_to_system_type(typestring), region_id, seq_num);
+  return get_fragment_region_path(trig_num, seq_num,
+				  daqdataformats::GeoID::string_to_system_type(typestring), region_id);
 }
   
 void HDF5FileLayout::fill_path_params_map(hdf5filelayout::FileLayoutParams const& flp)
