@@ -121,6 +121,7 @@ public:
                   size_t file_index,
                   std::string application_name,
                   const hdf5filelayout::FileLayoutParams& fl_params,
+		  std::string inprogress_filename_suffix=".writing",
                   unsigned open_flags = HighFive::File::Create);
 
   // constructor for reading
@@ -202,6 +203,7 @@ private:
 
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
+  const std::string m_bare_file_name;
   const unsigned m_open_flags;
 
   // Total size of data being written
