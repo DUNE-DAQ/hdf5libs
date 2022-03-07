@@ -44,8 +44,19 @@ ERS_DECLARE_ISSUE(hdf5libs,
 		  "Number " << number << " has more digits than the max specified of " << digits << ". Using natural width.",
                   ((uint64_t)number)((uint64_t)digits)) // NOLINT(build/unsigned)
 
-namespace hdf5libs {
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  FileLayoutInvalidSystemType,
+                  "Bad File Layout cofiguration: sytem type " << sys_type_name << " is invalid.",
+                  ((std::string)sys_type_name))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+                  FileLayoutUnconfiguredSystemType,
+                  "Requested File Layout for unconfigured system type " << sys_type << " ("  << sys_type_name << ")",
+                  ((daqdataformats::GeoID::SystemType)sys_type)((std::string)sys_type_name))
+
+namespace hdf5libs {
+  
 class HDF5FileLayout
 {
 public:
@@ -74,8 +85,7 @@ public:
   { return m_path_params_map; }
 
   hdf5filelayout::PathParams 
-  get_path_params(daqdataformats::GeoID::SystemType type) const
-  { return m_path_params_map.at(type); }
+  get_path_params(daqdataformats::GeoID::SystemType type) const;
 
   hdf5filelayout::FileLayoutParams get_file_layout_params() const 
   { return m_conf_params; }

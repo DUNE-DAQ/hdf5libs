@@ -350,8 +350,7 @@ HDF5RawDataFile::get_trigger_record_header_dataset_paths()
     for (auto const& trig_num : get_all_trigger_record_numbers())
       trh_paths.push_back(m_file_ptr->getPath() + m_file_layout_ptr->get_trigger_record_header_path(trig_num));
     
-  }
-  else{
+  } else{
     for(auto const& path : get_dataset_paths())
       if(path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) != std::string::npos)
 	trh_paths.push_back(path);
