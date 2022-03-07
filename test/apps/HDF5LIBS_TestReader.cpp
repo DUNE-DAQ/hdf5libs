@@ -96,13 +96,13 @@ main(int argc, char** argv)
 
   auto first_trig_num = *(trigger_records.begin());
 
-  auto trh_ptr = h5_raw_data_file.get_trh_ptr(first_trig_num);
+  auto trh_ptr = h5_raw_data_file.get_trh_ptr(first_trig_num,0);
   TLOG() << "Trigger Record Headers:";
   TLOG() << "First: " << trh_ptr->get_header();
   TLOG() << "Last: " << h5_raw_data_file.get_trh_ptr(all_trh_paths.back())->get_header();
 
   TLOG() << "Fragment Headers:";
-  TLOG() << "First: " << h5_raw_data_file.get_frag_ptr(first_trig_num, "TPC", 0, 0)->get_header();
+  TLOG() << "First: " << h5_raw_data_file.get_frag_ptr(first_trig_num, 0, "TPC", 0, 0)->get_header();
   TLOG() << "Last: " << h5_raw_data_file.get_frag_ptr(all_frag_paths.back())->get_header();
 
   return 0;

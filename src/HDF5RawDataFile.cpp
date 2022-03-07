@@ -120,8 +120,8 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
  */
 void
 HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh)
-{
-
+{  
+  
   m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(trh),
                               static_cast<const char*>(trh.get_storage_location()),
                               trh.get_total_size_bytes());
@@ -367,7 +367,13 @@ HDF5RawDataFile::get_all_record_numbers()
     if (name.find(".") && get_version() < 2)
       throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-    record_numbers.insert(std::stoi(name.substr(loc + record_prefix_size)));
+    auto trstring = name.substr(loc + record_prefix_size);
+
+    loc = trstring.find(".");
+    if(loc!=std::string::npos)
+      trstring.resize(loc); //remove anything from '.' onwards
+
+    record_numbers.insert(std::stoi(trstring));
   }
 
   return record_numbers;
@@ -475,40 +481,40 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 }
 
 std::unique_ptr<daqdataformats::Fragment>
-HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
-                              const daqdataformats::GeoID element_id,
-                              const daqdataformats::sequence_number_t seq_num)
+	HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+				      const daqdataformats::sequence_number_t seq_num,
+				      const daqdataformats::GeoID element_id)
 {
   if(get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, element_id, seq_num));
+  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, element_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                              const daqdataformats::sequence_number_t seq_num,
                               const daqdataformats::GeoID::SystemType type,
                               const uint16_t region_id, // NOLINT(build/unsigned)
-                              const uint32_t element_id, // NOLINT(build/unsigned)
-                              const daqdataformats::sequence_number_t seq_num)
+                              const uint32_t element_id) // NOLINT(build/unsigned)
 {
   if(get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, type, region_id, element_id, seq_num));
+  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, type, region_id, element_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                              const daqdataformats::sequence_number_t seq_num,
                               const std::string typestring,
                               const uint16_t region_id, // NOLINT(build/unsigned)
-                              const uint32_t element_id, // NOLINT(build/unsigned)
-                              const daqdataformats::sequence_number_t seq_num)
+                              const uint32_t element_id) // NOLINT(build/unsigned)
 {
   if(get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, typestring, region_id, element_id, seq_num));
+  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, typestring, region_id, element_id));
 }
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader>
