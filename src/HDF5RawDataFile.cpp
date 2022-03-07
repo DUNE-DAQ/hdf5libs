@@ -16,7 +16,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <filesystem>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -31,8 +31,10 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  size_t file_index,
                                  std::string application_name,
                                  const hdf5filelayout::FileLayoutParams& fl_params,
+				 std::string inprogress_filename_suffix,
                                  unsigned open_flags)
-  : m_open_flags(open_flags)
+  : m_bare_file_name(file_name)
+  , m_open_flags(open_flags)
 {
 
   // check and make sure that the file isn't ReadOnly
@@ -40,11 +42,13 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
     throw IncompatibleOpenFlags(ERS_HERE,file_name,m_open_flags);
   }
 
+  auto filename_to_open = m_bare_file_name+inprogress_filename_suffix;
+  
   // do the file open
   try {
-    m_file_ptr.reset(new HighFive::File(file_name, m_open_flags));
+    m_file_ptr.reset(new HighFive::File(filename_to_open, m_open_flags));
   } catch (std::exception const& excpt) {
-    throw FileOpenFailed(ERS_HERE, file_name, excpt.what());
+    throw FileOpenFailed(ERS_HERE, filename_to_open, excpt.what());
   }
 
   m_recorded_size = 0;
@@ -77,6 +81,9 @@ HDF5RawDataFile::~HDF5RawDataFile()
     write_attribute("closing_timestamp", file_closing_timestamp);
 
     m_file_ptr->flush();
+
+    //rename file to the bare name
+    std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
   }
 
   // explicit destruction; not really needed, but nice to be clear...
@@ -125,14 +132,15 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag)
  * @brief Constructor for reading a file
  */
 HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
-  : m_open_flags(HighFive::File::ReadOnly)
+  : m_bare_file_name(file_name)
+  , m_open_flags(HighFive::File::ReadOnly)
 {
 
   // do the file open
   try {
-    m_file_ptr = std::make_unique<HighFive::File>(file_name, m_open_flags);
+    m_file_ptr = std::make_unique<HighFive::File>(m_bare_file_name, m_open_flags);
   } catch (std::exception const& excpt) {
-    throw FileOpenFailed(ERS_HERE, file_name, excpt.what());
+    throw FileOpenFailed(ERS_HERE, m_bare_file_name, excpt.what());
   }
 
   if (m_file_ptr->hasAttribute("recorded_size"))
