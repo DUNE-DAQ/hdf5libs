@@ -44,7 +44,6 @@ ERS_DECLARE_ISSUE(hdf5libs,
 		  "Number " << number << " has more digits than the max specified of " << digits << ". Using natural width.",
                   ((uint64_t)number)((uint64_t)digits)) // NOLINT(build/unsigned)
 
-
 ERS_DECLARE_ISSUE(hdf5libs,
                   FileLayoutInvalidSystemType,
                   "Bad File Layout cofiguration: sytem type " << sys_type_name << " is invalid.",
