@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,"TPC",1,0);
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -317,7 +317,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
 
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,"PDS",0,1);
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   //test access by passing in GeoID
   dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
-  frag_ptr = h5file_ptr->get_frag_ptr(5,gid);
+  frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,"TPC",1,0);
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -416,7 +416,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
 
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,"PDS",0,1);
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -426,7 +426,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   //test access by passing in GeoID
   dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
-  frag_ptr = h5file_ptr->get_frag_ptr(5,gid);
+  frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,

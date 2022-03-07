@@ -61,17 +61,17 @@ HDF5FileLayout::get_path_params(daqdataformats::GeoID::SystemType type) const
 std::string HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build/unsigned)
 						     daqdataformats::sequence_number_t seq_num) const
 {
-  std::ostringstream trigger_number_string;
+  std::ostringstream record_number_string;
 
   int width=m_conf_params.digits_for_trigger_number;
   
-  if(trig_num >= m_powers_ten[m_conf_params.digits_for_trigger_number]){
-    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,trig_num,m_conf_params.digits_for_trigger_number));
+  if(record_number >= m_powers_ten[m_conf_params.digits_for_trigger_number]){
+    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,record_number,m_conf_params.digits_for_trigger_number));
     width=0; // tells it to revert to normal width
   }
         
-  trigger_number_string << m_conf_params.trigger_record_name_prefix
-			<< std::setw(width) << std::setfill('0') << record_number;
+  record_number_string << m_conf_params.trigger_record_name_prefix
+		       << std::setw(width) << std::setfill('0') << record_number;
 
   if (m_conf_params.digits_for_sequence_number > 0) {
 
@@ -80,7 +80,7 @@ std::string HDF5FileLayout::get_record_number_string(uint64_t record_number, // 
 	ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,seq_num,m_conf_params.digits_for_sequence_number));
 	width=0; // tells it to revert to normal width
       }
-      trigger_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
+      record_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
   }
   
   return record_number_string.str();
