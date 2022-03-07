@@ -97,10 +97,10 @@ create_file_layout_params()
 
   dunedaq::hdf5libs::hdf5filelayout::FileLayoutParams layout_params;
   layout_params.path_param_list = param_list;
-  layout_params.trigger_record_name_prefix = "TriggerRecord";
-  layout_params.digits_for_trigger_number = 6;
+  layout_params.record_name_prefix = "TriggerRecord";
+  layout_params.digits_for_record_number = 6;
   layout_params.digits_for_sequence_number = 4;
-  layout_params.trigger_record_header_dataset_name = "TriggerRecordHeader";
+  layout_params.record_header_dataset_name = "TriggerRecordHeader";
 
   return layout_params;
 }

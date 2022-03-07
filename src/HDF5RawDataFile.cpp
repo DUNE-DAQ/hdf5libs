@@ -67,7 +67,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   //write the record type
-  write_attribute("record_type",fl_params.trigger_record_name_prefix);
+  write_attribute("record_type",fl_params.record_name_prefix);
 
 }
 
@@ -280,8 +280,8 @@ void HDF5RawDataFile::check_file_layout()
     return;
 
   std::string record_type = get_attribute<std::string>("record_type");
-  if(record_type.compare(m_file_layout_ptr->get_trigger_record_name_prefix())!=0)
-    throw BadRecordType(ERS_HERE,record_type,m_file_layout_ptr->get_trigger_record_name_prefix());
+  if(record_type.compare(m_file_layout_ptr->get_record_name_prefix())!=0)
+    throw BadRecordType(ERS_HERE,record_type,m_file_layout_ptr->get_record_name_prefix());
   
 }
 
@@ -290,8 +290,8 @@ void HDF5RawDataFile::check_record_type(std::string rt_name)
   if(get_version() < 2)
     return;
 
-  if(m_file_layout_ptr->get_trigger_record_name_prefix().compare(rt_name)!=0)
-    throw WrongRecordTypeRequested(ERS_HERE,rt_name,m_file_layout_ptr->get_trigger_record_name_prefix());
+  if(m_file_layout_ptr->get_record_name_prefix().compare(rt_name)!=0)
+    throw WrongRecordTypeRequested(ERS_HERE,rt_name,m_file_layout_ptr->get_record_name_prefix());
   
 }
 
@@ -355,7 +355,7 @@ HDF5RawDataFile::get_all_record_numbers()
   HighFive::Group parent_group = m_file_ptr->getGroup(m_file_ptr->getPath());
 
   std::vector<std::string> childNames = parent_group.listObjectNames();
-  const std::string record_prefix = m_file_layout_ptr->get_trigger_record_name_prefix();
+  const std::string record_prefix = m_file_layout_ptr->get_record_name_prefix();
   const size_t record_prefix_size = record_prefix.size();
 
   for (auto const& name : childNames) {
@@ -410,7 +410,7 @@ HDF5RawDataFile::get_record_header_dataset_paths()
   } else{
 
     for(auto const& path : get_dataset_paths()){
-      if(path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) != std::string::npos){
+      if(path.find(m_file_layout_ptr->get_record_header_dataset_name()) != std::string::npos){
 	rec_paths.push_back(path);
       }
     }
@@ -446,7 +446,7 @@ HDF5RawDataFile::get_all_fragment_dataset_paths()
   std::vector<std::string> frag_paths;
 
   for (auto const& path : get_dataset_paths()) {
-      if (path.find(m_file_layout_ptr->get_trigger_header_dataset_name()) == std::string::npos)
+      if (path.find(m_file_layout_ptr->get_record_header_dataset_name()) == std::string::npos)
         frag_paths.push_back(path);
   }
 

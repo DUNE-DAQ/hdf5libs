@@ -32,18 +32,18 @@ void HDF5FileLayout::check_config()
   if( m_version < 2 )
     return;
 
-  if(m_conf_params.trigger_record_name_prefix.compare("TriggerRecord")==0){
+  if(m_conf_params.record_name_prefix.compare("TriggerRecord")==0){
     if(m_conf_params.digits_for_sequence_number==0){
       ers::error(FileLayoutSequenceIDsCannotBeZero(ERS_HERE,4));
       m_conf_params.digits_for_sequence_number=4;
     }
-  } else if(m_conf_params.trigger_record_name_prefix.compare("TimeSlice")==0){
+  } else if(m_conf_params.record_name_prefix.compare("TimeSlice")==0){
     if(m_conf_params.digits_for_sequence_number!=0){
-      ers::warning(InvalidSequenceDigits(ERS_HERE,m_conf_params.trigger_record_name_prefix,0));
+      ers::warning(InvalidSequenceDigits(ERS_HERE,m_conf_params.record_name_prefix,0));
       m_conf_params.digits_for_sequence_number=0;
     }
   } else{
-    throw InvalidRecordName(ERS_HERE,m_conf_params.trigger_record_name_prefix);
+    throw InvalidRecordName(ERS_HERE,m_conf_params.record_name_prefix);
   }
 }
   
@@ -63,14 +63,14 @@ std::string HDF5FileLayout::get_record_number_string(uint64_t record_number, // 
 {
   std::ostringstream record_number_string;
 
-  int width=m_conf_params.digits_for_trigger_number;
+  int width=m_conf_params.digits_for_record_number;
   
-  if(record_number >= m_powers_ten[m_conf_params.digits_for_trigger_number]){
-    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,record_number,m_conf_params.digits_for_trigger_number));
+  if(record_number >= m_powers_ten[m_conf_params.digits_for_record_number]){
+    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,record_number,m_conf_params.digits_for_record_number));
     width=0; // tells it to revert to normal width
   }
         
-  record_number_string << m_conf_params.trigger_record_name_prefix
+  record_number_string << m_conf_params.record_name_prefix
 		       << std::setw(width) << std::setfill('0') << record_number;
 
   if (m_conf_params.digits_for_sequence_number > 0) {
@@ -109,7 +109,7 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
   path_elements.push_back(get_trigger_number_string(trh.get_trigger_number(), trh.get_sequence_number()));
   
   // then the TriggerRecordHeader dataset name
-  path_elements.push_back(m_conf_params.trigger_record_header_dataset_name);
+  path_elements.push_back(m_conf_params.record_header_dataset_name);
   
   return path_elements;
 }
@@ -126,7 +126,7 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
   path_elements.push_back(get_timeslice_number_string(tsh.timeslice_number));
   
   // then the TriggerRecordHeader dataset name
-  path_elements.push_back(m_conf_params.trigger_record_header_dataset_name);
+  path_elements.push_back(m_conf_params.record_header_dataset_name);
   
   return path_elements;
 }
@@ -185,7 +185,7 @@ std::string HDF5FileLayout::get_trigger_record_header_path(daqdataformats::trigg
 							   daqdataformats::sequence_number_t seq_num) const
 {
   return get_trigger_number_string(trig_num, seq_num) + "/" +
-    m_conf_params.trigger_record_header_dataset_name;
+    m_conf_params.record_header_dataset_name;
 }
 
 /**
@@ -194,7 +194,7 @@ std::string HDF5FileLayout::get_trigger_record_header_path(daqdataformats::trigg
 std::string HDF5FileLayout::get_timeslice_header_path(daqdataformats::timeslice_number_t ts_num) const
 {
   return get_timeslice_number_string(ts_num) + "/" +
-    m_conf_params.trigger_record_header_dataset_name;
+    m_conf_params.record_header_dataset_name;
 }
 
 /**
@@ -312,10 +312,10 @@ void HDF5FileLayout::fill_path_params_map(hdf5filelayout::FileLayoutParams const
 hdf5filelayout::FileLayoutParams HDF5FileLayout::get_v0_file_layout_params()
 {
   hdf5filelayout::FileLayoutParams flp;
-  flp.trigger_record_name_prefix = "TriggerRecord";
-  flp.digits_for_trigger_number = 6;
+  flp.record_name_prefix = "TriggerRecord";
+  flp.digits_for_record_number = 6;
   flp.digits_for_sequence_number = 0;
-  flp.trigger_record_header_dataset_name = "TriggerRecordHeader";
+  flp.record_header_dataset_name = "TriggerRecordHeader";
   
   hdf5filelayout::PathParams pp;
   

@@ -81,17 +81,17 @@ public:
 
   uint32_t get_version() const noexcept { return m_version; } // NOLINT(build/unsigned)
 
-  std::string get_trigger_record_name_prefix() const noexcept 
-  { return m_conf_params.trigger_record_name_prefix; }
+  std::string get_record_name_prefix() const noexcept 
+  { return m_conf_params.record_name_prefix; }
   
-  int get_digits_for_trigger_number() const noexcept 
-  { return m_conf_params.digits_for_trigger_number; }
+  int get_digits_for_record_number() const noexcept 
+  { return m_conf_params.digits_for_record_number; }
 
   int get_digits_for_sequence_number() const noexcept 
   { return m_conf_params.digits_for_sequence_number; }
   
-  std::string get_trigger_header_dataset_name() const noexcept 
-  { return m_conf_params.trigger_record_header_dataset_name; }
+  std::string get_record_header_dataset_name() const noexcept 
+  { return m_conf_params.record_header_dataset_name; }
 
   std::map<daqdataformats::GeoID::SystemType, hdf5filelayout::PathParams> 
   get_path_params_map() const 
