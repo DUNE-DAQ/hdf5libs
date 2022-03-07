@@ -82,6 +82,7 @@ main(int argc, char** argv)
                                                      file_index,                 // file_index,
                                                      app_name,                   // app_name
                                                      fl_conf,                    // file_layout_confs
+						     ".writing",                 // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
