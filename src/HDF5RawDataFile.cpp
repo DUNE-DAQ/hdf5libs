@@ -158,26 +158,6 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag)
                               frag.get_size());
 }
 
-HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
-  : m_bare_file_name(file_name)
-  , m_open_flags(HighFive::File::ReadOnly)
-{
-
-  // do the file open
-  try {
-    m_file_ptr = std::make_unique<HighFive::File>(m_bare_file_name, m_open_flags);
-  } catch (std::exception const& excpt) {
-    throw FileOpenFailed(ERS_HERE, m_bare_file_name, excpt.what());
-  }
-
-  if (m_file_ptr->hasAttribute("recorded_size"))
-    m_recorded_size = get_attribute<size_t>("recorded_size");
-  else
-    m_recorded_size = 0;
-
-  read_file_layout();
-}
-
 /**
  * @brief write the file layout
  */
