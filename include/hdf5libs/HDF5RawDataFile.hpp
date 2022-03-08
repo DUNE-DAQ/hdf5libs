@@ -133,6 +133,11 @@ public:
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
 
+  std::string get_record_type() const noexcept { return m_record_type; }
+
+  bool is_trigger_record_type() const noexcept { return m_record_type.compare("TriggerRecord")==0; }
+  bool is_timeslice_type()      const noexcept { return m_record_type.compare("TimeSlice")==0; }
+  
   HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
 
   uint32_t get_version() const { return m_file_layout_ptr->get_version(); } // NOLINT(build/unsigned)
@@ -208,6 +213,7 @@ private:
 
   // Total size of data being written
   size_t m_recorded_size;
+  std::string m_record_type;
 
   // file layout writing/reading
   void write_file_layout();

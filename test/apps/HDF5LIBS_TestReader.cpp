@@ -19,6 +19,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
@@ -43,67 +44,98 @@ main(int argc, char** argv)
   // open our file reading
   HDF5RawDataFile h5_raw_data_file(ifile_name);
 
-  TLOG() << "File name: " << h5_raw_data_file.get_file_name();
-  TLOG() << "\tRecorded size from class: " << h5_raw_data_file.get_recorded_size();
+  std::ostringstream ss;
+  
+  ss << "\nFile name: " << h5_raw_data_file.get_file_name();
+  ss << "\n\tRecorded size from class: " << h5_raw_data_file.get_recorded_size();
 
   auto recorded_size = h5_raw_data_file.get_attribute<size_t>("recorded_size");
-  TLOG() << "\tRecorded size from attribute: " << recorded_size;
+  ss << "\n\tRecorded size from attribute: " << recorded_size;
 
+  auto record_type = h5_raw_data_file.get_record_type();
+  ss << "\nRecord type = " << record_type;
+  
   nlohmann::json flp_json;
   auto flp = h5_raw_data_file.get_file_layout().get_file_layout_params();
   hdf5filelayout::to_json(flp_json, flp);
-  TLOG() << "File Layout Parameters:\n" << flp_json;
-  TLOG();
+  ss << "\nFile Layout Parameters:\n" << flp_json;
 
+  TLOG() << ss.str();
+  ss.str("");
+  
   // get some file attributes
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto creation_timestamp = h5_raw_data_file.get_attribute<std::string>("creation_timestamp");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
 
-  TLOG() << "\n\tRun number: " << run_number;
-  TLOG() << "\n\tFile index: " << file_index;
-  TLOG() << "\n\tCreation timestamp: " << creation_timestamp;
-  TLOG() << "\n\tWriter app name: " << app_name;
-  TLOG();
+  ss << "\n\tRun number: " << run_number;
+  ss << "\n\tFile index: " << file_index;
+  ss << "\n\tCreation timestamp: " << creation_timestamp;
+  ss << "\n\tWriter app name: " << app_name;
 
-  auto trigger_records = h5_raw_data_file.get_all_trigger_record_numbers();
-  TLOG() << "Number of trigger records: " << trigger_records.size();
-  if (trigger_records.empty()) {
-    TLOG() << "NO TRIGGER RECORDS FOUND";
+  TLOG() << ss.str();
+  ss.str("");
+
+  auto records = h5_raw_data_file.get_all_record_numbers();
+  ss << "\nNumber of records: " << records.size();
+  if (records.empty()) {
+    ss << "\n\nNO TRIGGER RECORDS FOUND";
+    TLOG() << ss.str();
     return 0;
   }
-  TLOG() << "\tFirst record: " << *(trigger_records.begin());
-  TLOG() << "\tLast record: " << *(std::next(trigger_records.begin(), trigger_records.size() - 1));
+  ss << "\n\tFirst record: " << *(records.begin());
+  ss << "\n\tLast record: " << *(std::next(records.begin(), records.size() - 1));
 
+  TLOG() << ss.str();
+  ss.str("");
+    
   auto all_datasets = h5_raw_data_file.get_dataset_paths();
-  TLOG() << "All datasets found:";
+  ss << "\nAll datasets found:";
   for (auto const& path : all_datasets)
-    TLOG() << "\n\t" << path;
-  TLOG();
+    ss << "\n\t" << path;
 
-  auto all_trh_paths = h5_raw_data_file.get_trigger_record_header_dataset_paths();
-  TLOG() << "All trigger record header datasets found:";
-  for (auto const& path : all_trh_paths)
-    TLOG() << "\n\t" << path;
-  TLOG();
+  TLOG() << ss.str();
+  ss.str("");
+
+  auto all_rh_paths = h5_raw_data_file.get_record_header_dataset_paths();
+  ss << "\nAll record header datasets found:";
+  for (auto const& path : all_rh_paths)
+    ss << "\n\t" << path;
+
+  TLOG() << ss.str();
+  ss.str("");
 
   auto all_frag_paths = h5_raw_data_file.get_all_fragment_dataset_paths();
-  TLOG() << "All fragment datasets found:";
+  ss << "\nAll fragment datasets found:";
   for (auto const& path : all_frag_paths)
-    TLOG() << "\n\t" << path;
-  TLOG();
+    ss << "\n\t" << path;
 
-  auto first_trig_num = *(trigger_records.begin());
+  TLOG() << ss.str();
+  ss.str("");
 
-  auto trh_ptr = h5_raw_data_file.get_trh_ptr(first_trig_num,0);
-  TLOG() << "Trigger Record Headers:";
-  TLOG() << "First: " << trh_ptr->get_header();
-  TLOG() << "Last: " << h5_raw_data_file.get_trh_ptr(all_trh_paths.back())->get_header();
+  auto first_rec_num = *(records.begin());
 
-  TLOG() << "Fragment Headers:";
-  TLOG() << "First: " << h5_raw_data_file.get_frag_ptr(first_trig_num, 0, "TPC", 0, 0)->get_header();
-  TLOG() << "Last: " << h5_raw_data_file.get_frag_ptr(all_frag_paths.back())->get_header();
+  if(h5_raw_data_file.is_trigger_record_type()){
+    auto trh_ptr = h5_raw_data_file.get_trh_ptr(first_rec_num,0);
+    ss << "\nTrigger Record Headers:";
+    ss << "\nFirst: " << trh_ptr->get_header();
+    ss << "\nLast: " << h5_raw_data_file.get_trh_ptr(all_rh_paths.back())->get_header();
+  }
+  else if(h5_raw_data_file.is_timeslice_type()){
+    auto tsh_ptr = h5_raw_data_file.get_tsh_ptr(first_rec_num);
+    ss << "\nTimeSlice Headers:";
+    ss << "\nFirst: " << *tsh_ptr;
+    ss << "\nLast: " << *(h5_raw_data_file.get_tsh_ptr(all_rh_paths.back()));
+  }
+  TLOG() << ss.str();
+  ss.str("");
+
+  ss << "\nFragment Headers:";
+  ss << "\nFirst: " << h5_raw_data_file.get_frag_ptr(first_rec_num, 0, "TPC", 0, 0)->get_header();
+  ss << "\nLast: " << h5_raw_data_file.get_frag_ptr(all_frag_paths.back())->get_header();
+  TLOG() << ss.str();
+  ss.str("");
 
   return 0;
 }

@@ -29,6 +29,12 @@ register_hdf5rawdatafile(py::module& m)
 	 "Get file name")
     .def("get_recorded_size", &HDF5RawDataFile::get_recorded_size,
 	 "Get recorded size")
+    .def("get_record_type", &HDF5RawDataFile::get_record_type,
+	 "Get record type")
+    .def("is_trigger_record_type",&HDF5RawDataFile::is_trigger_record_type,
+	 "Is record type TriggerRecord")
+    .def("is_timeslice_type",&HDF5RawDataFile::is_timeslice_type,
+	 "Is record type TimeSlice")
     .def("get_dataset_paths", &HDF5RawDataFile::get_dataset_paths,
 	 "Get all dataset paths under specified top group in file",
 	 py::arg("top_level_group_name")="")
@@ -38,13 +44,13 @@ register_hdf5rawdatafile(py::module& m)
 	 "Get all trigger record numbers in file")
     .def("get_all_timeslice_numbers", &HDF5RawDataFile::get_all_timeslice_numbers,
 	 "Get all timeslice numbers in file")
-    .def("get_trigger_record_header_dataset_paths", 
+    .def("get_record_header_dataset_paths", 
 	 &HDF5RawDataFile::get_record_header_dataset_paths,
 	 "Get all paths to record header datasets")
     .def("get_trigger_record_header_dataset_paths", 
 	 &HDF5RawDataFile::get_trigger_record_header_dataset_paths,
 	 "Get all paths to TriggerRecordHeader datasets")
-    .def("get_trigger_record_header_dataset_paths", 
+    .def("get_timeslice_header_dataset_paths", 
 	 &HDF5RawDataFile::get_timeslice_header_dataset_paths,
 	 "Get all paths to TimeSliceHeader datasets")
     .def("get_all_fragment_dataset_paths",

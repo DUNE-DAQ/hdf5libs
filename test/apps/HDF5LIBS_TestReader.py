@@ -34,21 +34,28 @@ def main():
     #this is a bit messy at the moment: should try to combine interfaces here
     h5py_file = h5py.File(ifile_name,'r')
     for attr in h5py_file.attrs.items(): print ("File Attribute ",attr[0]," = ",attr[1])
+
+    #get type of record
+    record_type = h5_file.get_record_type()
     
-    trigger_records = h5_file.get_all_trigger_record_numbers()
-    print("Number of trigger records: %d"%len(trigger_records))
-    print("\tTrigger records: ",trigger_records)
+    records = h5_file.get_all_record_numbers()
+    print("Number of records: %d"%len(records))
+    print("\tRecord numbers: ",records)
 
     all_datasets = h5_file.get_dataset_paths()
     print("All datasets found:")
     for d in all_datasets: print(d)
 
-    all_trh_paths = h5_file.get_trigger_record_header_dataset_paths()
-    print("TriggerRecordHeaders:")
-    for d in all_trh_paths: 
-        trh = h5_file.get_trh(d)
-        print(d,": ",trh.get_trigger_number(),
-              trh.get_sequence_number(),trh.get_trigger_timestamp())
+    all_rh_paths = h5_file.get_record_header_dataset_paths()
+    print("Record Headers:")
+    for d in all_rh_paths: 
+        if record_type=="TriggerRecord":
+            trh = h5_file.get_trh(d)
+            print(d,": ",trh.get_trigger_number(),
+                  trh.get_sequence_number(),trh.get_trigger_timestamp())
+        elif record_type=="TimeSlice":
+            tsh = h5_file.get_tsh(d)
+            print(d,": ",tsh.timeslice_number)
 
     all_frag_paths = h5_file.get_all_fragment_dataset_paths()
     print("Fragments:")

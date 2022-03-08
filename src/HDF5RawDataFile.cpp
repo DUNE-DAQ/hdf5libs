@@ -71,7 +71,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   //write the record type
-  write_attribute("record_type",fl_params.record_name_prefix);
+  m_record_type = fl_params.record_name_prefix;
+  write_attribute("record_type",m_record_type);
 
 }
 
@@ -256,7 +257,14 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
   else
     m_recorded_size = 0;
 
+  
   read_file_layout();
+
+  if(m_file_ptr->hasAttribute("record_type"))
+    m_record_type = get_attribute<std::string>("record_type");
+  else
+    m_record_type = m_file_layout_ptr->get_record_name_prefix();
+
   check_file_layout();
 }
 
