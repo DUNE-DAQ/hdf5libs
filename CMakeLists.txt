@@ -21,11 +21,12 @@ daq_add_library (HDF5FileLayout.cpp HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs 
 
 ##############################################################################
 # Unit tests
-daq_add_unit_test( HDF5WriteRead_test LINK_LIBRARIES hdf5libs )
+daq_add_unit_test( HDF5WriteReadTriggerRecord_test LINK_LIBRARIES hdf5libs )
+daq_add_unit_test( HDF5WriteReadTimeSlice_test LINK_LIBRARIES hdf5libs )
 
 ##############################################################################
 # Python bindings
-daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daqdataformats)
 
 ##############################################################################
 # Applications

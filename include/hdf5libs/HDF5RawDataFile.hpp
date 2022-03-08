@@ -18,6 +18,7 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
+#include "daqdataformats/TimeSlice.hpp"
 #include "logging/Logging.hpp"
 
 // External Packages
@@ -37,6 +38,7 @@
 #include <sys/statvfs.h>
 #include <variant>
 #include <vector>
+#include <utility>
 
 namespace dunedaq {
 
@@ -63,6 +65,18 @@ ERS_DECLARE_ISSUE(hdf5libs,
 		  << " but min allowed version is " << min_allowed
 		  << " and max allowed version is " << max_allowed,
 		  ((uint32_t)version)((uint32_t)min_allowed)((uint32_t)max_allowed)) // NOLINT(build/unsigned)
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  BadRecordType,
+		  "Record type attribute " << rt_attr
+		  << " does not match file layout config record name prefix " << rt_fl,
+		  ((std::string)rt_attr)((std::string)rt_fl))
+
+ERS_DECLARE_ISSUE(hdf5libs,
+		  WrongRecordTypeRequested,
+		  "Record type requested " << rname
+		  << " does not match file layout config record name prefix " << rt_fl,
+		  ((std::string)rname)((std::string)rt_fl))
 
 ERS_DECLARE_ISSUE(hdf5libs,
 		  InvalidHDF5Group,
@@ -119,6 +133,11 @@ public:
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
 
+  std::string get_record_type() const noexcept { return m_record_type; }
+
+  bool is_trigger_record_type() const noexcept { return m_record_type.compare("TriggerRecord")==0; }
+  bool is_timeslice_type()      const noexcept { return m_record_type.compare("TimeSlice")==0; }
+  
   HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
 
   uint32_t get_version() const { return m_file_layout_ptr->get_version(); } // NOLINT(build/unsigned)
@@ -126,6 +145,8 @@ public:
   // basic data writing methods
   void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TriggerRecordHeader& trh);
+  void write(const daqdataformats::TimeSlice& ts);
+  void write(const daqdataformats::TimeSliceHeader& tsh);
   void write(const daqdataformats::Fragment& frag);
 
   // attribute writers/getters
@@ -143,35 +164,41 @@ public:
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
 
-  void explore_subgroup(const HighFive::Group& parent_group, std::string relative_path, std::vector<std::string>& path_list);
-
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
-  std::set<daqdataformats::trigger_number_t> get_all_record_numbers();
-  std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
 
+  std::set<uint64_t> get_all_record_numbers(); // NOLINT(build/unsigned)
+  std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
+  std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers();
+
+  std::vector<std::string> get_record_header_dataset_paths();
   std::vector<std::string> get_trigger_record_header_dataset_paths();
+  std::vector<std::string> get_timeslice_header_dataset_paths();
+
   std::vector<std::string> get_all_fragment_dataset_paths();
 
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                         const daqdataformats::GeoID element_id,
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                         const daqdataformats::GeoID::SystemType type,
+  std::unique_ptr<daqdataformats::Fragment>            get_frag_ptr(const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
+  std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const std::string& dataset_name);
+  
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                         const daqdataformats::sequence_number_t seq_num,
+                                                         const daqdataformats::GeoID element_id);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                         const daqdataformats::sequence_number_t seq_num,
+							 const daqdataformats::GeoID::SystemType type,
                                                          const uint16_t region_id, // NOLINT(build/unsigned)
-                                                         const uint32_t element_id, // NOLINT(build/unsigned)
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const daqdataformats::trigger_number_t trig_num,
+                                                         const uint32_t element_id); // NOLINT(build/unsigned)
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                         const daqdataformats::sequence_number_t seq_num,
                                                          const std::string typestring,
                                                          const uint16_t region_id, // NOLINT(build/unsigned)
-                                                         const uint32_t element_id, // NOLINT(build/unsigned)
-                                                         const daqdataformats::sequence_number_t seq_num = 0);
+                                                         const uint32_t element_id); // NOLINT(build/unsigned)
 
-  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                                                                    const daqdataformats::sequence_number_t seq_num = 0);
+  std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
 
 private:
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
@@ -186,13 +213,22 @@ private:
 
   // Total size of data being written
   size_t m_recorded_size;
+  std::string m_record_type;
 
   // file layout writing/reading
   void write_file_layout();
   void read_file_layout();
+  void check_file_layout();
 
+  //checking function
+  void check_record_type(std::string);
+  
   // writing to datasets
   size_t do_write(std::vector<std::string> const&, const char*, size_t);
+
+  //unpacking groups when reading
+  void explore_subgroup(const HighFive::Group& parent_group, std::string relative_path, std::vector<std::string>& path_list);
+
 };
 
 

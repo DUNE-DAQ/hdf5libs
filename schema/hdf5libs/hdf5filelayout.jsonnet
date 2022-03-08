@@ -31,14 +31,14 @@ local types = {
     list_of_path_params : s.sequence("PathParamList", self.subdet_path_params, doc="List of subdetector path parameters" ),
 
     hdf5_file_layout_params: s.record("FileLayoutParams", [
-        s.field("trigger_record_name_prefix", self.hdf_string, "TriggerRecord",
-                doc="Prefix for the TriggerRecord name"),
-        s.field("digits_for_trigger_number", self.count, 6,
-                doc="Number of digits to use for the trigger number in the TriggerRecord name inside the HDF5 file"),
-        s.field("digits_for_sequence_number", self.count, 0,
+        s.field("record_name_prefix", self.hdf_string, "TriggerRecord",
+                doc="Prefix for the record name"),
+        s.field("digits_for_record_number", self.count, 6,
+                doc="Number of digits to use for the record number in the record name inside the HDF5 file"),
+        s.field("digits_for_sequence_number", self.count, 4,
                 doc="Number of digits to use for the sequence number in the TriggerRecord name inside the HDF5 file"),
-        s.field("trigger_record_header_dataset_name", self.hdf_string, "TriggerRecordHeader",
-                doc="Dataset name for the TriggerRecordHeader"),
+        s.field("record_header_dataset_name", self.hdf_string, "TriggerRecordHeader",
+                doc="Dataset name for the record header"),
         s.field("path_param_list", self.list_of_path_params, doc=""),
     ], doc="Parameters for the layout of Groups and DataSets within the HDF5 file"),
 

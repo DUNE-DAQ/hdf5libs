@@ -1,5 +1,5 @@
 /**
- * @file HDF5WriteRead_test.cxx Application that tests and demonstrates
+ * @file HDF5WriteReadTimeSlice_test.cxx Application that tests and demonstrates
  * the write/read functions of the HDF5RawDataFile class.
  *
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
@@ -12,7 +12,7 @@
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
 
 
-#define BOOST_TEST_MODULE HDF5WriteRead_test // NOLINT
+#define BOOST_TEST_MODULE HDF5WriteReadTimeSlice_test // NOLINT
 
 #include "boost/test/unit_test.hpp"
 
@@ -30,7 +30,7 @@ using namespace dunedaq::hdf5libs;
 
 constexpr int run_number=53;
 constexpr int file_index=0;
-const std::string application_name="HDF5WriteRead_test";
+const std::string application_name="HDF5WriteReadTimeSlice_test";
 constexpr size_t fragment_size = 100;
 constexpr size_t region_count_tpc=2;
 constexpr size_t element_count_tpc=2;
@@ -97,37 +97,31 @@ create_file_layout_params()
 
   dunedaq::hdf5libs::hdf5filelayout::FileLayoutParams layout_params;
   layout_params.path_param_list = param_list;
-  layout_params.trigger_record_name_prefix = "TriggerRecord";
-  layout_params.digits_for_trigger_number = 6;
+  layout_params.record_name_prefix = "TimeSlice";
+  layout_params.digits_for_record_number = 6;
   layout_params.digits_for_sequence_number = 0;
-  layout_params.trigger_record_header_dataset_name = "TriggerRecordHeader";
+  layout_params.record_header_dataset_name = "TimeSliceHeader";
 
   return layout_params;
 }
 
-dunedaq::daqdataformats::TriggerRecord
-create_trigger_record(int trig_num)
+dunedaq::daqdataformats::TimeSlice
+create_timeslice(int ts_num)
 {
   //setup our dummy_data
   std::vector<char> dummy_vector(fragment_size);
   char* dummy_data = dummy_vector.data();
 
   //get a timestamp for this trigger
-  int64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+  int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
   
-  //create TriggerRecordHeader
-  dunedaq::daqdataformats::TriggerRecordHeaderData trh_data;
-  trh_data.trigger_number = trig_num;
-  trh_data.trigger_timestamp = ts;
-  trh_data.num_requested_components = components_per_record;
-  trh_data.run_number = run_number;
-  trh_data.sequence_number = 0;
-  trh_data.max_sequence_number = 1;
+  //create TimeSliceHeader
+  dunedaq::daqdataformats::TimeSliceHeader tsh;
+  tsh.timeslice_number = ts_num;
+  tsh.run_number = run_number;
   
-  dunedaq::daqdataformats::TriggerRecordHeader trh(&trh_data);
-    
-  //create our TriggerRecord
-  dunedaq::daqdataformats::TriggerRecord tr(trh);
+  //create our TimeSlice
+  dunedaq::daqdataformats::TimeSlice ts(tsh);
 
   //loop over regions and elements tpc
   for( size_t reg_num=0; reg_num < region_count_tpc; ++reg_num)
@@ -136,10 +130,10 @@ create_trigger_record(int trig_num)
 	
 	//create our fragment
 	dunedaq::daqdataformats::FragmentHeader fh;
-	fh.trigger_number = trig_num;
-	fh.trigger_timestamp = ts;
-	fh.window_begin = ts;
-	fh.window_end   = ts;
+	fh.trigger_number = ts_num;
+	fh.trigger_timestamp = timestamp;
+	fh.window_begin = timestamp;
+	fh.window_end   = timestamp;
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
@@ -151,7 +145,7 @@ create_trigger_record(int trig_num)
 	frag_ptr->set_header_fields(fh);
 	
 	//add fragment to TriggerRecord
-	tr.add_fragment(std::move(frag_ptr));
+	ts.add_fragment(std::move(frag_ptr));
 	
       }//end loop over elements
     }//end loop over regions
@@ -163,10 +157,10 @@ create_trigger_record(int trig_num)
 	
 	//create our fragment
 	dunedaq::daqdataformats::FragmentHeader fh;
-	fh.trigger_number = trig_num;
-	fh.trigger_timestamp = ts;
-	fh.window_begin = ts;
-	fh.window_end   = ts;
+	fh.trigger_number = ts_num;
+	fh.trigger_timestamp = timestamp;
+	fh.window_begin = timestamp;
+	fh.window_end   = timestamp;
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
@@ -178,22 +172,22 @@ create_trigger_record(int trig_num)
 	frag_ptr->set_header_fields(fh);
 	
 	//add fragment to TriggerRecord
-	tr.add_fragment(std::move(frag_ptr));
+	ts.add_fragment(std::move(frag_ptr));
 	
       }//end loop over elements
     }//end loop over regions
 
-  return tr;
+  return ts;
 }
 
-BOOST_AUTO_TEST_SUITE(HDF5WriteRead_test)
+BOOST_AUTO_TEST_SUITE(HDF5WriteReadTimeSlice_test)
 
 BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 {
   std::string file_path(std::filesystem::temp_directory_path());
   std::string filename = "demo"+std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
 
-  const int trigger_count = 5;
+  const int timeslice_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   std::string delete_pattern = "demo.*.hdf5";
@@ -212,8 +206,8 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 								  flp_json_in));
 
   // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
+  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
+    h5file_ptr->write(create_timeslice(timeslice_number));
 
   //get recorded size for checking
   size_t recorded_size_at_write = h5file_ptr->get_recorded_size();
@@ -233,11 +227,13 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
   auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
   auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
+  auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
   BOOST_REQUIRE_EQUAL(recorded_size_at_write,recorded_size_attr);
   BOOST_REQUIRE_EQUAL(run_number,run_number_attr);
   BOOST_REQUIRE_EQUAL(file_index,file_index_attr);
   BOOST_REQUIRE_EQUAL(application_name,app_name_attr);
-
+  BOOST_REQUIRE_EQUAL("TimeSlice",record_type_attr);
+  
   //extract and check file layout parameters
   auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
   hdf5filelayout::data_t flp_json_read;
@@ -253,7 +249,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   std::string file_path(std::filesystem::temp_directory_path());
   std::string filename = "demo"+std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
 
-  const int trigger_count = 5;
+  const int timeslice_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   std::string delete_pattern = "demo.*.hdf5";
@@ -267,52 +263,52 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 								  create_file_layout_params()));
 
   // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
+  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
+    h5file_ptr->write(create_timeslice(timeslice_number));
 
   h5file_ptr.reset(); // explicit destruction
 
   //open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path+"/"+filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count,trigger_records.size());
+  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+  BOOST_REQUIRE_EQUAL(timeslice_count,timeslices.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1,first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count,last_trigger_record);
+  auto first_timeslice = *(timeslices.begin());
+  auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
+  BOOST_REQUIRE_EQUAL(1,first_timeslice);
+  BOOST_REQUIRE_EQUAL(timeslice_count,last_timeslice);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count*(1+components_per_record),all_datasets.size());
+  BOOST_REQUIRE_EQUAL(timeslice_count*(1+components_per_record),all_datasets.size());
 
-  auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count,all_trh_paths.size());
+  auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
+  BOOST_REQUIRE_EQUAL(timeslice_count,all_tsh_paths.size());
 
   auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count*components_per_record,all_frag_paths.size());
+  BOOST_REQUIRE_EQUAL(timeslice_count*components_per_record,all_frag_paths.size());
 
   //test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
-  trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(),3);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(),run_number);
+  std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
+  trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
+  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number,3);
+  BOOST_REQUIRE_EQUAL(trs_ptr->run_number,run_number);
 
   //test access by trigger number
-  trh_ptr = h5file_ptr->get_trh_ptr(2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(),2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(),run_number);
+  trs_ptr = h5file_ptr->get_tsh_ptr(2);
+  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number,2);
+  BOOST_REQUIRE_EQUAL(trs_ptr->run_number,run_number);
 
   
   std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
   
   //test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_timeslice);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,"TPC",1,0);
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -321,7 +317,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
 
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,"PDS",0,1);
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -331,7 +327,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   //test access by passing in GeoID
   dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
-  frag_ptr = h5file_ptr->get_frag_ptr(5,gid);
+  frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -349,7 +345,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   std::string file_path(std::filesystem::temp_directory_path());
   std::string filename = "demo"+std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
 
-  const int trigger_count = 5;
+  const int timeslice_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   std::string delete_pattern = "demo.*.hdf5";
@@ -366,52 +362,52 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 								  fl_pars));
 
   // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
+  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
+    h5file_ptr->write(create_timeslice(timeslice_number));
 
   h5file_ptr.reset(); // explicit destruction
 
   //open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path+"/"+filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count,trigger_records.size());
+  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+  BOOST_REQUIRE_EQUAL(timeslice_count,timeslices.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1,first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count,last_trigger_record);
+  auto first_timeslice = *(timeslices.begin());
+  auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
+  BOOST_REQUIRE_EQUAL(1,first_timeslice);
+  BOOST_REQUIRE_EQUAL(timeslice_count,last_timeslice);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count*(1+components_per_record),all_datasets.size());
+  BOOST_REQUIRE_EQUAL(timeslice_count*(1+components_per_record),all_datasets.size());
 
-  auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count,all_trh_paths.size());
+  auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
+  BOOST_REQUIRE_EQUAL(timeslice_count,all_tsh_paths.size());
 
   auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count*components_per_record,all_frag_paths.size());
+  BOOST_REQUIRE_EQUAL(timeslice_count*components_per_record,all_frag_paths.size());
 
   //test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
-  trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(),3);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(),run_number);
+  std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
+  trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
+  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number,3);
+  BOOST_REQUIRE_EQUAL(trs_ptr->run_number,run_number);
 
   //test access by trigger number
-  trh_ptr = h5file_ptr->get_trh_ptr(2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(),2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(),run_number);
+  trs_ptr = h5file_ptr->get_tsh_ptr(2);
+  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number,2);
+  BOOST_REQUIRE_EQUAL(trs_ptr->run_number,run_number);
 
   
   std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
   
   //test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_timeslice);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,"TPC",1,0);
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -420,7 +416,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
 
   //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,"PDS",0,1);
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
@@ -430,7 +426,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   //test access by passing in GeoID
   dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
-  frag_ptr = h5file_ptr->get_frag_ptr(5,gid);
+  frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
