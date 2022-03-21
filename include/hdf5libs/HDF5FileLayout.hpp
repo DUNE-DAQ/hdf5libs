@@ -38,14 +38,14 @@ namespace dunedaq {
 ERS_DECLARE_ISSUE(hdf5libs,
 																		InvalidRecordName,
 																		"Record name " << name
-																																	<< " is unknown.",
+																									 << " is unknown.",
 																		((std::string)name))
 
 ERS_DECLARE_ISSUE(hdf5libs,
 																		InvalidSequenceDigits,
 																		"Record name of type " << name
-																																									<< " must have sequence digits" << digits
-																																									<< ". Resetting that now.",
+																													 << " must have sequence digits" << digits
+																													 << ". Resetting that now.",
 																		((std::string)name)((int32_t)digits))
 
 ERS_DECLARE_ISSUE(hdf5libs,
@@ -122,14 +122,14 @@ hdf5filelayout::FileLayoutParams get_file_layout_params() const
  * @brief get string for record number
  */
 std::string get_record_number_string(uint64_t record_number,   // NOLINT(build/unsigned)
-																																					daqdataformats::sequence_number_t seq_num = 0) const;
+																		 daqdataformats::sequence_number_t seq_num = 0) const;
 
 
 /**
  * @brief get string for Trigger number
  */
 std::string get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
-																																						daqdataformats::sequence_number_t seq_num = 0) const;
+																			daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get string for TimeSlice number
@@ -155,16 +155,22 @@ std::vector<std::string>
 get_path_elements(const daqdataformats::FragmentHeader& fh) const;
 
 /**
+ * @brief extract Fragment GeoID given path elements
+ */
+daqdataformats::GeoID
+get_geo_id_from_path_elements(std::vector<std::string> const& path_elements) const;
+
+/**
  * @brief get the full path for a record header dataset based on trig/seq number
  */
 std::string get_record_header_path(uint64_t rec_num,   // NOLINT (build/unsigned)
-																																			daqdataformats::sequence_number_t seq_num = 0) const;
+																	 daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get the full path for a TriggerRecordHeader dataset based on trig/seq number
  */
 std::string get_trigger_record_header_path(daqdataformats::trigger_number_t trig_num,
-																																											daqdataformats::sequence_number_t seq_num = 0) const;
+																					 daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get the full path for a TimesliceHeader dataset based on ts number
@@ -175,55 +181,55 @@ std::string get_timeslice_header_path(daqdataformats::timeslice_number_t ts_num)
  * @brief get the full path for a Fragment dataset based on trig/seq number and element ID
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																														daqdataformats::sequence_number_t seq_num,
-																														daqdataformats::GeoID element_id) const;
+															daqdataformats::sequence_number_t seq_num,
+															daqdataformats::GeoID element_id) const;
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																														daqdataformats::sequence_number_t seq_num,
-																														daqdataformats::GeoID::SystemType type,
-																														uint16_t region_id,   // NOLINT(build/unsigned)
-																														uint32_t element_id) const;   // NOLINT(build/unsigned)
+															daqdataformats::sequence_number_t seq_num,
+															daqdataformats::GeoID::SystemType type,
+															uint16_t region_id,   // NOLINT(build/unsigned)
+															uint32_t element_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																														daqdataformats::sequence_number_t seq_num,
-																														const std::string& typestring,
-																														uint16_t region_id,   // NOLINT(build/unsigned)
-																														uint32_t element_id) const;   // NOLINT(build/unsigned)
+															daqdataformats::sequence_number_t seq_num,
+															const std::string& typestring,
+															uint16_t region_id,   // NOLINT(build/unsigned)
+															uint32_t element_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string get_fragment_type_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																																			daqdataformats::sequence_number_t seq_num,
-																																			daqdataformats::GeoID::SystemType type) const;
+																	 daqdataformats::sequence_number_t seq_num,
+																	 daqdataformats::GeoID::SystemType type) const;
 
 /**
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string get_fragment_type_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																																			daqdataformats::sequence_number_t seq_num,
-																																			std::string typestring) const;
+																	 daqdataformats::sequence_number_t seq_num,
+																	 std::string typestring) const;
 
 /**
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string get_fragment_region_path(uint64_t trig_num, // NOLINT(build/unsigned)
-																																					daqdataformats::sequence_number_t seq_num,
-																																					daqdataformats::GeoID::SystemType type,
-																																					uint16_t region_id) const;   // NOLINT(build/unsigned)
+																		 daqdataformats::sequence_number_t seq_num,
+																		 daqdataformats::GeoID::SystemType type,
+																		 uint16_t region_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string get_fragment_region_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																																					daqdataformats::sequence_number_t seq_num,
-																																					std::string typestring,
-																																					uint16_t region_id) const;   // NOLINT(build/unsigned)
+																		 daqdataformats::sequence_number_t seq_num,
+																		 std::string typestring,
+																		 uint16_t region_id) const;   // NOLINT(build/unsigned)
 
 private:
 /**
@@ -240,6 +246,11 @@ uint32_t m_version;   // NOLINT(build/unsigned)
  * @brief map translation for GeoID::SystemType to dataset path parameters
  */
 std::map<daqdataformats::GeoID::SystemType, hdf5filelayout::PathParams> m_path_params_map;
+
+/**
+ * @brief map translation for the detector group name to GeoID SystemType
+ */
+std::map<std::string,daqdataformats::GeoID::SystemType> m_detector_group_name_to_type_map;
 
 //quick powers of ten lookup
 constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
@@ -266,9 +277,9 @@ constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
 								};
 
 /**
- * @brief Fill path parameters map from FileLayoutParams
+ * @brief Fill path parameters maps from FileLayoutParams
  */
-void fill_path_params_map(hdf5filelayout::FileLayoutParams const& flp);
+void fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp);
 
 /**
  * @brief Version0 FileLayout parameters, for backward compatibility

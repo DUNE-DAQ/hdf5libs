@@ -221,10 +221,18 @@ std::vector<std::string> get_all_fragment_dataset_paths();
 
 //get all fragment dataset paths for given record ID
 std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid);
+std::vector<std::string> get_fragment_dataset_paths(const uint64_t rec_num,   // NOLINT (build/unsigned)
+                                                    const daqdataformats::sequence_number_t seq_num=0);
 
 //get all fragment dataset paths for a SystemType
 std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::GeoID::SystemType type);
 std::vector<std::string> get_fragment_dataset_paths(const std::string typestring);
+
+//get all fragment dataset paths for a record ID and SystemType
+std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid,
+                                                    const daqdataformats::GeoID::SystemType type);
+std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid,
+                                                    const std::string typestring);
 
 //get all fragment dataset paths for a GeoID
 std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::GeoID element_id);
@@ -235,6 +243,39 @@ std::vector<std::string> get_fragment_dataset_paths(const std::string typestring
                                                     const uint16_t region_id,   //NOLINT(build/unsigned)
                                                     const uint32_t element_id);   //NOLINT(build/unsigned)
 
+//get a list of all the geo ids from a list of fragment dataset paths
+std::set<daqdataformats::GeoID> get_geo_ids(std::vector<std::string> const& frag_dataset_paths);
+
+//get a list of all the geo ids anywhere in the file
+std::set<daqdataformats::GeoID> get_all_geo_ids()
+{ return get_geo_ids(get_all_fragment_dataset_paths()); }
+//get GeoIDs in a record
+std::set<daqdataformats::GeoID> get_geo_ids(const record_id_t rid)
+{ return get_geo_ids(get_fragment_dataset_paths(rid)); }
+std::set<daqdataformats::GeoID> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                            const daqdataformats::sequence_number_t seq_num=0)
+{ return get_geo_ids(std::make_pair(rec_num,seq_num)); }
+
+//get GeoIDs for given system type in a record
+std::set<daqdataformats::GeoID> get_geo_ids(const record_id_t rid,
+                                            const daqdataformats::GeoID::SystemType type)
+{ return get_geo_ids(get_fragment_dataset_paths(rid,type)); }
+std::set<daqdataformats::GeoID> get_geo_ids(const record_id_t rid,
+                                            const std::string typestring)
+{ return get_geo_ids(get_fragment_dataset_paths(rid,typestring)); }
+std::set<daqdataformats::GeoID> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                            const daqdataformats::sequence_number_t seq_num,
+                                            const daqdataformats::GeoID::SystemType type)
+{ return get_geo_ids(std::make_pair(rec_num,seq_num),type); }
+std::set<daqdataformats::GeoID> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                            const daqdataformats::sequence_number_t seq_num,
+                                            const std::string typestring)
+{ return get_geo_ids(std::make_pair(rec_num,seq_num),typestring); }
+
+
+//get GeoIDs for a system type
+std::vector<daqdataformats::GeoID> get_geo_ids(const daqdataformats::GeoID::SystemType type);
+std::vector<daqdataformats::GeoID> get_geo_ids(const std::string typestring);
 
 
 std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
@@ -243,12 +284,22 @@ std::unique_ptr<daqdataformats::Fragment>            get_frag_ptr(const std::str
 std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
 std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const std::string& dataset_name);
 
-std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned)
-                                                       const daqdataformats::sequence_number_t seq_num,
+std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
                                                        const daqdataformats::GeoID element_id);
 std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned)
                                                        const daqdataformats::sequence_number_t seq_num,
+                                                       const daqdataformats::GeoID element_id);
+std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
                                                        const daqdataformats::GeoID::SystemType type,
+                                                       const uint16_t region_id,   // NOLINT(build/unsigned)
+                                                       const uint32_t element_id);   // NOLINT(build/unsigned)
+std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned)
+                                                       const daqdataformats::sequence_number_t seq_num,
+                                                       const daqdataformats::GeoID::SystemType type,
+                                                       const uint16_t region_id,   // NOLINT(build/unsigned)
+                                                       const uint32_t element_id);   // NOLINT(build/unsigned)
+std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
+                                                       const std::string typestring,
                                                        const uint16_t region_id,   // NOLINT(build/unsigned)
                                                        const uint32_t element_id);   // NOLINT(build/unsigned)
 std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned)
@@ -257,9 +308,15 @@ std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,  
                                                        const uint16_t region_id,   // NOLINT(build/unsigned)
                                                        const uint32_t element_id);   // NOLINT(build/unsigned)
 
+
 std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                                                                  const daqdataformats::sequence_number_t seq_num = 0);
+std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid)
+{ return get_trh_ptr(rid.first,rid.second); }
+
 std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
+std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const record_id_t rid)
+{ return get_tsh_ptr(rid.first); }
 
 private:
 HDF5RawDataFile(const HDF5RawDataFile&) = delete;

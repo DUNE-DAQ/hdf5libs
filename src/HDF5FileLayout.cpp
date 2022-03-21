@@ -21,7 +21,7 @@ HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t v
         if (m_version < 2)
                 m_conf_params = get_v0_file_layout_params();
 
-        fill_path_params_map(m_conf_params);
+        fill_path_params_maps(m_conf_params);
 
         check_config();
 }
@@ -304,7 +304,27 @@ std::string HDF5FileLayout::get_fragment_region_path(uint64_t trig_num, // NOLIN
                                         daqdataformats::GeoID::string_to_system_type(typestring), region_id);
 }
 
-void HDF5FileLayout::fill_path_params_map(hdf5filelayout::FileLayoutParams const& flp)
+daqdataformats::GeoID
+HDF5FileLayout::get_geo_id_from_path_elements(std::vector<std::string> const& path_elements) const
+{
+
+  //ignore first path element, which is for the record group
+  //second path element is detector name.
+  daqdataformats::GeoID::SystemType systype = m_detector_group_name_to_type_map.at(path_elements[1]);
+
+  //get back the path parameters for this system type from the file layout
+  auto path_params = get_path_params(systype);
+
+  //third path element is region. remove prefix and translate to number
+  auto reg_id = std::stoi( path_elements[2].substr(path_params.region_name_prefix.size()) );
+
+  //fourth path element is element. remove prefix and translate to numbers
+  auto ele_id = std::stoi( path_elements[3].substr(path_params.element_name_prefix.size()) );
+
+  return daqdataformats::GeoID(systype,reg_id,ele_id);
+}
+
+void HDF5FileLayout::fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp)
 {
         for (auto const& path_param : flp.path_param_list) {
                 auto sys_type = daqdataformats::GeoID::string_to_system_type(path_param.detector_group_type);
@@ -313,6 +333,7 @@ void HDF5FileLayout::fill_path_params_map(hdf5filelayout::FileLayoutParams const
                         throw FileLayoutInvalidSystemType(ERS_HERE,path_param.detector_group_type);
 
                 m_path_params_map[sys_type] = path_param;
+                m_detector_group_name_to_type_map[path_param.detector_group_name] = sys_type;
         }
 }
 
