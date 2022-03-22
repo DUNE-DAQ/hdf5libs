@@ -127,7 +127,7 @@ enum
 
 // define a record number type
 // that is a pair of the trigger record or timeslice number and sequence number
-typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
+typedef std::pair<uint64_t,daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
 
 // constructor for writing
 HDF5RawDataFile(std::string file_name,
@@ -274,8 +274,10 @@ std::set<daqdataformats::GeoID> get_geo_ids(const uint64_t rec_num, //NOLINT(bui
 
 
 //get GeoIDs for a system type
-std::vector<daqdataformats::GeoID> get_geo_ids(const daqdataformats::GeoID::SystemType type);
-std::vector<daqdataformats::GeoID> get_geo_ids(const std::string typestring);
+std::set<daqdataformats::GeoID> get_geo_ids(const daqdataformats::GeoID::SystemType type)
+{ return get_geo_ids(get_fragment_dataset_paths(type)); }
+std::set<daqdataformats::GeoID> get_geo_ids(const std::string typestring)
+{ return get_geo_ids(get_fragment_dataset_paths(typestring)); }
 
 
 std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);

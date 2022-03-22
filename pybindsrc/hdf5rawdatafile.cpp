@@ -10,6 +10,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 #include <string>
 
@@ -23,7 +24,7 @@ void
 register_hdf5rawdatafile(py::module& m)
 {
 
-  py::class_<HDF5RawDataFile>(m, "HDF5RawDataFile")
+  py::class_<HDF5RawDataFile>(m, "HDF5RawDataFileCPP")
     .def(py::init<std::string>())
 
     .def("get_file_name",
@@ -103,6 +104,14 @@ register_hdf5rawdatafile(py::module& m)
          "Get fragment datasets for record number and sequence number",
          py::arg("rec_num"),py::arg("seq_num")=0)
     .def("get_fragment_dataset_paths",
+         py::overload_cast<const HDF5RawDataFile::record_id_t,const daqdataformats::GeoID::SystemType>
+         (&HDF5RawDataFile::get_fragment_dataset_paths),
+         "Get fragment datasets for record ID and GeoID System Type")
+    .def("get_fragment_dataset_paths",
+         py::overload_cast<const HDF5RawDataFile::record_id_t,const std::string>
+         (&HDF5RawDataFile::get_fragment_dataset_paths),
+         "Get fragment datasets for record ID and GeoID System Type string")
+    .def("get_fragment_dataset_paths",
          py::overload_cast<const daqdataformats::GeoID::SystemType>(&HDF5RawDataFile::get_fragment_dataset_paths),
          "Get fragment datasets for GeoID System Type")
     .def("get_fragment_dataset_paths",
@@ -119,6 +128,44 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const std::string,const uint16_t,const uint32_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_fragment_dataset_paths),
          "Get fragment datasets for GeoID system string/region/element")
+
+    .def("get_all_geo_ids",&HDF5RawDataFile::get_all_geo_ids,
+         "Get all geo IDs seen in file")
+    .def("get_geo_ids",
+         py::overload_cast<const HDF5RawDataFile::record_id_t>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record id")
+    .def("get_geo_ids",
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record/sequence number")
+    .def("get_geo_ids",
+         py::overload_cast<const HDF5RawDataFile::record_id_t,const daqdataformats::GeoID::SystemType>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record id with a given system type")
+    .def("get_geo_ids",
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t,
+                           const daqdataformats::GeoID::SystemType>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record/sequence number with a given system type")
+    .def("get_geo_ids",
+         py::overload_cast<const HDF5RawDataFile::record_id_t,const std::string>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record id with a given system type string")
+    .def("get_geo_ids",
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t,
+                           const std::string>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs in a record/sequence number with a given system type string")
+    .def("get_geo_ids",
+         py::overload_cast<const daqdataformats::GeoID::SystemType>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs with a given system type")
+    .def("get_geo_ids",
+         py::overload_cast<const std::string>
+         (&HDF5RawDataFile::get_geo_ids),
+         "Get all geo IDs with a given system type string")
+
 
 //    .def("get_frag_ptr", py::overload_cast<const std::string & >
 //         (&HDF5RawDataFile::get_frag_ptr),
@@ -196,8 +243,8 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const daqdataformats::timeslice_number_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_tsh_ptr),
          "Get TimeSliceHeader from timeslince number")
-
     ;
+
 }
 
 } // namespace python

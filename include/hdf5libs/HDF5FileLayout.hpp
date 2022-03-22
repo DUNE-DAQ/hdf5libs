@@ -36,37 +36,37 @@
 namespace dunedaq {
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		InvalidRecordName,
-																		"Record name " << name
-																									 << " is unknown.",
-																		((std::string)name))
+                  InvalidRecordName,
+                  "Record name " << name
+                                 << " is unknown.",
+                  ((std::string)name))
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		InvalidSequenceDigits,
-																		"Record name of type " << name
-																													 << " must have sequence digits" << digits
-																													 << ". Resetting that now.",
-																		((std::string)name)((int32_t)digits))
+                  InvalidSequenceDigits,
+                  "Record name of type " << name
+                                         << " must have sequence digits" << digits
+                                         << ". Resetting that now.",
+                  ((std::string)name)((int32_t)digits))
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		FileLayoutSequenceIDsCannotBeZero,
-																		"Cannot specify 0 digits for sequence IDs in TriggerRecords. Reverting to " << digits,
-																		((uint64_t)digits)) // NOLINT(build/unsigned)
+                  FileLayoutSequenceIDsCannotBeZero,
+                  "Cannot specify 0 digits for sequence IDs in TriggerRecords. Reverting to " << digits,
+                  ((uint64_t)digits))                   // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		FileLayoutNotEnoughDigitsForPath,
-																		"Number " << number << " has more digits than the max specified of " << digits << ". Using natural width.",
-																		((uint64_t)number)((uint64_t)digits)) // NOLINT(build/unsigned)
+                  FileLayoutNotEnoughDigitsForPath,
+                  "Number " << number << " has more digits than the max specified of " << digits << ". Using natural width.",
+                  ((uint64_t)number)((uint64_t)digits))                   // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		FileLayoutInvalidSystemType,
-																		"Bad File Layout cofiguration: sytem type " << sys_type_name << " is invalid.",
-																		((std::string)sys_type_name))
+                  FileLayoutInvalidSystemType,
+                  "Bad File Layout cofiguration: sytem type " << sys_type_name << " is invalid.",
+                  ((std::string)sys_type_name))
 
 ERS_DECLARE_ISSUE(hdf5libs,
-																		FileLayoutUnconfiguredSystemType,
-																		"Requested File Layout for unconfigured system type " << sys_type << " ("  << sys_type_name << ")",
-																		((daqdataformats::GeoID::SystemType)sys_type)((std::string)sys_type_name))
+                  FileLayoutUnconfiguredSystemType,
+                  "Requested File Layout for unconfigured system type " << sys_type << " ("  << sys_type_name << ")",
+                  ((daqdataformats::GeoID::SystemType)sys_type)((std::string)sys_type_name))
 
 namespace hdf5libs {
 
@@ -81,33 +81,33 @@ explicit HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version 
 
 uint32_t get_version() const noexcept  // NOLINT(build/unsigned)
 {
-								return m_version;
+	return m_version;
 }
 
 std::string get_record_name_prefix() const noexcept
 {
-								return m_conf_params.record_name_prefix;
+	return m_conf_params.record_name_prefix;
 }
 
 int get_digits_for_record_number() const noexcept
 {
-								return m_conf_params.digits_for_record_number;
+	return m_conf_params.digits_for_record_number;
 }
 
 int get_digits_for_sequence_number() const noexcept
 {
-								return m_conf_params.digits_for_sequence_number;
+	return m_conf_params.digits_for_sequence_number;
 }
 
 std::string get_record_header_dataset_name() const noexcept
 {
-								return m_conf_params.record_header_dataset_name;
+	return m_conf_params.record_header_dataset_name;
 }
 
 std::map<daqdataformats::GeoID::SystemType, hdf5filelayout::PathParams>
 get_path_params_map() const
 {
-								return m_path_params_map;
+	return m_path_params_map;
 }
 
 hdf5filelayout::PathParams
@@ -115,21 +115,21 @@ get_path_params(daqdataformats::GeoID::SystemType type) const;
 
 hdf5filelayout::FileLayoutParams get_file_layout_params() const
 {
-								return m_conf_params;
+	return m_conf_params;
 }
 
 /**
  * @brief get string for record number
  */
 std::string get_record_number_string(uint64_t record_number,   // NOLINT(build/unsigned)
-																		 daqdataformats::sequence_number_t seq_num = 0) const;
+                                     daqdataformats::sequence_number_t seq_num = 0) const;
 
 
 /**
  * @brief get string for Trigger number
  */
 std::string get_trigger_number_string(daqdataformats::trigger_number_t trig_num,
-																			daqdataformats::sequence_number_t seq_num = 0) const;
+                                      daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get string for TimeSlice number
@@ -164,13 +164,13 @@ get_geo_id_from_path_elements(std::vector<std::string> const& path_elements) con
  * @brief get the full path for a record header dataset based on trig/seq number
  */
 std::string get_record_header_path(uint64_t rec_num,   // NOLINT (build/unsigned)
-																	 daqdataformats::sequence_number_t seq_num = 0) const;
+                                   daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get the full path for a TriggerRecordHeader dataset based on trig/seq number
  */
 std::string get_trigger_record_header_path(daqdataformats::trigger_number_t trig_num,
-																					 daqdataformats::sequence_number_t seq_num = 0) const;
+                                           daqdataformats::sequence_number_t seq_num = 0) const;
 
 /**
  * @brief get the full path for a TimesliceHeader dataset based on ts number
@@ -181,55 +181,55 @@ std::string get_timeslice_header_path(daqdataformats::timeslice_number_t ts_num)
  * @brief get the full path for a Fragment dataset based on trig/seq number and element ID
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-															daqdataformats::sequence_number_t seq_num,
-															daqdataformats::GeoID element_id) const;
+                              daqdataformats::sequence_number_t seq_num,
+                              daqdataformats::GeoID element_id) const;
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-															daqdataformats::sequence_number_t seq_num,
-															daqdataformats::GeoID::SystemType type,
-															uint16_t region_id,   // NOLINT(build/unsigned)
-															uint32_t element_id) const;   // NOLINT(build/unsigned)
+                              daqdataformats::sequence_number_t seq_num,
+                              daqdataformats::GeoID::SystemType type,
+                              uint16_t region_id,   // NOLINT(build/unsigned)
+                              uint32_t element_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the full path for a Fragment dataset based on trig/seq number, give element_id pieces
  */
 std::string get_fragment_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-															daqdataformats::sequence_number_t seq_num,
-															const std::string& typestring,
-															uint16_t region_id,   // NOLINT(build/unsigned)
-															uint32_t element_id) const;   // NOLINT(build/unsigned)
+                              daqdataformats::sequence_number_t seq_num,
+                              const std::string& typestring,
+                              uint16_t region_id,   // NOLINT(build/unsigned)
+                              uint32_t element_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string get_fragment_type_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																	 daqdataformats::sequence_number_t seq_num,
-																	 daqdataformats::GeoID::SystemType type) const;
+                                   daqdataformats::sequence_number_t seq_num,
+                                   daqdataformats::GeoID::SystemType type) const;
 
 /**
  * @brief get the path for a Fragment type group based on trig/seq number and type
  */
 std::string get_fragment_type_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																	 daqdataformats::sequence_number_t seq_num,
-																	 std::string typestring) const;
+                                   daqdataformats::sequence_number_t seq_num,
+                                   std::string typestring) const;
 
 /**
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string get_fragment_region_path(uint64_t trig_num, // NOLINT(build/unsigned)
-																		 daqdataformats::sequence_number_t seq_num,
-																		 daqdataformats::GeoID::SystemType type,
-																		 uint16_t region_id) const;   // NOLINT(build/unsigned)
+                                     daqdataformats::sequence_number_t seq_num,
+                                     daqdataformats::GeoID::SystemType type,
+                                     uint16_t region_id) const;   // NOLINT(build/unsigned)
 
 /**
  * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
  */
 std::string get_fragment_region_path(uint64_t trig_num,   // NOLINT(build/unsigned)
-																		 daqdataformats::sequence_number_t seq_num,
-																		 std::string typestring,
-																		 uint16_t region_id) const;   // NOLINT(build/unsigned)
+                                     daqdataformats::sequence_number_t seq_num,
+                                     std::string typestring,
+                                     uint16_t region_id) const;   // NOLINT(build/unsigned)
 
 private:
 /**
@@ -254,27 +254,27 @@ std::map<std::string,daqdataformats::GeoID::SystemType> m_detector_group_name_to
 
 //quick powers of ten lookup
 constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
-								= { 1, //1e0
-												10,                                  //1e1
-												100,                                  //1e2
-												1000,                                  //1e3
-												10000,                                  //1e4
-												100000,                                  //1e5
-												1000000,                                  //1e6
-												10000000,                                  //1e7
-												100000000,                                  //1e8
-												1000000000,                                  //1e9
-												10000000000,                                  //1e10
-												100000000000,                                  //1e11
-												1000000000000,                                  //1e12
-												10000000000000,                                  //1e13
-												100000000000000,                                  //1e14
-												1000000000000000,                                  //1e15
-												10000000000000000,                                  //1e16
-												100000000000000000,                                  //1e17
-												1000000000000000000,                                  //1e18
-												10000000000000000000u                                  //1e19
-								};
+  = { 1,               																			//1e0
+	    10,                                                    //1e1
+	    100,                                                    //1e2
+	    1000,                                                    //1e3
+	    10000,                                                    //1e4
+	    100000,                                                    //1e5
+	    1000000,                                                    //1e6
+	    10000000,                                                    //1e7
+	    100000000,                                                    //1e8
+	    1000000000,                                                    //1e9
+	    10000000000,                                                    //1e10
+	    100000000000,                                                    //1e11
+	    1000000000000,                                                    //1e12
+	    10000000000000,                                                    //1e13
+	    100000000000000,                                                    //1e14
+	    1000000000000000,                                                    //1e15
+	    10000000000000000,                                                    //1e16
+	    100000000000000000,                                                    //1e17
+	    1000000000000000000,                                                    //1e18
+	    10000000000000000000u                                                    //1e19
+	};
 
 /**
  * @brief Fill path parameters maps from FileLayoutParams
