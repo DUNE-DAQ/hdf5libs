@@ -53,7 +53,7 @@ def parse_binary_file(fname, k_n_request, k_print_out, clock_speed_hz,
             if byte == trh_magic_word or byte == tsl_magic_word:
                 nfrag = 0
                 if ntrh !=0 and k_print_out in ['both', 'fragment']:
-                    print(80*'-')
+                    print(31*"-", "Fragment Header ", 31*"-")
                     print_fragment_header(bytesbuffer, clock_speed_hz)
                 bytesbuffer = bytearray()
                 ntrh += 1
@@ -61,11 +61,11 @@ def parse_binary_file(fname, k_n_request, k_print_out, clock_speed_hz,
             if byte == frag_magic_word:
                 if nfrag == 0 and ntrh != 0 and k_print_out in ['both',
                                                                 'header']:
-                    print(80*'=')
+                    print(24*"=", "TriggerRecord/TimeSlice Header", 24*"=")
                     print_header(bytesbuffer, record_type, clock_speed_hz,
                                  k_list_components)
                 if nfrag != 0 and k_print_out in ['both', 'fragment']:
-                    print(80*'-')
+                    print(31*"-", "Fragment Header ", 31*"-")
                     print_fragment_header(bytesbuffer, clock_speed_hz)
                 bytesbuffer = bytearray()
                 nfrag += 1

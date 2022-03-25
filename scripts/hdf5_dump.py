@@ -51,7 +51,6 @@ class DAQDataFile:
             print(32*"=", "File  Metadata", 32*"=")
             for k in self.h5file.attrs.keys():
                 print("{:<30}: {}".format(k, self.h5file.attrs[k]))
-        print(80*"=")
         n = 0
         for i in self.records:
             if n >= k_nrecords and k_nrecords > 0:
@@ -59,7 +58,7 @@ class DAQDataFile:
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
-                print(80*"=")
+                print(24*"=", "TriggerRecord/TimeSlice Header", 24*"=")
                 print('{:<30}:\t{}'.format("Path", i.path))
                 print('{:<30}:\t{}'.format("Size", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
@@ -69,7 +68,7 @@ class DAQDataFile:
                 for j in i.fragments:
                     dset = self.h5file[j]
                     data_array = bytearray(dset[:])
-                    print(80*'-')
+                    print(31*"-", "Fragment Header ", 31*"-")
                     print('{:<30}:\t{}'.format("Path", j))
                     print('{:<30}:\t{}'.format("Size", dset.shape))
                     print('{:<30}:\t{}'.format("Data type", dset.dtype))
