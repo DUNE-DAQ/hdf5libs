@@ -193,7 +193,7 @@ def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
 
 
 def print_time_slice_header(data_array, clock_speed_hz):
-    keys = ['Magic word', 'Version', 'TimeSlice number',
+    keys = ['Marker word', 'Version', 'TimeSlice number',
             'Run number']
     unpack_string = '<2IQI'
     print_header_dict(unpack_header(data_array[:20], unpack_string, keys),
