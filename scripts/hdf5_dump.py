@@ -59,7 +59,7 @@ class DAQDataFile:
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
-        print(80*"=")
+                print(80*"=")
                 print('{:<30}:\t{}'.format("Path", i.path))
                 print('{:<30}:\t{}'.format("Size", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
