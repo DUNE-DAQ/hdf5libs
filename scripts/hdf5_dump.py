@@ -12,7 +12,8 @@ class DAQDataFile:
     def __init__(self, name):
         self.name = name
         self.h5file = h5py.File(self.name, 'r')
-        # Assume older versions hdf5 contains only trigger record
+        # Assume HDf5 files without file attributes field "record_type"
+        # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
         self.records = []
         if 'record_type' in self.h5file.attrs.keys():
@@ -43,22 +44,24 @@ class DAQDataFile:
         return
 
     def printout(self, k_header_type, k_nrecords, k_list_components=False):
-        print(32*"=", "File  Metadata", 32*"=")
-        for k in self.h5file.attrs.keys():
-            print("{:<30}: {}".format(k, self.h5file.attrs[k]))
+        k_header_type = set(k_header_type)
+        if not {"attributes", "all"}.isdisjoint(k_header_type):
+            print(32*"=", "File  Metadata", 32*"=")
+            for k in self.h5file.attrs.keys():
+                print("{:<30}: {}".format(k, self.h5file.attrs[k]))
         print(80*"=")
         n = 0
         for i in self.records:
-            if n >= k_nrecords and k_nrecords >= 0:
+            if n >= k_nrecords and k_nrecords > 0:
                 break
-            if k_header_type in ['header', 'both']:
+            if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
                 print('{:<30}:\t{}'.format("Path", i.path))
                 print('{:<30}:\t{}'.format("Size", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
                 print_header(data_array, self.record_type, k_list_components)
-            if k_header_type in ['fragment', 'both']:
+            if not {"fragment", "both", "all"}.isdisjoint(k_header_type):
                 for j in i.fragments:
                     dset = self.h5file[j]
                     data_array = bytearray(dset[:])
@@ -77,7 +80,7 @@ class DAQDataFile:
             report = []
             n = 0
             for i in self.records:
-                if n >= k_nrecords and k_nrecords >= 0:
+                if n >= k_nrecords and k_nrecords > 0:
                     break
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
@@ -113,6 +116,7 @@ class DAQDataFile:
 
 
 def tick_to_timestamp(ticks):
+    global CLOCK_SPEED_HZ
     ns = float(ticks)/CLOCK_SPEED_HZ
     if ns < 3000000000:
         return datetime.datetime.fromtimestamp(ns)
@@ -213,9 +217,13 @@ def parse_args():
     parser.add_argument('-b', '--binary-output',
                         help='convert to the specified binary file')
 
-    parser.add_argument('-p', '--print-out',
-                        choices=['header', 'fragment', 'both'],
-                        help='select which part of data to display')
+    parser.add_argument('-p', '--print-out', action='append',
+                        choices=['header', 'fragment', 'both', 'attributes',
+                                 'all'],
+                        help='''select which part of data to be displayed, this
+                        option can be repeated multiple times, "-p both" is
+                        equivalent to "-p header -p fragment", "-p all" is
+                        equivalent to "-p attributes -p header -p fragment"''')
 
     parser.add_argument('-c', '--check-fragments',
                         help='''check if fragments written in trigger record
@@ -231,6 +239,11 @@ def parse_args():
                         help='specify number of records to be parsed',
                         default=0)
 
+    parser.add_argument('-s', '--speed-of-clock', type=float,
+                        help='''specify clock spped in Hz, default is
+                        50000000.0 (50MHz)''',
+                        default=50000000.0)
+
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 1.0')
     return parser.parse_args()
@@ -238,6 +251,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+    global CLOCK_SPEED_HZ
+    CLOCK_SPEED_HZ = args.speed_of_clock
     if args.print_out is None and args.check_fragments is False and \
             args.binary_output is None:
         print("Error: use at least one of the two following options:")
