@@ -44,29 +44,29 @@ def main():
     records = h5_file.get_all_record_ids()
     print("Number of records: %d" % len(records))
 
-#    all_geo_ids = h5_file.get_all_geo_ids()
-#    print(f"Number of different geo_ids: {len(all_geo_ids)}")
-
-#    all_datasets = h5_file.get_dataset_paths()
-#    print(f"Number of datasets found: {len(all_datasets)}")
+    ## accessors for getting all found geo IDs or all dataset paths
+    ## note that these take a little while to execute, as there's a lot of string parsing underneath
+    
+    #all_geo_ids = h5_file.get_all_geo_ids()
+    #all_datasets = h5_file.get_dataset_paths()
 
     #let's do a loop through records now:
     for rid in records[:10]:
         print("Processing record (num,seq): ",rid)
 
         #get record header datasets
-        record_header_dataset = h5_file.get_record_header_dataset_path(rid[0],rid[1])
+        record_header_dataset = h5_file.get_record_header_dataset_path(rid)
         if record_type=="TriggerRecord":
-            trh = h5_file.get_trh(rid[0],rid[1])
+            trh = h5_file.get_trh(rid)
             print(f"{record_header_dataset}: {trh.get_trigger_number()},{trh.get_sequence_number()},{trh.get_trigger_timestamp()}")
         elif record_type=="TimeSlice":
-            tsh = h5_file.get_tsh(rid[0],rid[1])
+            tsh = h5_file.get_tsh(rid)
             print(f"{record_header_dataset}: {tsh.timeslice_number}")
 
         #loop through fragment datasets
         for gid in h5_file.get_geo_ids(rid)[:10]:
             print(gid)
-            frag = h5_file.get_frag(rid[0],rid[1],gid)
+            frag = h5_file.get_frag(rid,gid)
             print(f"\tFragment (rec_num,seq_num)=({frag.get_trigger_number()},{frag.get_sequence_number()})")
 
     #alternatively, can directly grab a TriggerRecord or TimeSlice object...
@@ -77,11 +77,11 @@ def main():
         record = None
 
         if record_type=="TriggerRecord":
-            record = h5_file.get_trigger_record(rid[0],rid[1])
+            record = h5_file.get_trigger_record(rid)
             trh = record.get_header_ref()
             print(f"Trigger Record Header: {trh.get_trigger_number()},{trh.get_sequence_number()},{trh.get_trigger_timestamp()}")
         elif record_type=="TimeSlice":
-            record = h5_file.get_timeslice(rid[0],rid[1])
+            record = h5_file.get_timeslice(rid)
             tsh = record.get_header()
             print(f"TimeSlice Header: {tsh.timeslice_number}")
 
