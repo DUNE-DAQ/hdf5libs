@@ -128,6 +128,7 @@ enum
 // define a record number type
 // that is a pair of the trigger record or timeslice number and sequence number
 typedef std::pair<uint64_t,daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
+typedef std::set<record_id_t, std::less<> > record_id_set;
 
 // constructor for writing
 HDF5RawDataFile(std::string file_name,
@@ -195,9 +196,9 @@ T get_attribute(const HighFive::DataSet& dset, std::string name);
 
 std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
-std::set<record_id_t> get_all_record_ids();
-std::set<record_id_t> get_all_trigger_record_ids();
-std::set<record_id_t> get_all_timeslice_ids();
+record_id_set get_all_record_ids();
+record_id_set get_all_trigger_record_ids();
+record_id_set get_all_timeslice_ids();
 
 std::set<uint64_t> get_all_record_numbers();   // NOLINT(build/unsigned)
 std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
@@ -320,6 +321,16 @@ std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const daqdatafo
 std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const record_id_t rid)
 { return get_tsh_ptr(rid.first); }
 
+daqdataformats::TriggerRecord get_trigger_record(const daqdataformats::trigger_number_t trig_num,
+                                                 const daqdataformats::sequence_number_t seq_num = 0);
+daqdataformats::TriggerRecord get_trigger_record(const record_id_t rid)
+{ return get_trigger_record(rid.first,rid.second); }
+
+daqdataformats::TimeSlice get_timeslice(const daqdataformats::timeslice_number_t ts_num);
+daqdataformats::TimeSlice get_timeslice(record_id_t rid)
+{ return get_timeslice(rid.first); }
+
+
 private:
 HDF5RawDataFile(const HDF5RawDataFile&) = delete;
 HDF5RawDataFile& operator=(const HDF5RawDataFile&) = delete;
@@ -350,7 +361,7 @@ size_t do_write(std::vector<std::string> const&, const char*, size_t);
 void explore_subgroup(const HighFive::Group& parent_group, std::string relative_path, std::vector<std::string>& path_list);
 
 //useful holders as we unread
-std::set<record_id_t> m_record_ids;
+record_id_set m_record_ids;
 
 };
 

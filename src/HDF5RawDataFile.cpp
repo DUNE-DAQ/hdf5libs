@@ -360,7 +360,7 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
 /**
  * @brief Return all of the record numbers in the file.
  */
-std::set<HDF5RawDataFile::record_id_t> // NOLINT(build/unsigned)
+HDF5RawDataFile::record_id_set // NOLINT(build/unsigned)
 HDF5RawDataFile::get_all_record_ids()
 {
 	if(!m_record_ids.empty())
@@ -408,7 +408,7 @@ std::set<uint64_t> HDF5RawDataFile::get_all_record_numbers() // NOLINT(build/uns
 	return record_numbers;
 }
 
-std::set<HDF5RawDataFile::record_id_t>
+HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_trigger_record_ids()
 {
 	check_record_type("TriggerRecord");
@@ -424,7 +424,7 @@ HDF5RawDataFile::get_all_trigger_record_numbers()
 	return get_all_record_numbers();
 }
 
-std::set<HDF5RawDataFile::record_id_t>
+HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_timeslice_ids()
 {
 	check_record_type("TimeSlice");
@@ -484,7 +484,7 @@ std::string HDF5RawDataFile::get_record_header_dataset_path(const record_id_t ri
 	if(rec_id==get_all_record_ids().end())
 		throw RecordIDNotFound(ERS_HERE,rid.first,rid.second);
 
-	return (m_file_ptr->getPath() + m_file_layout_ptr->get_record_header_path(rec_id->first,rec_id->second));
+	return (m_file_ptr->getPath() + m_file_layout_ptr->get_record_header_path(rid.first,rid.second));
 }
 
 std::string
@@ -550,7 +550,7 @@ std::vector<std::string> HDF5RawDataFile::get_fragment_dataset_paths(const recor
 	if(rec_id==get_all_record_ids().end())
 		throw RecordIDNotFound(ERS_HERE,rid.first,rid.second);
 
-	std::string record_group_path = m_file_ptr->getPath()+m_file_layout_ptr->get_record_number_string(rec_id->first,rec_id->second);
+	std::string record_group_path = m_file_ptr->getPath()+m_file_layout_ptr->get_record_number_string(rid.first,rid.second);
 
 	for (auto const& path : get_dataset_paths(record_group_path)) {
 		if (path.find(m_file_layout_ptr->get_record_header_dataset_name()) == std::string::npos)
@@ -786,6 +786,31 @@ HDF5RawDataFile::get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
 	return get_tsh_ptr(m_file_layout_ptr->get_trigger_record_header_path(ts_num));
+}
+
+daqdataformats::TriggerRecord
+HDF5RawDataFile::get_trigger_record(const daqdataformats::trigger_number_t trig_num,
+                                    const daqdataformats::sequence_number_t seq_num)
+{
+  daqdataformats::TriggerRecord trigger_record(*get_trh_ptr(trig_num,seq_num));
+  for( auto const& frag_path : get_fragment_dataset_paths(trig_num,seq_num) )
+  {
+    trigger_record.add_fragment(get_frag_ptr(frag_path));
+  }
+
+  return trigger_record;
+}
+
+daqdataformats::TimeSlice
+HDF5RawDataFile::get_timeslice(const daqdataformats::timeslice_number_t ts_num)
+{
+  daqdataformats::TimeSlice timeslice(*get_tsh_ptr(ts_num));
+  for( auto const& frag_path : get_fragment_dataset_paths(ts_num) )
+  {
+    timeslice.add_fragment(get_frag_ptr(frag_path));
+  }
+
+  return timeslice;
 }
 
 } // namespace hdf5libs

@@ -1,6 +1,7 @@
 from ._daq_hdf5libs_py import *
 
 class HDF5RawDataFile(HDF5RawDataFileCPP):
+#    pass
 
     #return sorted record numbers here
     def get_all_record_ids(self):

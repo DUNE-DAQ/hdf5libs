@@ -220,7 +220,7 @@ register_hdf5rawdatafile(py::module& m)
     .def("get_trh",
          py::overload_cast<const std::string & >
          (&HDF5RawDataFile::get_trh_ptr),
-	       "Get TriggerRecordHeader from datset")
+	       "Get TriggerRecordHeader from dataset")
      .def("get_trh",
           py::overload_cast<const HDF5RawDataFile::record_id_t>
           (&HDF5RawDataFile::get_trh_ptr),
@@ -239,10 +239,28 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const HDF5RawDataFile::record_id_t>
          (&HDF5RawDataFile::get_tsh_ptr),
          "Get TimeSliceHeader from record id")
-    .def("get_trh",
+    .def("get_tsh",
          py::overload_cast<const daqdataformats::timeslice_number_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_tsh_ptr),
          "Get TimeSliceHeader from timeslince number")
+
+    .def("get_trigger_record",
+         py::overload_cast<const HDF5RawDataFile::record_id_t>
+         (&HDF5RawDataFile::get_trigger_record),
+         "Get TriggerRecord object from record id")
+    .def("get_trigger_record",
+         py::overload_cast<const daqdataformats::trigger_number_t,
+                           const daqdataformats::sequence_number_t>
+         (&HDF5RawDataFile::get_trigger_record),
+         "Get TriggerRecord object from record/sequence number")
+    .def("get_timeslice",
+         py::overload_cast<const HDF5RawDataFile::record_id_t>
+         (&HDF5RawDataFile::get_timeslice),
+         "Get TimeSlice object from record id")
+    .def("get_timeslice",
+         py::overload_cast<const daqdataformats::timeslice_number_t>
+         (&HDF5RawDataFile::get_timeslice),
+         "Get TimeSlice object from timeslice number")
     ;
 
 }
