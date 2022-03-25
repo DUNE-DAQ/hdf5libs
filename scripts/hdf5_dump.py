@@ -59,6 +59,7 @@ class DAQDataFile:
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
+        print(80*"=")
                 print('{:<30}:\t{}'.format("Path", i.path))
                 print('{:<30}:\t{}'.format("Size", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
@@ -196,7 +197,8 @@ def print_time_slice_header(data_array, clock_speed_hz):
     keys = ['Magic word', 'Version', 'TimeSlice number',
             'Run number']
     unpack_string = '<2IQI'
-    print_header_dict(unpack_header(data_array[:20], unpack_string, keys))
+    print_header_dict(unpack_header(data_array[:20], unpack_string, keys),
+                      clock_speed_hz)
     return
 
 
