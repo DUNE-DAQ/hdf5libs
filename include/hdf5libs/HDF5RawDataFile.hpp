@@ -39,6 +39,7 @@
 #include <variant>
 #include <vector>
 #include <utility>
+#include <functional>
 
 namespace dunedaq {
 

@@ -136,7 +136,7 @@ register_hdf5rawdatafile(py::module& m)
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record id")
     .def("get_geo_ids",
-         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t>
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record/sequence number")
     .def("get_geo_ids",
@@ -144,7 +144,7 @@ register_hdf5rawdatafile(py::module& m)
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record id with a given system type")
     .def("get_geo_ids",
-         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t,
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t, //NOLINT(build/unsigned)
                            const daqdataformats::GeoID::SystemType>
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record/sequence number with a given system type")
@@ -153,7 +153,7 @@ register_hdf5rawdatafile(py::module& m)
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record id with a given system type string")
     .def("get_geo_ids",
-         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t,
+         py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t, //NOLINT(build/unsigned)
                            const std::string>
          (&HDF5RawDataFile::get_geo_ids),
          "Get all geo IDs in a record/sequence number with a given system type string")
@@ -263,7 +263,7 @@ register_hdf5rawdatafile(py::module& m)
          "Get TimeSlice object from timeslice number")
     ;
 
-}
+} //NOLINT
 
 } // namespace python
 } // namespace hdf5libs

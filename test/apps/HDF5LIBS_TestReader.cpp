@@ -142,17 +142,17 @@ main(int argc, char** argv)
 	// TLOG() << ss.str();
 	// ss.str("");
 
-	/*
-	* Example of walking through a file record by record, 'efficiently'.
-	* (1) Get all the records in the file.
-	* (2) For a known rid, you can construct the record header dataset path
-	*     using the internally-held file layout parameters. Use that to grab the
-	*     record header pointer.
-	* (3) For a known rid, you could get all of the fragment dataset path names.
-	*     Alternatively, as is done here, you can get the set of GeoIDs found in this record.
-	*     Then, loop over those and grab the appropriate fragment.
-	*     Obviously this allows you to filter out gids that you don't want.
-	*/
+	/**
+	 * Example of walking through a file record by record, 'efficiently'.
+	 * (1) Get all the records in the file.
+	 * (2) For a known rid, you can construct the record header dataset path
+	 *     using the internally-held file layout parameters. Use that to grab the
+	 *     record header pointer.
+	 * (3) For a known rid, you could get all of the fragment dataset path names.
+	 *     Alternatively, as is done here, you can get the set of GeoIDs found in this record.
+	 *     Then, loop over those and grab the appropriate fragment.
+	 *     Obviously this allows you to filter out gids that you don't want.
+	 */
 	for(auto const& rid : h5_raw_data_file.get_all_record_ids()){
 		ss << "Processing record (" << rid.first << "," << rid.second << "):";
 
@@ -160,8 +160,7 @@ main(int argc, char** argv)
 		if(h5_raw_data_file.is_trigger_record_type()){
 			auto trh_ptr = h5_raw_data_file.get_trh_ptr(rid);
 			ss << "\n\t" << trh_ptr->get_header();
-		}
-		else if(h5_raw_data_file.is_timeslice_type()){
+		} else if(h5_raw_data_file.is_timeslice_type()){
 			auto tsh_ptr = h5_raw_data_file.get_tsh_ptr(rid);
 			ss << "\n\t" << *tsh_ptr;
 		}
@@ -179,16 +178,16 @@ main(int argc, char** argv)
 		TLOG() << ss.str(); ss.str("");
 	}
 
-	/*
-	* Example of walking through a file record by record, reconstructing the record.
-	*
-	* *** YOU SHOULD NOT DO THIS ***
-	* Why not? It may seem convenient. But it requires that you hold all of the fragments
-	* in memory. This won't scale well! Instead, use the fact that we can more intelligently
-	* grab the data we want, using something like the example above.
-	*
-	* Still, it was requested, so here it is.
-	*/
+	/**
+	 * Example of walking through a file record by record, reconstructing the record.
+	 *
+	 * *** YOU SHOULD NOT DO THIS ***
+	 * Why not? It may seem convenient. But it requires that you hold all of the fragments
+	 * in memory. This won't scale well! Instead, use the fact that we can more intelligently
+	 * grab the data we want, using something like the example above.
+	 *
+	 * Still, it was requested, so here it is.
+	 */
 	for(auto const& rid : h5_raw_data_file.get_all_record_ids()){
 		ss << "Processing record (" << rid.first << "," << rid.second << "):";
 
@@ -201,8 +200,7 @@ main(int argc, char** argv)
 				//ss << "\n\t" << frag_ptr->get_element_id();
 				ss << "\n\t" << frag_ptr->get_header();
 			}
-		}
-		else if(h5_raw_data_file.is_timeslice_type()){
+		} else if(h5_raw_data_file.is_timeslice_type()){
 			auto record = h5_raw_data_file.get_timeslice(rid);
 			auto const& tsh = record.get_header();
 			ss << "\n\t" << tsh;
@@ -216,4 +214,4 @@ main(int argc, char** argv)
 	}
 
 	return 0;
-}
+} // NOLINT
