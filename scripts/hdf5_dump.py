@@ -5,8 +5,6 @@ import datetime
 import h5py
 import struct
 
-CLOCK_SPEED_HZ = 50000000.0
-
 
 class DAQDataFile:
     def __init__(self, name):
@@ -15,6 +13,7 @@ class DAQDataFile:
         # Assume HDf5 files without file attributes field "record_type"
         # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
+        self.clock_speed_hz = 50000000.0
         self.records = []
         if 'record_type' in self.h5file.attrs.keys():
             self.record_type = self.h5file.attrs['record_type']
@@ -26,6 +25,9 @@ class DAQDataFile:
 
     def __del__(self):
         self.h5file.close()
+
+    def set_clock_speed_hz(self, k_clock_speed_hz):
+        self.clock_speed_hz = k_clock_speed_hz
 
     def convert_to_binary(self, binary_file, k_nrecords):
         with open(binary_file, 'wb') as bf:
@@ -60,7 +62,8 @@ class DAQDataFile:
                 print('{:<30}:\t{}'.format("Path", i.path))
                 print('{:<30}:\t{}'.format("Size", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
-                print_header(data_array, self.record_type, k_list_components)
+                print_header(data_array, self.record_type, self.clock_speed_hz,
+                             k_list_components)
             if not {"fragment", "both", "all"}.isdisjoint(k_header_type):
                 for j in i.fragments:
                     dset = self.h5file[j]
@@ -69,7 +72,7 @@ class DAQDataFile:
                     print('{:<30}:\t{}'.format("Path", j))
                     print('{:<30}:\t{}'.format("Size", dset.shape))
                     print('{:<30}:\t{}'.format("Data type", dset.dtype))
-                    print_fragment_header(data_array)
+                    print_fragment_header(data_array, self.clock_speed_hz)
             n += 1
         return
 
@@ -115,9 +118,8 @@ class DAQDataFile:
                     self.fragments.append(self.path + '/' + name)
 
 
-def tick_to_timestamp(ticks):
-    global CLOCK_SPEED_HZ
-    ns = float(ticks)/CLOCK_SPEED_HZ
+def tick_to_timestamp(ticks, clock_speed_hz):
+    ns = float(ticks)/clock_speed_hz
     if ns < 3000000000:
         return datetime.datetime.fromtimestamp(ns)
     else:
@@ -138,14 +140,14 @@ def get_geo_id_type(i):
         return "Invalid"
 
 
-def print_header_dict(hdict):
+def print_header_dict(hdict, clock_speed_hz):
     filtered_list = ['Padding', 'GeoID version', 'Component request version']
     for ik, iv in hdict.items():
         if any(map(ik.__contains__, filtered_list)):
             continue
         elif "time" in ik or "begin" in ik or "end" in ik:
             print("{:<30}: {} ({})".format(
-                ik, iv, tick_to_timestamp(iv)))
+                ik, iv, tick_to_timestamp(iv, clock_speed_hz)))
         elif 'Marker word' in ik:
             print("{:<30}: {}".format(ik, hex(iv)))
         elif 'GeoID type' in ik:
@@ -155,24 +157,26 @@ def print_header_dict(hdict):
     return
 
 
-def print_fragment_header(data_array):
+def print_fragment_header(data_array, clock_speed_hz):
     keys = ['Marker word', 'Version', 'Frag Size', 'Trig number',
             'Trig timestamp', 'Window begin', 'Window end', 'Run number',
             'Error bits', 'Fragment type', 'Sequence number',
             'Fragment Padding', 'GeoID version', 'GeoID type', 'GeoID region',
             'GeoID element', 'Geo ID Padding']
     unpack_string = '<2I5Q3I2H1I2H2I'
-    print_header_dict(unpack_header(data_array[:80], unpack_string, keys))
+    print_header_dict(unpack_header(data_array[:80], unpack_string, keys),
+                      clock_speed_hz)
     return
 
 
-def print_trigger_record_header(data_array, k_list_components=False):
+def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
     keys = ['Marker word', 'Version', 'Trigger number',
             'Trigger timestamp', 'No. of requested components', 'Run Number',
             'Error bits', 'Trigger type', 'Sequence number',
             'Max sequence num']
     unpack_string = '<2I3Q2I3H'
-    print_header_dict(unpack_header(data_array[:46], unpack_string, keys))
+    print_header_dict(unpack_header(data_array[:46], unpack_string, keys),
+                      clock_speed_hz)
 
     if k_list_components:
         comp_keys = ['Component request version', 'Component Request Padding',
@@ -184,11 +188,11 @@ def print_trigger_record_header(data_array, k_list_components=False):
                                            data_array[48:]):
             i_comp = dict(zip(comp_keys, i_values))
             print(80*'-')
-            print_header_dict(i_comp)
+            print_header_dict(i_comp, clock_speed_hz)
     return
 
 
-def print_time_slice_header(data_array):
+def print_time_slice_header(data_array, clock_speed_hz):
     keys = ['Magic word', 'Version', 'TimeSlice number',
             'Run number']
     unpack_string = '<2IQI'
@@ -196,11 +200,12 @@ def print_time_slice_header(data_array):
     return
 
 
-def print_header(data_array, record_type, k_list_components=False):
+def print_header(data_array, record_type, clock_speed_hz, k_list_components):
     if record_type == "TriggerRecord":
-        print_trigger_record_header(data_array, k_list_components)
+        print_trigger_record_header(data_array, clock_speed_hz,
+                                    k_list_components)
     elif record_type == "TimeSlice":
-        print_time_slice_header(data_array)
+        print_time_slice_header(data_array, clock_speed_hz)
     else:
         print(f"Error: Record Type {record_type} is not supported.")
     return
@@ -251,8 +256,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    global CLOCK_SPEED_HZ
-    CLOCK_SPEED_HZ = args.speed_of_clock
     if args.print_out is None and args.check_fragments is False and \
             args.binary_output is None:
         print("Error: use at least one of the two following options:")
@@ -266,6 +269,7 @@ def main():
     if args.binary_output is not None:
         h5.convert_to_binary(args.binary_output, args.num_of_records)
     if args.print_out is not None:
+        h5.set_clock_speed_hz(args.speed_of_clock)
         h5.printout(args.print_out, args.num_of_records, args.list_components)
     if args.check_fragments:
         h5.check_fragments(args.num_of_records)

@@ -34,7 +34,8 @@ def get_record_locations_from_binary_file(fname):
     return (trh_loc, frag_loc)
 
 
-def parse_binary_file(fname, k_n_request, k_print_out, k_list_components):
+def parse_binary_file(fname, k_n_request, k_print_out, clock_speed_hz,
+                      k_list_components):
     frag_magic_word = bytes.fromhex("22221111")
     trh_magic_word = bytes.fromhex("44443333")
     tsl_magic_word = bytes.fromhex("66665555")
@@ -53,7 +54,7 @@ def parse_binary_file(fname, k_n_request, k_print_out, k_list_components):
                 nfrag = 0
                 if ntrh !=0 and k_print_out in ['both', 'fragment']:
                     print(80*'-')
-                    print_fragment_header(bytesbuffer)
+                    print_fragment_header(bytesbuffer, clock_speed_hz)
                 bytesbuffer = bytearray()
                 ntrh += 1
                 if ntrh > k_n_request and k_n_request != 0: break
@@ -61,10 +62,11 @@ def parse_binary_file(fname, k_n_request, k_print_out, k_list_components):
                 if nfrag == 0 and ntrh != 0 and k_print_out in ['both',
                                                                 'header']:
                     print(80*'=')
-                    print_header(bytesbuffer, record_type, k_list_components)
+                    print_header(bytesbuffer, record_type, clock_speed_hz,
+                                 k_list_components)
                 if nfrag != 0 and k_print_out in ['both', 'fragment']:
                     print(80*'-')
-                    print_fragment_header(bytesbuffer)
+                    print_fragment_header(bytesbuffer, clock_speed_hz)
                 bytesbuffer = bytearray()
                 nfrag += 1
             bytesbuffer.extend(byte)
@@ -98,6 +100,11 @@ def parse_args():
                         help='specify number of records to be parsed',
                         default=0)
 
+    parser.add_argument('-s', '--speed-of-clock', type=float,
+                        help='''specify clock spped in Hz, default is
+                        50000000.0 (50MHz)''',
+                        default=50000000.0)
+
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 1.0')
     return parser.parse_args()
@@ -110,7 +117,7 @@ def main():
     print("Reading file", bfile)
 
     parse_binary_file(bfile, args.num_of_records, args.print_out,
-                      args.list_components)
+                      args.speed_of_clock, args.list_components)
     if args.debug:
         get_record_locations_from_binary_file(bfile)
     return
