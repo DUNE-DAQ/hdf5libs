@@ -15,13 +15,15 @@ namespace dunedaq {
 namespace hdf5libs {
 namespace python {
 
-extern void register_daqdecoder(py::module &);
+extern void
+register_hdf5rawdatafile(py::module&);
 
-PYBIND11_MODULE(_daq_hdf5libs_py, m) {
+PYBIND11_MODULE(_daq_hdf5libs_py, m)
+{
 
-    m.doc() = "c++ implementation of the dunedaq hdf5libs modules"; // optional module docstring
+  m.doc() = "c++ implementation of the dunedaq hdf5libs modules"; // optional module docstring
 
-    register_daqdecoder(m);
+  register_hdf5rawdatafile(m);
 }
 
 } // namespace python
