@@ -48,13 +48,13 @@ void HDF5FileLayout::check_config()
 }
 
 hdf5filelayout::PathParams
-HDF5FileLayout::get_path_params(daqdataformats::GeoID::SystemType type) const
+HDF5FileLayout::get_path_params(daqdataformats::SourceID::Subsystem type) const
 {
 	try{
 		return m_path_params_map.at(type);
 	}catch(std::out_of_range&) {
-		throw FileLayoutUnconfiguredSystemType(ERS_HERE,
-		                                       type,daqdataformats::GeoID::system_type_to_string(type));
+		throw FileLayoutUnconfiguredSubsystem(ERS_HERE,
+		                                       type,daqdataformats::SourceID::subsystem_to_string(type));
 	}
 }
 
@@ -144,35 +144,22 @@ std::vector<std::string> HDF5FileLayout::get_path_elements(const daqdataformats:
 	path_elements.push_back(get_trigger_number_string(fh.trigger_number, fh.sequence_number));
 
 	// then get the path params from our file layout for this type
-	auto const& path_params = get_path_params(fh.element_id.system_type);
+	auto const& path_params = get_path_params(fh.element_id.subsystem);
 
 	// next is the detector group name
 	path_elements.push_back(path_params.detector_group_name);
 
-	// then the region
-	std::ostringstream region_string;
-
-	int width=path_params.digits_for_region_number;
-	if(fh.element_id.region_id >= m_powers_ten[path_params.digits_for_region_number]) {
-		ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.region_id,path_params.digits_for_region_number));
-		width=0;             // tells it to revert to normal width
-	}
-
-	region_string << path_params.region_name_prefix << std::setw(width)
-	              << std::setfill('0') << fh.element_id.region_id;
-	path_elements.push_back(region_string.str());
-
-	// finally the element
+	// then the element
 	std::ostringstream element_string;
 
-	width=path_params.digits_for_element_number;
-	if(fh.element_id.element_id >= m_powers_ten[path_params.digits_for_element_number]) {
-		ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.element_id,path_params.digits_for_element_number));
+	int width=path_params.digits_for_element_number;
+	if(fh.element_id.id >= m_powers_ten[path_params.digits_for_element_number]) {
+		ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE,fh.element_id.id,path_params.digits_for_element_number));
 		width=0;             // tells it to revert to normal width
 	}
 
 	element_string << path_params.element_name_prefix << std::setw(width)
-	               << std::setfill('0') << fh.element_id.element_id;
+	              << std::setfill('0') << fh.element_id.id;
 	path_elements.push_back(element_string.str());
 
 	return path_elements;
@@ -212,16 +199,15 @@ std::string HDF5FileLayout::get_timeslice_header_path(daqdataformats::timeslice_
  */
 std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build/unsigned)
                                               daqdataformats::sequence_number_t seq_num,
-                                              daqdataformats::GeoID element_id) const
+                                              daqdataformats::SourceID element_id) const
 {
 
-	auto const& path_params = get_path_params(element_id.system_type);
+	auto const& path_params = get_path_params(element_id.subsystem);
 
 	std::ostringstream path_string;
 	path_string << get_trigger_number_string(trig_num, seq_num) << "/" << path_params.detector_group_name << "/"
-	            << path_params.region_name_prefix << std::setw(path_params.digits_for_region_number)
-	            << std::setfill('0') << element_id.region_id << "/" << path_params.element_name_prefix
-	            << std::setw(path_params.digits_for_element_number) << std::setfill('0') << element_id.element_id;
+	            << path_params.element_name_prefix << std::setw(path_params.digits_for_element_number) 
+	            << std::setfill('0') << element_id.id;
 	return path_string.str();
 }
 
@@ -230,12 +216,11 @@ std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build
  */
 std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build/unsigned)
                                               daqdataformats::sequence_number_t seq_num,
-                                              daqdataformats::GeoID::SystemType type,
-                                              uint16_t region_id, // NOLINT(build/unsigned)
+                                              daqdataformats::SourceID::Subsystem type,
                                               uint32_t element_id) const // NOLINT(build/unsigned)
 {
-	daqdataformats::GeoID gid{ type, region_id, element_id };
-	return get_fragment_path(trig_num, seq_num, gid);
+	daqdataformats::SourceID sid{ type, element_id };
+	return get_fragment_path(trig_num, seq_num, sid);
 }
 
 /**
@@ -244,11 +229,10 @@ std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build
 std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build/unsigned)
                                               daqdataformats::sequence_number_t seq_num,
                                               const std::string& typestring,
-                                              uint16_t region_id, // NOLINT(build/unsigned)
                                               uint32_t element_id) const // NOLINT(build/unsigned)
 {
-	daqdataformats::GeoID gid{ daqdataformats::GeoID::string_to_system_type(typestring), region_id, element_id };
-	return get_fragment_path(trig_num, seq_num, gid);
+	daqdataformats::SourceID sid{ daqdataformats::SourceID::string_to_subsystem(typestring), element_id };
+	return get_fragment_path(trig_num, seq_num, sid);
 }
 
 /**
@@ -256,7 +240,7 @@ std::string HDF5FileLayout::get_fragment_path(uint64_t trig_num, // NOLINT(build
  */
 std::string HDF5FileLayout::get_fragment_type_path(uint64_t trig_num, // NOLINT(build/unsigned)
                                                    daqdataformats::sequence_number_t seq_num,
-                                                   daqdataformats::GeoID::SystemType type) const
+                                                   daqdataformats::SourceID::Subsystem type) const
 {
 	auto const& path_params = get_path_params(type);
 
@@ -272,64 +256,32 @@ std::string HDF5FileLayout::get_fragment_type_path(uint64_t trig_num, // NOLINT(
                                                    daqdataformats::sequence_number_t seq_num,
                                                    std::string typestring) const
 {
-	return get_fragment_type_path(trig_num, seq_num, daqdataformats::GeoID::string_to_system_type(typestring));
+	return get_fragment_type_path(trig_num, seq_num, daqdataformats::SourceID::string_to_subsystem(typestring));
 }
 
-/**
- * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
- */
-std::string HDF5FileLayout::get_fragment_region_path(uint64_t trig_num, // NOLINT(build/unsigned)
-                                                     daqdataformats::sequence_number_t seq_num,
-                                                     daqdataformats::GeoID::SystemType type,
-                                                     uint16_t region_id) const // NOLINT(build/unsigned)
-{
-	auto const& path_params = get_path_params(type);
-
-	std::ostringstream path_string;
-	path_string << get_trigger_number_string(trig_num, seq_num) << "/" << path_params.detector_group_name << "/"
-	            << path_params.region_name_prefix << std::setw(path_params.digits_for_region_number)
-	            << std::setfill('0') << region_id;
-	return path_string.str();
-}
-
-/**
- * @brief get the path for a Fragment region group based on trig/seq number,type, and region ID
- */
-std::string HDF5FileLayout::get_fragment_region_path(uint64_t trig_num, // NOLINT(build/unsigned)
-                                                     daqdataformats::sequence_number_t seq_num,
-                                                     std::string typestring,
-                                                     uint16_t region_id) const // NOLINT(build/unsigned)
-{
-	return get_fragment_region_path(trig_num, seq_num,
-	                                daqdataformats::GeoID::string_to_system_type(typestring), region_id);
-}
-
-daqdataformats::GeoID
-HDF5FileLayout::get_geo_id_from_path_elements(std::vector<std::string> const& path_elements) const
+daqdataformats::SourceID
+HDF5FileLayout::get_source_id_from_path_elements(std::vector<std::string> const& path_elements) const
 {
 	//ignore first path element, which is for the record group
 	//second path element is detector name.
-	daqdataformats::GeoID::SystemType systype = m_detector_group_name_to_type_map.at(path_elements[1]);
+	daqdataformats::SourceID::Subsystem systype = m_detector_group_name_to_type_map.at(path_elements[1]);
 
 	//get back the path parameters for this system type from the file layout
 	auto path_params = get_path_params(systype);
 
-	//third path element is region. remove prefix and translate to number
-	auto reg_id = std::stoi( path_elements[2].substr(path_params.region_name_prefix.size()) );
-
 	//fourth path element is element. remove prefix and translate to numbers
 	auto ele_id = std::stoi( path_elements[3].substr(path_params.element_name_prefix.size()) );
 
-	return daqdataformats::GeoID(systype,reg_id,ele_id);
+	return daqdataformats::SourceID(systype,ele_id);
 }
 
 void HDF5FileLayout::fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp)
 {
 	for (auto const& path_param : flp.path_param_list) {
-		auto sys_type = daqdataformats::GeoID::string_to_system_type(path_param.detector_group_type);
+		auto sys_type = daqdataformats::SourceID::string_to_subsystem(path_param.detector_group_type);
 
-		if (sys_type == daqdataformats::GeoID::SystemType::kInvalid)
-			throw FileLayoutInvalidSystemType(ERS_HERE,path_param.detector_group_type);
+		if (sys_type == daqdataformats::SourceID::Subsystem::kUNDEFINED)
+			throw FileLayoutInvalidSubsystem(ERS_HERE,path_param.detector_group_type);
 
 		m_path_params_map[sys_type] = path_param;
 		m_detector_group_name_to_type_map[path_param.detector_group_name] = sys_type;
@@ -351,32 +303,24 @@ hdf5filelayout::FileLayoutParams HDF5FileLayout::get_v0_file_layout_params()
 
 	pp.detector_group_type = "TPC";
 	pp.detector_group_name = "TPC";
-	pp.region_name_prefix = "APA";
-	pp.digits_for_region_number = 3;
 	pp.element_name_prefix = "Link";
 	pp.digits_for_element_number = 2;
 	flp.path_param_list.push_back(pp);
 
 	pp.detector_group_type = "PDS";
 	pp.detector_group_name = "PDS";
-	pp.region_name_prefix = "Region";
-	pp.digits_for_region_number = 3;
 	pp.element_name_prefix = "Element";
 	pp.digits_for_element_number = 2;
 	flp.path_param_list.push_back(pp);
 
 	pp.detector_group_type = "NDLArTPC";
 	pp.detector_group_name = "NDLArTPC";
-	pp.region_name_prefix = "Region";
-	pp.digits_for_region_number = 3;
 	pp.element_name_prefix = "Element";
 	pp.digits_for_element_number = 2;
 	flp.path_param_list.push_back(pp);
 
 	pp.detector_group_type = "DataSelection";
 	pp.detector_group_name = "Trigger";
-	pp.region_name_prefix = "Region";
-	pp.digits_for_region_number = 3;
 	pp.element_name_prefix = "Element";
 	pp.digits_for_element_number = 2;
 	flp.path_param_list.push_back(pp);

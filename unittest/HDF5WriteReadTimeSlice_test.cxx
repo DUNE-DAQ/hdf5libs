@@ -32,14 +32,12 @@ constexpr int run_number=53;
 constexpr int file_index=0;
 const std::string application_name="HDF5WriteReadTimeSlice_test";
 constexpr size_t fragment_size = 100;
-constexpr size_t region_count_tpc=2;
-constexpr size_t element_count_tpc=2;
-constexpr size_t region_count_pds=2;
-constexpr size_t element_count_pds=2;
+constexpr size_t element_count_tpc=4;
+constexpr size_t element_count_pds=4;
 
 const size_t components_per_record = 
-  region_count_tpc*element_count_tpc + 
-  region_count_pds*element_count_pds;
+  element_count_tpc + 
+  element_count_pds;
 
 std::vector<std::string>
 get_files_matching_pattern(const std::string& path, const std::string& pattern)
@@ -75,18 +73,14 @@ create_file_layout_params()
   dunedaq::hdf5libs::hdf5filelayout::PathParams params_tpc;
   params_tpc.detector_group_type = "TPC";
   params_tpc.detector_group_name = "TPC";
-  params_tpc.region_name_prefix = "APA";
-  params_tpc.digits_for_region_number = 3;
   params_tpc.element_name_prefix = "Link";
-  params_tpc.digits_for_element_number = 2;
+  params_tpc.digits_for_element_number = 5;
 
   dunedaq::hdf5libs::hdf5filelayout::PathParams params_pds;
   params_pds.detector_group_type = "PDS";
   params_pds.detector_group_name = "PDS";
-  params_pds.region_name_prefix = "Region";
-  params_pds.digits_for_region_number = 3;
   params_pds.element_name_prefix = "Element";
-  params_pds.digits_for_element_number = 2;
+  params_pds.digits_for_element_number = 5;
   
 
   //note, for unit test json equality checks, 'PDS' needs to come before
@@ -123,9 +117,7 @@ create_timeslice(int ts_num)
   //create our TimeSlice
   dunedaq::daqdataformats::TimeSlice ts(tsh);
 
-  //loop over regions and elements tpc
-  for( size_t reg_num=0; reg_num < region_count_tpc; ++reg_num)
-    {
+  //loop over elements tpc
       for( size_t ele_num=0; ele_num < element_count_tpc; ++ele_num){
 	
 	//create our fragment
@@ -137,8 +129,8 @@ create_timeslice(int ts_num)
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
-	fh.element_id = dunedaq::daqdataformats::GeoID(dunedaq::daqdataformats::GeoID::SystemType::kTPC, 
-						       reg_num, ele_num);
+	fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDRO, 
+						       ele_num);
 	
 	std::unique_ptr<dunedaq::daqdataformats::Fragment> 
 	  frag_ptr(new dunedaq::daqdataformats::Fragment(dummy_data,fragment_size));
@@ -148,11 +140,8 @@ create_timeslice(int ts_num)
 	ts.add_fragment(std::move(frag_ptr));
 	
       }//end loop over elements
-    }//end loop over regions
 
-  //loop over regions and elements pds
-  for( size_t reg_num=0; reg_num < region_count_pds; ++reg_num)
-    {
+  //loop over elements pds
       for( size_t ele_num=0; ele_num < element_count_pds; ++ele_num){
 	
 	//create our fragment
@@ -164,8 +153,8 @@ create_timeslice(int ts_num)
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
-	fh.element_id = dunedaq::daqdataformats::GeoID(dunedaq::daqdataformats::GeoID::SystemType::kPDS, 
-						       reg_num, ele_num);
+	fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDRO,
+						        ele_num);
 	
 	std::unique_ptr<dunedaq::daqdataformats::Fragment> 
 	  frag_ptr(new dunedaq::daqdataformats::Fragment(dummy_data,fragment_size));
@@ -175,7 +164,6 @@ create_timeslice(int ts_num)
 	ts.add_fragment(std::move(frag_ptr));
 	
       }//end loop over elements
-    }//end loop over regions
 
   return ts;
 }
@@ -307,33 +295,30 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_timeslice);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
-  //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
+  //test access by trigger number, type, element
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kTPC);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,1);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,0);
 
-  //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
+  //test access by trigger number, type, element
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kPDS);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,1);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
   //test access by passing in GeoID
-  dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
+  dunedaq::daqdataformats::SourceID gid = {dunedaq::daqdataformats::SourceID::Subsystem::kDRO,1};
   frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kPDS);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,1);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,1);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
 
   // clean up the files that were created
@@ -406,33 +391,30 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),last_timeslice);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   
-  //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",1,0);
+  //test access by trigger number, type, element
+  frag_ptr = h5file_ptr->get_frag_ptr(2,0,"TPC",0);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kTPC);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,1);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,0);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,0);
 
-  //test access by trigger number, type, region, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",0,1);
+  //test access by trigger number, type, element
+  frag_ptr = h5file_ptr->get_frag_ptr(4,0,"PDS",1);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kPDS);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,1);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
   //test access by passing in GeoID
-  dunedaq::daqdataformats::GeoID gid = {dunedaq::daqdataformats::GeoID::SystemType::kPDS,1,1};
+  dunedaq::daqdataformats::SourceID gid = {dunedaq::daqdataformats::SourceID::Subsystem::kDRO,1};
   frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().system_type,
-		      dunedaq::daqdataformats::GeoID::SystemType::kPDS);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().region_id,1);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().element_id,1);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
 
   // clean up the files that were created

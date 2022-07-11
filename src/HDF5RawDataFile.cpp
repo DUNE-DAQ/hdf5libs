@@ -568,7 +568,7 @@ std::vector<std::string> HDF5RawDataFile::get_fragment_dataset_paths(const uint6
 
 //get all fragment dataset paths for a SystemType
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::GeoID::SystemType type)
+HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type)
 {
 	std::vector<std::string> frag_paths;
 	for( auto const& rid : get_all_record_ids()) {
@@ -581,13 +581,13 @@ HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::GeoID::SystemT
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const std::string typestring)
 {
-	daqdataformats::GeoID::SystemType type = daqdataformats::GeoID::string_to_system_type(typestring);
+	daqdataformats::SourceID::Subsystem type = daqdataformats::SourceID::string_to_subsystem(typestring);
 	return get_fragment_dataset_paths(type);
 }
 
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid,
-                                            const daqdataformats::GeoID::SystemType type)
+                                            const daqdataformats::SourceID::Subsystem type)
 {
 	std::vector<std::string> frag_paths;
 
@@ -602,13 +602,13 @@ std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid,
                                             const std::string typestring)
 {
-	daqdataformats::GeoID::SystemType type = daqdataformats::GeoID::string_to_system_type(typestring);
+	daqdataformats::SourceID::Subsystem type = daqdataformats::SourceID::string_to_subsystem(typestring);
 	return get_fragment_dataset_paths(rid,type);
 }
 
-//get all fragment dataset paths for a GeoID
+//get all fragment dataset paths for a SourceID
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::GeoID element_id)
+HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID element_id)
 {
 	std::vector<std::string> frag_paths;
 
@@ -619,24 +619,22 @@ HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::GeoID element_
 }
 
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::GeoID::SystemType type,
-                                            const uint16_t region_id,         //NOLINT(build/unsigned)
+HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type,
                                             const uint32_t element_id)         //NOLINT(build/unsigned)
 {
-	return get_fragment_dataset_paths(daqdataformats::GeoID(type,region_id,element_id));
+	return get_fragment_dataset_paths(daqdataformats::SourceID(type,element_id));
 }
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const std::string typestring,
-                                            const uint16_t region_id,         //NOLINT(build/unsigned)
                                             const uint32_t element_id)         //NOLINT(build/unsigned)
 {
-	return get_fragment_dataset_paths(daqdataformats::GeoID(daqdataformats::GeoID::string_to_system_type(typestring),region_id,element_id));
+	return get_fragment_dataset_paths(daqdataformats::SourceID(daqdataformats::SourceID::string_to_subsystem(typestring),element_id));
 }
 
 
-std::set<daqdataformats::GeoID> HDF5RawDataFile::get_geo_ids(std::vector<std::string> const& frag_dataset_paths)
+std::set<daqdataformats::SourceID> HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_paths)
 {
-	std::set<daqdataformats::GeoID> geo_ids;
+	std::set<daqdataformats::SourceID> source_ids;
 	std::vector<std::string> path_elements;
 	std::string s;
 	for(auto const& frag_dataset : frag_dataset_paths) {
@@ -646,10 +644,10 @@ std::set<daqdataformats::GeoID> HDF5RawDataFile::get_geo_ids(std::vector<std::st
       if(s.size()>0)
         path_elements.push_back(s);
     }
-		geo_ids.insert(m_file_layout_ptr->get_geo_id_from_path_elements(path_elements));
+		source_ids.insert(m_file_layout_ptr->get_source_id_from_path_elements(path_elements));
 	}
 
-	return geo_ids;
+	return source_ids;
 }
 
 
@@ -683,7 +681,7 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
-                              const daqdataformats::GeoID element_id)
+                              const daqdataformats::SourceID element_id)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
@@ -694,7 +692,7 @@ HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
-                              const daqdataformats::GeoID element_id)
+                              const daqdataformats::SourceID element_id)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
@@ -704,52 +702,48 @@ HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num,   // NOLINT(build/unsigned
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
-                              const daqdataformats::GeoID::SystemType type,
-                              const uint16_t region_id, // NOLINT(build/unsigned)
+                              const daqdataformats::SourceID::Subsystem type,
                               const uint32_t element_id) // NOLINT(build/unsigned)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, type, region_id, element_id));
+	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, type,  element_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
-                              const daqdataformats::GeoID::SystemType type,
-                              const uint16_t region_id, // NOLINT(build/unsigned)
+                              const daqdataformats::SourceID::Subsystem type,
                               const uint32_t element_id) // NOLINT(build/unsigned)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, type, region_id, element_id));
+	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, type,  element_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
                               const std::string typestring,
-                              const uint16_t region_id, // NOLINT(build/unsigned)
                               const uint32_t element_id) // NOLINT(build/unsigned)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, typestring, region_id, element_id));
+	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, typestring,  element_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
                               const std::string typestring,
-                              const uint16_t region_id, // NOLINT(build/unsigned)
                               const uint32_t element_id) // NOLINT(build/unsigned)
 {
 	if(get_version() < 2)
 		throw IncompatibleFileLayoutVersion(ERS_HERE,get_version(),2,MAX_FILELAYOUT_VERSION);
 
-	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, typestring, region_id, element_id));
+	return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, typestring,  element_id));
 }
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader>

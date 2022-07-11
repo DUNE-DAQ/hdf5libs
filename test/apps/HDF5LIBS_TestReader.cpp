@@ -165,9 +165,9 @@ main(int argc, char** argv)
 			ss << "\n\t" << *tsh_ptr;
 		}
 
-		for(auto const& gid : h5_raw_data_file.get_geo_ids(rid)){
-			//ss << "\n\t" << gid << ": ";
-			auto frag_ptr = h5_raw_data_file.get_frag_ptr(rid,gid);
+		for(auto const& sid : h5_raw_data_file.get_source_ids(rid)){
+			//ss << "\n\t" << sid << ": ";
+			auto frag_ptr = h5_raw_data_file.get_frag_ptr(rid,sid);
 			ss << "\n\t" << frag_ptr->get_header();
 		}
 

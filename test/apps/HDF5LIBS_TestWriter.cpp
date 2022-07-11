@@ -65,15 +65,13 @@ main(int argc, char** argv)
 
   const int trigger_count = j_in["trigger_count"].get<int>();
   const int fragment_size = j_in["data_size"].get<int>() + sizeof(FragmentHeader);
-  const GeoID::SystemType gtype_to_use = GeoID::string_to_system_type(j_in["fragment_type"].get<std::string>());
-  const int region_count = j_in["region_count"].get<int>();
+  const SourceID::Subsystem stype_to_use = SourceID::string_to_subsystem(j_in["fragment_type"].get<std::string>());
   const int element_count = j_in["element_count"].get<int>();
 
   TLOG() << "\nOutput file: " << ofile_name << "\nRun number: " << run_number << "\nFile index: " << file_index
          << "\nNumber of trigger records: " << trigger_count
-         << "\nNumber of fragments: " << region_count * element_count << "  (Regions=" << region_count
-         << ",Elements=" << element_count << ")"
-         << "\nFragment type: " << GeoID::system_type_to_string(gtype_to_use)
+         << "\nNumber of fragments: " << element_count 
+         << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // open our file for writing
@@ -101,7 +99,7 @@ main(int argc, char** argv)
     TriggerRecordHeaderData trh_data;
     trh_data.trigger_number = trig_num;
     trh_data.trigger_timestamp = ts;
-    trh_data.num_requested_components = region_count * element_count;
+    trh_data.num_requested_components = element_count;
     trh_data.run_number = run_number;
     trh_data.sequence_number = 0;
     trh_data.max_sequence_number = 1;
@@ -111,8 +109,7 @@ main(int argc, char** argv)
     // create out TriggerRecord
     TriggerRecord tr(trh);
 
-    // loop over regions and elements
-    for (int reg_num = 0; reg_num < region_count; ++reg_num) {
+    // loop over elements
       for (int ele_num = 0; ele_num < element_count; ++ele_num) {
 
         // create our fragment
@@ -124,7 +121,7 @@ main(int argc, char** argv)
         fh.run_number = run_number;
         fh.fragment_type = 0;
 	fh.sequence_number = 0;
-        fh.element_id = GeoID(gtype_to_use, reg_num, ele_num);
+        fh.element_id = SourceID(stype_to_use, ele_num);
 
 	auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
         frag_ptr->set_header_fields(fh);
@@ -133,7 +130,6 @@ main(int argc, char** argv)
         tr.add_fragment(std::move(frag_ptr));
 
       } // end loop over elements
-    }   // end loop over regions
 
     // write trigger record to file
     h5_raw_data_file.write(tr);
