@@ -88,7 +88,7 @@ class DAQDataFile:
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
-                s = struct.unpack('<H', data_array[42:44])
+                (s, ) = struct.unpack('<H', data_array[42:44])
                 nf = len(i.fragments)
                 report.append((h, s, k, nf, nf - k))
                 n += 1
