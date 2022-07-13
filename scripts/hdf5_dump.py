@@ -88,19 +88,21 @@ class DAQDataFile:
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
+                s = struct.unpack('<H', data_array[42:44])
                 nf = len(i.fragments)
-                report.append((h, k, nf, nf - k))
+                report.append((h, s, k, nf, nf - k))
                 n += 1
-            print("{:-^60}".format("Column Definitions"))
+            print("{:-^80}".format("Column Definitions"))
             print("i:           Trigger record number;")
+            print("s:           Sequence number;")
             print("N_frag_exp:  expected no. of fragments stored in header;")
             print("N_frag_act:  no. of fragments written in trigger record;")
             print("N_diff:      N_frag_act - N_frag_exp")
-            print("{:-^60}".format("Column Definitions"))
-            print("{:^10}{:^15}{:^15}{:^10}".format(
-                "i", "N_frag_exp", "N_frag_act", "N_diff"))
+            print("{:-^80}".format("Column Definitions"))
+            print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(
+                "i", "s", "N_frag_exp", "N_frag_act", "N_diff"))
             for i in range(len(report)):
-                print("{:^10}{:^15}{:^15}{:^10}".format(*report[i]))
+                print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(*report[i]))
         return
 
     class Record:
