@@ -280,7 +280,7 @@ void HDF5FileLayout::fill_path_params_maps(hdf5filelayout::FileLayoutParams cons
 	for (auto const& path_param : flp.path_param_list) {
 		auto sys_type = daqdataformats::SourceID::string_to_subsystem(path_param.detector_group_type);
 
-		if (sys_type == daqdataformats::SourceID::Subsystem::kUNDEFINED)
+		if (sys_type == daqdataformats::SourceID::Subsystem::kUnknown)
 			throw FileLayoutInvalidSubsystem(ERS_HERE,path_param.detector_group_type);
 
 		m_path_params_map[sys_type] = path_param;

@@ -129,7 +129,8 @@ create_timeslice(int ts_num)
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
-	fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDRO, 
+        fh.element_id =
+          dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 
 						       ele_num);
 	
 	std::unique_ptr<dunedaq::daqdataformats::Fragment> 
@@ -153,7 +154,8 @@ create_timeslice(int ts_num)
 	fh.run_number = run_number;
 	fh.fragment_type = 0;
 	fh.sequence_number = 0;
-	fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDRO,
+        fh.element_id =
+          dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout,
 						        ele_num);
 	
 	std::unique_ptr<dunedaq::daqdataformats::Fragment> 
@@ -300,7 +302,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,0);
 
   //test access by trigger number, type, element
@@ -308,16 +310,16 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
   //test access by passing in GeoID
-  dunedaq::daqdataformats::SourceID gid = {dunedaq::daqdataformats::SourceID::Subsystem::kDRO,1};
+  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
   frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
 
@@ -396,7 +398,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),2);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,0);
 
   //test access by trigger number, type, element
@@ -404,16 +406,16 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),4);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
   //test access by passing in GeoID
-  dunedaq::daqdataformats::SourceID gid = {dunedaq::daqdataformats::SourceID::Subsystem::kDRO,1};
+  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
   frag_ptr = h5file_ptr->get_frag_ptr(5,0,gid);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(),5);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(),run_number);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-		      dunedaq::daqdataformats::SourceID::Subsystem::kDRO);
+                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id,1);
 
 
