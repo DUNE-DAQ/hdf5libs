@@ -69,18 +69,17 @@ main(int argc, char** argv)
   const int element_count = j_in["element_count"].get<int>();
 
   TLOG() << "\nOutput file: " << ofile_name << "\nRun number: " << run_number << "\nFile index: " << file_index
-         << "\nNumber of trigger records: " << trigger_count
-         << "\nNumber of fragments: " << element_count 
+         << "\nNumber of trigger records: " << trigger_count << "\nNumber of fragments: " << element_count
          << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
-                                                     run_number,                 // run_number
-                                                     file_index,                 // file_index,
-                                                     app_name,                   // app_name
-                                                     fl_conf,                    // file_layout_confs
-						     ".writing",                 // optional: suffix to use for files being written
+                                                     run_number, // run_number
+                                                     file_index, // file_index,
+                                                     app_name,   // app_name
+                                                     fl_conf,    // file_layout_confs
+                                                     ".writing", // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
@@ -110,26 +109,26 @@ main(int argc, char** argv)
     TriggerRecord tr(trh);
 
     // loop over elements
-      for (int ele_num = 0; ele_num < element_count; ++ele_num) {
+    for (int ele_num = 0; ele_num < element_count; ++ele_num) {
 
-        // create our fragment
-        FragmentHeader fh;
-        fh.trigger_number = trig_num;
-        fh.trigger_timestamp = ts;
-        fh.window_begin = ts - 10;
-        fh.window_end = ts;
-        fh.run_number = run_number;
-        fh.fragment_type = 0;
-	fh.sequence_number = 0;
-        fh.element_id = SourceID(stype_to_use, ele_num);
+      // create our fragment
+      FragmentHeader fh;
+      fh.trigger_number = trig_num;
+      fh.trigger_timestamp = ts;
+      fh.window_begin = ts - 10;
+      fh.window_end = ts;
+      fh.run_number = run_number;
+      fh.fragment_type = 0;
+      fh.sequence_number = 0;
+      fh.element_id = SourceID(stype_to_use, ele_num);
 
-	auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
-        frag_ptr->set_header_fields(fh);
+      auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
+      frag_ptr->set_header_fields(fh);
 
-        // add fragment to TriggerRecord
-        tr.add_fragment(std::move(frag_ptr));
+      // add fragment to TriggerRecord
+      tr.add_fragment(std::move(frag_ptr));
 
-      } // end loop over elements
+    } // end loop over elements
 
     // write trigger record to file
     h5_raw_data_file.write(tr);
