@@ -23,6 +23,7 @@
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
+using namespace dunedaq::detdataformats;
 
 void
 print_usage()
@@ -65,7 +66,9 @@ main(int argc, char** argv)
 
   const int trigger_count = j_in["trigger_count"].get<int>();
   const int fragment_size = j_in["data_size"].get<int>() + sizeof(FragmentHeader);
-  const SourceID::Subsystem stype_to_use = SourceID::string_to_subsystem(j_in["fragment_type"].get<std::string>());
+  const SourceID::Subsystem stype_to_use = SourceID::string_to_subsystem(j_in["subsystem_type"].get<std::string>());
+  const DetID::Subdetector dtype_to_use = DetID::string_to_subdetector(j_in["subdetector_type"].get<std::string>());
+  const FragmentType ftype_to_use = string_to_fragment_type(j_in["fragment_type"].get<std::string>());
   const int element_count = j_in["element_count"].get<int>();
 
   TLOG() << "\nOutput file: " << ofile_name << "\nRun number: " << run_number << "\nFile index: " << file_index
@@ -118,8 +121,9 @@ main(int argc, char** argv)
       fh.window_begin = ts - 10;
       fh.window_end = ts;
       fh.run_number = run_number;
-      fh.fragment_type = 0;
+      fh.fragment_type = static_cast<fragment_type_t>(ftype_to_use);
       fh.sequence_number = 0;
+      fh.detector_id = static_cast<uint16_t>(dtype_to_use);
       fh.element_id = SourceID(stype_to_use, ele_num);
 
       auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());

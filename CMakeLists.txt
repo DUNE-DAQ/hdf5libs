@@ -9,6 +9,7 @@ find_package(logging REQUIRED)
 find_package(ers REQUIRED)
 find_package(HighFive REQUIRED)
 find_package(daqdataformats REQUIRED)
+find_package(detdataformats REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(cetlib REQUIRED)   # Uses the daq-buildtools/cmake/Findcetlib.cmake
 find_package(Boost COMPONENTS iostreams unit_test_framework REQUIRED)
@@ -17,16 +18,16 @@ daq_codegen( *.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2 )
 
 ##############################################################################
 # Main library
-daq_add_library (HDF5FileLayout.cpp HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (HDF5FileLayout.cpp HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats detdataformats::detdataformats logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Unit tests
 daq_add_unit_test( HDF5WriteReadTriggerRecord_test LINK_LIBRARIES hdf5libs )
-daq_add_unit_test( HDF5WriteReadTimeSlice_test LINK_LIBRARIES hdf5libs )
+#daq_add_unit_test( HDF5WriteReadTimeSlice_test LINK_LIBRARIES hdf5libs )
 
 ##############################################################################
 # Python bindings
-daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daqdataformats)
+daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daqdataformats detdataformats::detdataformats)
 
 ##############################################################################
 # Applications

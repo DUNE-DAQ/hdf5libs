@@ -6,14 +6,16 @@
     "digits_for_sequence_number": 4,
     "record_header_dataset_name": "TriggerRecordHeader",
 
-    "path_param_list":[ {"detector_group_type":"TPC","detector_group_name":"TPC","region_name_prefix":"APA","digits_for_region_number":3,"element_name_prefix":"Link","digits_for_element_number":2} ]
+    "path_param_list":[ {"detector_group_type":"Detector_Readout","detector_group_name":"TPC","region_name_prefix":"APA","digits_for_region_number":3,"element_name_prefix":"Link","digits_for_element_number":2} ]
   },
 
   "run_number": 1234,
   "file_index": 0,
   "trigger_count": 5,
   "data_size": 10,
-  "fragment_type": "TPC",
+  "subsystem_type": "Detector_Readout",
+  "subdetector_type": "HD_TPC",
+  "fragment_type": "WIB",
   "region_count": 2,
   "element_count": 10
 

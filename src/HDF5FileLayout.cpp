@@ -112,7 +112,7 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TriggerRecordHeader& trh
   path_elements.push_back(get_trigger_number_string(trh.get_trigger_number(), trh.get_sequence_number()));
 
   // then the TriggerRecordHeader dataset name
-  path_elements.push_back(m_conf_params.record_header_dataset_name);
+  path_elements.push_back(trh.get_header().element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
 
   return path_elements;
 }
@@ -141,13 +141,22 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TimeSliceHeader& tsh) co
 std::vector<std::string>
 HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) const
 {
-
   std::vector<std::string> path_elements;
 
   // first the Trigger string
   // note, this still works for TimeSlices through enforced proper configuration of layout parameters
   path_elements.push_back(get_trigger_number_string(fh.trigger_number, fh.sequence_number));
 
+  // next the subdetector
+  path_elements.push_back(
+    detdataformats::DetID::subdetector_to_string(static_cast<detdataformats::DetID::Subdetector>(fh.detector_id)));
+
+  // then the sourceID plus fragment type
+  path_elements.push_back(
+    fh.element_id.to_string() + "_" +
+    daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
+
+#if 0
   // then get the path params from our file layout for this type
   auto const& path_params = get_path_params(fh.element_id.subsystem);
 
@@ -165,6 +174,7 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
 
   element_string << path_params.element_name_prefix << std::setw(width) << std::setfill('0') << fh.element_id.id;
   path_elements.push_back(element_string.str());
+#endif
 
   return path_elements;
 }
