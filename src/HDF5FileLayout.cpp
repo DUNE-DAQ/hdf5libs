@@ -111,8 +111,11 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TriggerRecordHeader& trh
   // first the Trigger string
   path_elements.push_back(get_trigger_number_string(trh.get_trigger_number(), trh.get_sequence_number()));
 
-  // then the TriggerRecordHeader dataset name
-  path_elements.push_back(trh.get_header().element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
+  // then the RawData group name
+  path_elements.push_back(m_conf_params.raw_data_group_name);
+
+  // then the SourceID
+  path_elements.push_back(trh.get_header().element_id.to_string());
 
   return path_elements;
 }
@@ -129,8 +132,11 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TimeSliceHeader& tsh) co
   // first the Trigger string
   path_elements.push_back(get_timeslice_number_string(tsh.timeslice_number));
 
-  // then the TriggerRecordHeader dataset name
-  path_elements.push_back(m_conf_params.record_header_dataset_name);
+  // then the RawData group name
+  path_elements.push_back(m_conf_params.raw_data_group_name);
+
+  // then the SourceID
+  path_elements.push_back(tsh.element_id.to_string());
 
   return path_elements;
 }
@@ -141,40 +147,18 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TimeSliceHeader& tsh) co
 std::vector<std::string>
 HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) const
 {
+
   std::vector<std::string> path_elements;
 
   // first the Trigger string
   // note, this still works for TimeSlices through enforced proper configuration of layout parameters
   path_elements.push_back(get_trigger_number_string(fh.trigger_number, fh.sequence_number));
 
-  // next the subdetector
-  path_elements.push_back(
-    detdataformats::DetID::subdetector_to_string(static_cast<detdataformats::DetID::Subdetector>(fh.detector_id)));
+  // then the RawData group name
+  path_elements.push_back(m_conf_params.raw_data_group_name);
 
-  // then the sourceID plus fragment type
-  path_elements.push_back(
-    fh.element_id.to_string() + "_" +
-    daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
-
-#if 0
-  // then get the path params from our file layout for this type
-  auto const& path_params = get_path_params(fh.element_id.subsystem);
-
-  // next is the detector group name
-  path_elements.push_back(path_params.detector_group_name);
-
-  // then the element
-  std::ostringstream element_string;
-
-  int width = path_params.digits_for_element_number;
-  if (fh.element_id.id >= m_powers_ten[path_params.digits_for_element_number]) {
-    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, fh.element_id.id, path_params.digits_for_element_number));
-    width = 0; // tells it to revert to normal width
-  }
-
-  element_string << path_params.element_name_prefix << std::setw(width) << std::setfill('0') << fh.element_id.id;
-  path_elements.push_back(element_string.str());
-#endif
+  // then the SourceID
+  path_elements.push_back(fh.element_id.to_string());
 
   return path_elements;
 }
