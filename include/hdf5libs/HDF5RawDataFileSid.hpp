@@ -131,7 +131,7 @@ public:
                      unsigned open_flags = HighFive::File::Create);
 
   // constructor for reading
-  // explicit HDF5RawDataFileSid(const std::string& file_name);
+  explicit HDF5RawDataFileSid(const std::string& file_name);
 
   ~HDF5RawDataFileSid();
 
@@ -334,8 +334,8 @@ private:
 
   // file layout writing/reading
   void write_file_layout();
-  // void read_file_layout();
-  // void check_file_layout();
+  void read_file_layout();
+  void check_file_layout();
 
   // checking function
   void check_record_type(std::string);

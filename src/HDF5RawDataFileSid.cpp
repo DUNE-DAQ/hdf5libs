@@ -223,8 +223,6 @@ HDF5RawDataFileSid::do_write(std::vector<std::string> const& group_and_dataset_p
   return 0;
 }
 
-#if 0
-
 /**
  * @brief Constructor for reading a file
  */
@@ -286,6 +284,8 @@ HDF5RawDataFileSid::check_file_layout()
   if (record_type.compare(m_file_layout_ptr->get_record_name_prefix()) != 0)
     throw BadRecordType(ERS_HERE, record_type, m_file_layout_ptr->get_record_name_prefix());
 }
+
+#if 0
 
 void
 HDF5RawDataFileSid::check_record_type(std::string rt_name)
