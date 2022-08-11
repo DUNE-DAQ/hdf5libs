@@ -1,15 +1,17 @@
 /**
  * @file HDF5WriteReadTriggerRecord_test.cxx Application that tests and demonstrates
- * the write/read functions of the HDF5RawDataFile class.
+ * the write/read functions of the HDF5RawDataFileSid class.
  *
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
  * received with this code.
  */
 
-#include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/HDF5RawDataFileSid.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
+
+#include "detdataformats/DetID.hpp"
 
 #define BOOST_TEST_MODULE HDF5WriteReadTriggerRecord_test // NOLINT
 
@@ -73,16 +75,16 @@ create_file_layout_params()
   params_tpc.element_name_prefix = "Link";
   params_tpc.digits_for_element_number = 5;
 
-  //dunedaq::hdf5libs::hdf5filelayout::PathParams params_pds;
-  //params_pds.detector_group_type = "PDS";
-  //params_pds.detector_group_name = "PDS";
-  //params_pds.element_name_prefix = "Element";
-  //params_pds.digits_for_element_number = 5;
+  // dunedaq::hdf5libs::hdf5filelayout::PathParams params_pds;
+  // params_pds.detector_group_type = "PDS";
+  // params_pds.detector_group_name = "PDS";
+  // params_pds.element_name_prefix = "Element";
+  // params_pds.digits_for_element_number = 5;
 
   // note, for unit test json equality checks, 'PDS' needs to come before
   //'TPC', as on reading back the filelayout it looks like it's alphabetical.
   dunedaq::hdf5libs::hdf5filelayout::PathParamList param_list;
-  //param_list.push_back(params_pds);
+  // param_list.push_back(params_pds);
   param_list.push_back(params_tpc);
 
   dunedaq::hdf5libs::hdf5filelayout::FileLayoutParams layout_params;
@@ -113,6 +115,7 @@ create_trigger_record(int trig_num)
   trh_data.run_number = run_number;
   trh_data.sequence_number = 0;
   trh_data.max_sequence_number = 1;
+  trh_data.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTRBuilder, 0);
 
   dunedaq::daqdataformats::TriggerRecordHeader trh(&trh_data);
 
@@ -129,7 +132,8 @@ create_trigger_record(int trig_num)
     fh.window_begin = ts;
     fh.window_end = ts;
     fh.run_number = run_number;
-    fh.fragment_type = static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kWIB);
+    fh.fragment_type =
+      static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kWIB);
     fh.sequence_number = 0;
     fh.detector_id = static_cast<uint16_t>(dunedaq::detdataformats::DetID::Subdetector::kHD_TPC);
     fh.element_id =
@@ -154,7 +158,8 @@ create_trigger_record(int trig_num)
     fh.window_begin = ts;
     fh.window_end = ts;
     fh.run_number = run_number;
-    fh.fragment_type = static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kDAPHNE);
+    fh.fragment_type =
+      static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kDAPHNE);
     fh.sequence_number = 0;
     fh.detector_id = static_cast<uint16_t>(dunedaq::detdataformats::DetID::Subdetector::kHD_PDS);
     fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout,
@@ -169,9 +174,7 @@ create_trigger_record(int trig_num)
 
   } // end loop over elements
 
-
-
-  for (size_t ele_num = 0; ele_num <2; ++ele_num) {
+  for (size_t ele_num = 0; ele_num < 2; ++ele_num) {
 
     // create our fragment
     dunedaq::daqdataformats::FragmentHeader fh;
@@ -180,11 +183,11 @@ create_trigger_record(int trig_num)
     fh.window_begin = ts;
     fh.window_end = ts;
     fh.run_number = run_number;
-    fh.fragment_type = static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kTriggerActivity);
+    fh.fragment_type =
+      static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kTriggerActivity);
     fh.sequence_number = 0;
     fh.detector_id = static_cast<uint16_t>(dunedaq::detdataformats::DetID::Subdetector::kDAQ);
-    fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger,
-                                                      ele_num);
+    fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger, ele_num);
 
     std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr(
       new dunedaq::daqdataformats::Fragment(dummy_data, fragment_size));
@@ -195,7 +198,7 @@ create_trigger_record(int trig_num)
 
   } // end loop over elements
 
-  for (size_t ele_num = 0; ele_num <1; ++ele_num) {
+  for (size_t ele_num = 0; ele_num < 1; ++ele_num) {
 
     // create our fragment
     dunedaq::daqdataformats::FragmentHeader fh;
@@ -204,11 +207,12 @@ create_trigger_record(int trig_num)
     fh.window_begin = ts;
     fh.window_end = ts;
     fh.run_number = run_number;
-    fh.fragment_type = static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kTriggerCandidate);
+    fh.fragment_type =
+      static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kTriggerCandidate);
     fh.sequence_number = 0;
     fh.detector_id = static_cast<uint16_t>(dunedaq::detdataformats::DetID::Subdetector::kDAQ);
-    fh.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger,
-                                                      ele_num + 2);
+    fh.element_id =
+      dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger, ele_num + 2);
 
     std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr(
       new dunedaq::daqdataformats::Fragment(dummy_data, fragment_size));
@@ -218,9 +222,6 @@ create_trigger_record(int trig_num)
     tr.add_fragment(std::move(frag_ptr));
 
   } // end loop over elements
-
-
-
 
   return tr;
 }
@@ -243,12 +244,12 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
 
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  // create_file_layout_params()));
-                                                                  flp_json_in));
+  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(new HDF5RawDataFileSid(file_path + "/" + filename,
+                                                                        run_number,
+                                                                        file_index,
+                                                                        application_name,
+                                                                        // create_file_layout_params()));
+                                                                        flp_json_in));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
@@ -265,7 +266,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   BOOST_REQUIRE_EQUAL(file_list.size(), 1);
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
 
   // check attributes
   auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
@@ -284,7 +285,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   BOOST_REQUIRE_EQUAL(flp_json_in, flp_json_read);
 
   // clean up the files that were created
-  //delete_files_matching_pattern(file_path, delete_pattern);
+  // delete_files_matching_pattern(file_path, delete_pattern);
 }
 
 #if 0
@@ -300,7 +301,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   delete_files_matching_pattern(file_path, delete_pattern);
 
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
+  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(new HDF5RawDataFileSid(
     file_path + "/" + filename, run_number, file_index, application_name, create_file_layout_params()));
 
   // write several events, each with several fragments
@@ -310,7 +311,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   h5file_ptr.reset(); // explicit destruction
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
 
   auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
   BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
@@ -391,8 +392,8 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   fl_pars.digits_for_sequence_number = 4;
 
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(
-    new HDF5RawDataFile(file_path + "/" + filename, run_number, file_index, application_name, fl_pars));
+  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(
+    new HDF5RawDataFileSid(file_path + "/" + filename, run_number, file_index, application_name, fl_pars));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
@@ -401,7 +402,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   h5file_ptr.reset(); // explicit destruction
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
 
   auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
   BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());

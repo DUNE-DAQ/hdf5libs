@@ -9,9 +9,10 @@
  * received with this code.
  */
 
-#include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/HDF5RawDataFileSid.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
+#include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 
 #include <fstream>
@@ -77,13 +78,13 @@ main(int argc, char** argv)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // open our file for writing
-  HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
-                                                     run_number, // run_number
-                                                     file_index, // file_index,
-                                                     app_name,   // app_name
-                                                     fl_conf,    // file_layout_confs
-                                                     ".writing", // optional: suffix to use for files being written
-                                                     HighFive::File::Overwrite); // optional: overwrite existing file
+  HDF5RawDataFileSid h5_raw_data_file = HDF5RawDataFileSid(ofile_name,
+                                                           run_number, // run_number
+                                                           file_index, // file_index,
+                                                           app_name,   // app_name
+                                                           fl_conf,    // file_layout_confs
+                                                           ".writing", // optional: suffix to use for files being written
+                                                           HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
 
@@ -105,6 +106,7 @@ main(int argc, char** argv)
     trh_data.run_number = run_number;
     trh_data.sequence_number = 0;
     trh_data.max_sequence_number = 1;
+    trh_data.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 0);
 
     TriggerRecordHeader trh(&trh_data);
 
