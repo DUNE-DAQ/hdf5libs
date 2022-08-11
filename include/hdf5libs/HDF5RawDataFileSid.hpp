@@ -13,6 +13,7 @@
 
 // DUNE-DAQ
 #include "hdf5libs/HDF5FileLayout.hpp"
+#include "hdf5libs/HDF5SourceIDMaps.hpp"
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
 
 #include "daqdataformats/Fragment.hpp"
@@ -152,11 +153,14 @@ public:
   }
 
   // basic data writing methods
+public:
   void write(const daqdataformats::TriggerRecord& tr);
-  void write(const daqdataformats::TriggerRecordHeader& trh);
   void write(const daqdataformats::TimeSlice& ts);
-  void write(const daqdataformats::TimeSliceHeader& tsh);
-  void write(const daqdataformats::Fragment& frag);
+private:
+  HighFive::Group write(const daqdataformats::TriggerRecordHeader& trh, HDF5SourceIDMaps& sid_maps);
+  void write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDMaps& sid_maps);
+  void write(const daqdataformats::Fragment& frag, HDF5SourceIDMaps& sid_maps);
+public:
 
   // attribute writers/getters
   template<typename T>
@@ -173,13 +177,23 @@ public:
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
 
-#if 0
   //std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
   record_id_set get_all_record_ids();
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
 
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
+                                                                   const daqdataformats::sequence_number_t seq_num = 0);
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid)
+  {
+    return get_trh_ptr(rid.first, rid.second);
+  }
+
+  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
+  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t rid) { return get_tsh_ptr(rid.first); }
+
+#if 0
   //std::set<uint64_t> get_all_record_numbers(); // NOLINT(build/unsigned)
   //std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
   //std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers();
@@ -296,16 +310,6 @@ public:
                                                          const std::string typestring,
                                                          const uint32_t element_id); // NOLINT(build/unsigned)
 
-  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                                   const daqdataformats::sequence_number_t seq_num = 0);
-  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid)
-  {
-    return get_trh_ptr(rid.first, rid.second);
-  }
-
-  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
-  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t rid) { return get_tsh_ptr(rid.first); }
-
   daqdataformats::TriggerRecord get_trigger_record(const daqdataformats::trigger_number_t trig_num,
                                                    const daqdataformats::sequence_number_t seq_num = 0);
   daqdataformats::TriggerRecord get_trigger_record(const record_id_t rid)
@@ -341,7 +345,7 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  size_t do_write(std::vector<std::string> const&, const char*, size_t);
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t);
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,

@@ -10,7 +10,7 @@
  * received with this code.
  */
 
-#include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/HDF5RawDataFileSid.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include "logging/Logging.hpp"
@@ -41,7 +41,7 @@ main(int argc, char** argv)
   const std::string ifile_name = std::string(argv[1]);
 
   // open our file reading
-  HDF5RawDataFile h5_raw_data_file(ifile_name);
+  HDF5RawDataFileSid h5_raw_data_file(ifile_name);
 
   std::ostringstream ss;
 
@@ -105,6 +105,8 @@ main(int argc, char** argv)
   //  TLOG() << ss.str();
   //  ss.str("");
 
+#if 0
+  // 11-Aug-2022, KAB: what value do we get from seeing the header dataset paths?
   auto all_rh_paths = h5_raw_data_file.get_record_header_dataset_paths();
   ss << "\nAll record header datasets found:";
   for (auto const& path : all_rh_paths)
@@ -211,6 +213,7 @@ main(int argc, char** argv)
     TLOG() << ss.str();
     ss.str("");
   }
+#endif
 
   return 0;
 } // NOLINT
