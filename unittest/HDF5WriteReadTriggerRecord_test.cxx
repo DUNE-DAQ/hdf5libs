@@ -244,12 +244,14 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
 
   // create the file
+  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> blah(new dunedaq::detchannelmaps::HardwareMapService(""));
   std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(new HDF5RawDataFileSid(file_path + "/" + filename,
                                                                         run_number,
                                                                         file_index,
                                                                         application_name,
                                                                         // create_file_layout_params()));
-                                                                        flp_json_in));
+                                                                        flp_json_in,
+                                                                        blah));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)

@@ -33,6 +33,7 @@ HDF5RawDataFileSid::HDF5RawDataFileSid(std::string file_name,
                                        size_t file_index,
                                        std::string application_name,
                                        const hdf5filelayout::FileLayoutParams& fl_params,
+                                       std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
                                        std::string inprogress_filename_suffix,
                                        unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -71,6 +72,11 @@ HDF5RawDataFileSid::HDF5RawDataFileSid(std::string file_name,
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
   write_file_layout();
 
+  // write the SourceID-related attributes
+  HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
+  HDF5SourceIDHandler::write_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
+  HDF5SourceIDHandler::write_version_info(*m_file_ptr);
+
   // write the record type
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
@@ -103,16 +109,15 @@ HDF5RawDataFileSid::~HDF5RawDataFileSid()
 void
 HDF5RawDataFileSid::write(const daqdataformats::TriggerRecord& tr)
 {
-  HDF5SourceIDMaps sid_maps;
+  HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  HighFive::Group top_level_group = write(tr.get_header_ref(), sid_maps);
+  HighFive::Group record_level_group = write(tr.get_header_ref(), source_id_path_map);
 
   for (auto const& frag_ptr : tr.get_fragments_ref()) {
-    write(*frag_ptr, sid_maps);
+    write(*frag_ptr, source_id_path_map);
   }
 
-  write_attribute(top_level_group, "source_id_path_map", get_json_string(sid_maps.get_source_id_path_map()));
-  TLOG() << get_json_string(sid_maps.get_source_id_path_map());
+  HDF5SourceIDHandler::write_record_level_path_info(record_level_group, source_id_path_map);
 }
 
 /**
@@ -121,54 +126,61 @@ HDF5RawDataFileSid::write(const daqdataformats::TriggerRecord& tr)
 void
 HDF5RawDataFileSid::write(const daqdataformats::TimeSlice& ts)
 {
-  HDF5SourceIDMaps sid_maps;
+  HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  write(ts.get_header(), sid_maps);
+  HighFive::Group record_level_group = write(ts.get_header(), source_id_path_map);
 
   for (auto const& frag_ptr : ts.get_fragments_ref()) {
-    write(*frag_ptr, sid_maps);
+    write(*frag_ptr, source_id_path_map);
   }
+
+  HDF5SourceIDHandler::write_record_level_path_info(record_level_group, source_id_path_map);
 }
 
 /**
  * @brief Write a TriggerRecordHeader to the file.
  */
 HighFive::Group
-HDF5RawDataFileSid::write(const daqdataformats::TriggerRecordHeader& trh, HDF5SourceIDMaps& sid_maps)
+HDF5RawDataFileSid::write(const daqdataformats::TriggerRecordHeader& trh,
+                          HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(trh),
              static_cast<const char*>(trh.get_storage_location()),
              trh.get_total_size_bytes());
   m_recorded_size += std::get<0>(write_results);
-  sid_maps.add_source_id_path(trh.get_header().element_id, std::get<1>(write_results));
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<1>(write_results));
   return std::get<2>(write_results);
 }
 
 /**
  * @brief Write a TimeSliceHeader to the file.
  */
-void
-HDF5RawDataFileSid::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDMaps& sid_maps)
+HighFive::Group
+HDF5RawDataFileSid::write(const daqdataformats::TimeSliceHeader& tsh,
+                          HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(tsh), (const char*)(&tsh), sizeof(daqdataformats::TimeSliceHeader));
   m_recorded_size += std::get<0>(write_results);
-  sid_maps.add_source_id_path(tsh.element_id, std::get<1>(write_results));
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
+  return std::get<2>(write_results);
 }
 
 /**
  * @brief Write a Fragment to the file.
  */
 void
-HDF5RawDataFileSid::write(const daqdataformats::Fragment& frag, HDF5SourceIDMaps& sid_maps)
+HDF5RawDataFileSid::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
              static_cast<const char*>(frag.get_storage_location()),
              frag.get_size());
   m_recorded_size += std::get<0>(write_results);
-  sid_maps.add_source_id_path(frag.get_element_id(), std::get<1>(write_results));
+
+  daqdataformats::SourceID source_id = frag.get_element_id();
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, source_id, std::get<1>(write_results));
 }
 
 /**
@@ -299,43 +311,28 @@ HDF5RawDataFileSid::check_file_layout()
     throw BadRecordType(ERS_HERE, record_type, m_file_layout_ptr->get_record_name_prefix());
 }
 
-/**
- * @brief Return all of the record numbers in the file.
- */
-HDF5RawDataFileSid::record_id_set // NOLINT(build/unsigned)
-HDF5RawDataFileSid::get_all_record_ids()
+// get all SourceIDs for given record ID
+std::vector<daqdataformats::SourceID>
+HDF5RawDataFileSid::get_fragment_source_ids(const record_id_t rid)
 {
-  if (!m_record_ids.empty())
-    return m_record_ids;
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
 
-  // records are at the top level
+#if 0
+  // fetch the relevant mapping information from the record Attributes, if needed
+  if (m_source_id_cache.count(rid) == 0 ||
+      m_source_id_path_cache.count(rid) == 0 ||
+      m_source_id_geo_id_cache.count(rid) == 0) {
+  if (m_source_id_path_cache.count(rid) != 0) {
+    HDF5SourceIDHandler::source_id_path_map_t sid_path_map = m_source_id_path_cache[rid];
+    sid_list = sid_path_map.keys();
+  }
 
-  HighFive::Group parent_group = m_file_ptr->getGroup(m_file_ptr->getPath());
+  }
+#endif
 
-  std::vector<std::string> childNames = parent_group.listObjectNames();
-  const std::string record_prefix = m_file_layout_ptr->get_record_name_prefix();
-  const size_t record_prefix_size = record_prefix.size();
-
-  for (auto const& name : childNames) {
-    auto loc = name.find(record_prefix);
-
-    if (loc == std::string::npos)
-      continue;
-
-    auto rec_num_string = name.substr(loc + record_prefix_size);
-
-    loc = rec_num_string.find(".");
-    if (loc == std::string::npos) {
-      m_record_ids.insert(std::make_pair(std::stoi(rec_num_string), 0));
-    } else {
-      auto seq_num_string = rec_num_string.substr(loc + 1);
-      rec_num_string.resize(loc); // remove anything from '.' onwards
-      m_record_ids.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
-    }
-
-  } // end loop over childNames
-
-  return m_record_ids;
+  return m_source_id_cache[rid];
 }
 
 #if 0
@@ -396,7 +393,48 @@ HDF5RawDataFileSid::get_dataset_paths(std::string top_level_group_name)
 
   return path_list;
 }
+#endif
 
+/**
+ * @brief Return all of the record numbers in the file.
+ */
+HDF5RawDataFileSid::record_id_set // NOLINT(build/unsigned)
+HDF5RawDataFileSid::get_all_record_ids()
+{
+  if (!m_all_record_ids_in_file.empty())
+    return m_all_record_ids_in_file;
+
+  // records are at the top level
+
+  HighFive::Group parent_group = m_file_ptr->getGroup(m_file_ptr->getPath());
+
+  std::vector<std::string> childNames = parent_group.listObjectNames();
+  const std::string record_prefix = m_file_layout_ptr->get_record_name_prefix();
+  const size_t record_prefix_size = record_prefix.size();
+
+  for (auto const& name : childNames) {
+    auto loc = name.find(record_prefix);
+
+    if (loc == std::string::npos)
+      continue;
+
+    auto rec_num_string = name.substr(loc + record_prefix_size);
+
+    loc = rec_num_string.find(".");
+    if (loc == std::string::npos) {
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), 0));
+    } else {
+      auto seq_num_string = rec_num_string.substr(loc + 1);
+      rec_num_string.resize(loc); // remove anything from '.' onwards
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
+    }
+
+  } // end loop over childNames
+
+  return m_all_record_ids_in_file;
+}
+
+#if 0
 std::set<uint64_t>
 HDF5RawDataFileSid::get_all_record_numbers() // NOLINT(build/unsigned)
 {

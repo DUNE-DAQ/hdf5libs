@@ -29,21 +29,22 @@ using namespace dunedaq::detdataformats;
 void
 print_usage()
 {
-  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <output_file_name>";
+  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <hardware_map_file> <output_file_name>";
 }
 
 int
 main(int argc, char** argv)
 {
 
-  if (argc != 3) {
+  if (argc != 4) {
     print_usage();
     return 1;
   }
 
   const std::string app_name = std::string(argv[0]);
   const std::string ifile_name = std::string(argv[1]);
-  const std::string ofile_name = std::string(argv[2]);
+  const std::string hw_map_file_name = std::string(argv[2]);
+  const std::string ofile_name = std::string(argv[3]);
 
   // read in configuration
   nlohmann::json j_in, fl_conf;
@@ -77,14 +78,20 @@ main(int argc, char** argv)
          << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
+  // create the HardwareMapService
+  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+    new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
+
   // open our file for writing
-  HDF5RawDataFileSid h5_raw_data_file = HDF5RawDataFileSid(ofile_name,
-                                                           run_number, // run_number
-                                                           file_index, // file_index,
-                                                           app_name,   // app_name
-                                                           fl_conf,    // file_layout_confs
-                                                           ".writing", // optional: suffix to use for files being written
-                                                           HighFive::File::Overwrite); // optional: overwrite existing file
+  HDF5RawDataFileSid h5_raw_data_file =
+    HDF5RawDataFileSid(ofile_name,
+                       run_number, // run_number
+                       file_index, // file_index,
+                       app_name,   // app_name
+                       fl_conf,    // file_layout_confs
+                       hw_map_service,
+                       ".writing",                 // optional: suffix to use for files being written
+                       HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
 
