@@ -8,7 +8,7 @@
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 #include "hdf5libs/hdf5sourceidmaps/Nljs.hpp"
 
-//#include <stdexcept>
+#include "logging/Logging.hpp"
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -20,31 +20,37 @@ HDF5SourceIDHandler::write_version_info(HighFive::File& h5_file)
 }
 
 void
-HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> /*hw_map_svc*/,
-                                                   source_id_geo_id_map_t& /*the_map*/)
-{}
-
-void
-HDF5SourceIDHandler::write_file_level_geo_id_info(HighFive::File& /*h5_file*/,
-                                                  const source_id_geo_id_map_t& /*the_map*/)
+HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
+                                                   source_id_geo_id_map_t& source_id_geo_id_map)
 {
-  //write_attribute(record_level_group, "source_id_path_map", get_json_string(sid_maps.get_source_id_path_map()));
-  //HDF5RawDataFileSid.cpp_20220816145709:  write_attribute(record_level_group, "source_id_geo_id_map", get_json_string(sid_maps.get_source_id_geo_id_map()));
+  std::vector<detchannelmaps::HardwareMapService::HWInfo> hw_info_list = hw_map_svc->get_all_hw_info();
+  for (auto const& hw_info : hw_info_list) {
+    daqdataformats::SourceID source_id(daqdataformats::SourceID::Subsystem::kDetectorReadout, hw_info.dro_source_id);
+    add_source_id_geo_id_to_map(source_id_geo_id_map, source_id, hw_info.geo_id);
+  }
 }
 
 void
-HDF5SourceIDHandler::write_record_level_path_info(HighFive::Group& record_group,
-                                                  const source_id_path_map_t& the_map)
+HDF5SourceIDHandler::write_file_level_geo_id_info(HighFive::File& h5_file, const source_id_geo_id_map_t& the_map)
+{
+  write_attribute(h5_file, "source_id_geo_id_map", get_json_string(the_map));
+}
+
+void
+HDF5SourceIDHandler::write_record_level_path_info(HighFive::Group& record_group, const source_id_path_map_t& the_map)
 {
   write_attribute(record_group, "source_id_path_map", get_json_string(the_map));
 }
 
 uint32_t
-HDF5SourceIDHandler::determine_version_from_file(const HighFive::File& /*h5_file*/) // NOLINT(build/unsigned)
+HDF5SourceIDHandler::determine_version_from_file(const HighFive::File& h5_file) // NOLINT(build/unsigned)
 {
   uint32_t version = 1;
 
-  // fetch the version attribute from the file
+  try {
+    version = get_attribute<HighFive::File, uint32_t>(h5_file, "source_id_metadata_version");
+  } catch (...) {
+  }
 
   return version;
 }
@@ -64,9 +70,17 @@ HDF5SourceIDHandler::fetch_record_level_geo_id_info(const HighFive::Group& /*rec
 {}
 
 void
-HDF5SourceIDHandler::fetch_source_id_path_info(const HighFive::Group& /*record_group*/,
-                                               source_id_path_map_t& /*the_map*/)
-{}
+HDF5SourceIDHandler::fetch_source_id_path_info(const HighFive::Group& record_group,
+                                               source_id_path_map_t& source_id_path_map)
+{
+  if (m_version == 3) {
+    try {
+      std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "source_id_path_map");
+      parse_json_string(map_string, source_id_path_map);
+    } catch (...) {
+    }
+  }
+}
 
 void
 HDF5SourceIDHandler::add_source_id_path_to_map(source_id_path_map_t& source_id_path_map,
@@ -94,7 +108,7 @@ std::string
 HDF5SourceIDHandler::get_json_string(const HDF5SourceIDHandler::source_id_path_map_t& the_map)
 {
   hdf5sourceidmaps::SourceIDPathMap json_struct;
-  for (auto map_element : the_map) {
+  for (auto const& map_element : the_map) {
     json_struct.source_id_version = map_element.first.version;
     hdf5sourceidmaps::SourceIDPathPair json_element;
     json_element.subsys = static_cast<uint32_t>(map_element.first.subsystem); // NOLINT(build/unsigned)
@@ -102,16 +116,16 @@ HDF5SourceIDHandler::get_json_string(const HDF5SourceIDHandler::source_id_path_m
     json_element.path = map_element.second;
     json_struct.map_entries.push_back(json_element);
   }
-  hdf5sourceidmaps::data_t json_obj;
-  hdf5sourceidmaps::to_json(json_obj, json_struct);
-  return json_obj.dump();
+  hdf5sourceidmaps::data_t json_tmp_data;
+  hdf5sourceidmaps::to_json(json_tmp_data, json_struct);
+  return json_tmp_data.dump();
 }
 
 std::string
 HDF5SourceIDHandler::get_json_string(const HDF5SourceIDHandler::source_id_geo_id_map_t& the_map)
 {
   hdf5sourceidmaps::SourceIDGeoIDMap json_struct;
-  for (auto map_element : the_map) {
+  for (auto const& map_element : the_map) {
     json_struct.source_id_version = map_element.first.version;
     hdf5sourceidmaps::GeoIDList json_geo_id_list;
     for (auto const& geo_id_from_map : map_element.second) {
@@ -123,10 +137,29 @@ HDF5SourceIDHandler::get_json_string(const HDF5SourceIDHandler::source_id_geo_id
     json_element.geoids = json_geo_id_list;
     json_struct.map_entries.push_back(json_element);
   }
-  hdf5sourceidmaps::data_t json_obj;
-  hdf5sourceidmaps::to_json(json_obj, json_struct);
-  return json_obj.dump();
+  hdf5sourceidmaps::data_t json_tmp_data;
+  hdf5sourceidmaps::to_json(json_tmp_data, json_struct);
+  return json_tmp_data.dump();
 }
+
+void
+HDF5SourceIDHandler::parse_json_string(const std::string& json_string, source_id_path_map_t& source_id_path_map)
+{
+  hdf5sourceidmaps::SourceIDPathMap json_struct;
+  hdf5sourceidmaps::data_t json_tmp_data = nlohmann::json::parse(json_string);
+  hdf5sourceidmaps::from_json(json_tmp_data, json_struct);
+  for (auto const& json_element : json_struct.map_entries) {
+    daqdataformats::SourceID::Subsystem subsys = static_cast<daqdataformats::SourceID::Subsystem>(json_element.subsys);
+    daqdataformats::SourceID::ID_t id = static_cast<daqdataformats::SourceID::ID_t>(json_element.id);
+    daqdataformats::SourceID source_id(subsys, id);
+    source_id_path_map[source_id] = json_element.path;
+  }
+}
+
+void
+HDF5SourceIDHandler::parse_json_string(const std::string& /*json_string*/,
+                                       source_id_geo_id_map_t& /*source_id_geo_id_map*/)
+{}
 
 } // namespace hdf5libs
 } // namespace dunedaq

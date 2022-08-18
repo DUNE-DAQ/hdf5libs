@@ -133,10 +133,26 @@ private:
   static std::string get_json_string(const source_id_geo_id_map_t& source_id_geo_id_map);
 
   /**
+   * Parses the specified JSON string into the specified source_id_path map
+   */
+  static void parse_json_string(const std::string& json_string, source_id_path_map_t& source_id_path_map);
+
+  /**
+   * Parses the specified JSON string into the specified source_id_geo_id map
+   */
+  static void parse_json_string(const std::string& json_string, source_id_geo_id_map_t& source_id_geo_id_map);
+
+  /**
    * Writes the specified attribute name and value to the specified HightFive File or Group.
    */
   template<typename C, typename T>
   static void write_attribute(HighFive::AnnotateTraits<C>& h5annt, const std::string& name, T value);
+
+  /**
+   * Fetches the attribute with the specified name from the specified HightFive File or Group.
+   */
+  template<typename C, typename T>
+  static T get_attribute(const HighFive::AnnotateTraits<C>& h5annt, const std::string& name);
 };
 
 template<typename C, typename T>
@@ -145,10 +161,22 @@ HDF5SourceIDHandler::write_attribute(HighFive::AnnotateTraits<C>& h5annt, const 
 {
   if (!(h5annt.hasAttribute(name)))
     h5annt.createAttribute(name, value);
-  //else
-  //  ers::warning(HDF5AttributeExists(ERS_HERE, name));
+  // else
+  //   ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
 
+template<typename C, typename T>
+T
+HDF5SourceIDHandler::get_attribute(const HighFive::AnnotateTraits<C>& h5annt, const std::string& name)
+{
+  // if (!h5annt.hasAttribute(name)) {
+  //   throw InvalidHDF5Attribute(ERS_HERE, name);
+  // }
+  auto attr = h5annt.getAttribute(name);
+  T value;
+  attr.read(value);
+  return value;
+}
 
 } // namespace hdf5libs
 } // namespace dunedaq

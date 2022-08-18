@@ -189,9 +189,6 @@ public:
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
 
-  // get all SourceIDs for given record ID
-  std::vector<daqdataformats::SourceID> get_fragment_source_ids(const record_id_t rid);
-
 #if 0
   std::set<uint64_t> get_all_record_numbers(); // NOLINT(build/unsigned)
   std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
@@ -239,17 +236,17 @@ public:
 
   // get a list of all the source ids anywhere in the file
   std::set<daqdataformats::SourceID> get_all_source_ids() { return get_source_ids(get_all_fragment_dataset_paths()); }
+#endif
+
   // get SourceIDs in a record
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid)
-  {
-    return get_source_ids(get_fragment_dataset_paths(rid));
-  }
+  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid);
   std::set<daqdataformats::SourceID> get_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                     const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_source_ids(std::make_pair(rec_num, seq_num));
   }
 
+#if 0
   // get SourceIDs for given system type in a record
   std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid,
                                                     const daqdataformats::SourceID::Subsystem type)
@@ -282,12 +279,15 @@ public:
   {
     return get_source_ids(get_fragment_dataset_paths(typestring));
   }
+#endif
 
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
+#if 0
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const std::string& dataset_name);
+#endif
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
                                                          const daqdataformats::SourceID element_id);
@@ -308,7 +308,6 @@ public:
                                                          const daqdataformats::sequence_number_t seq_num,
                                                          const std::string typestring,
                                                          const uint32_t element_id); // NOLINT(build/unsigned)
-#endif
 
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                                                                    const daqdataformats::sequence_number_t seq_num = 0);
@@ -363,10 +362,14 @@ private:
                         std::string relative_path,
                         std::vector<std::string>& path_list);
 
+  // adds record-level information to caches, if needed
+  void add_record_level_info_to_caches_if_needed(record_id_t rid);
+
   // caches of full-file and record-specific information
   record_id_set m_all_record_ids_in_file;
+  uint32_t m_source_id_handler_version = 1; // NOLINT(build/unsigned)
   HDF5SourceIDHandler::source_id_geo_id_map_t m_file_level_source_id_geo_id_map;
-  std::map<record_id_t, std::vector<daqdataformats::SourceID>> m_source_id_cache;
+  std::map<record_id_t, std::set<daqdataformats::SourceID>> m_source_id_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_path_map_t> m_source_id_path_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_geo_id_map_t> m_source_id_geo_id_cache;
 };
