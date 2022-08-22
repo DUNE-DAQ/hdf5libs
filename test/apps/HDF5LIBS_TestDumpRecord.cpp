@@ -11,6 +11,7 @@
 
 #include "hdf5libs/HDF5RawDataFileSid.hpp"
 
+#include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 
 #include <fstream>
@@ -20,6 +21,7 @@
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
+using namespace dunedaq::detdataformats;
 
 void
 print_usage()
@@ -91,13 +93,17 @@ main(int argc, char** argv)
   ss.str("");
 
   for (auto const& record_id : records) {
-    std::set<SourceID> sid_list = h5_raw_data_file.get_source_ids(record_id);
-    for (auto const& source_id : sid_list) {
+    auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+    ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
+    std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
+    for (auto const& source_id : frag_sid_list) {
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
-      ss << "\n\tFragment size = " << frag_ptr->get_size();
-      TLOG() << ss.str();
-      ss.str("");
+      ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment from subdetector "
+         << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
+         << " has size = " << frag_ptr->get_size();
     }
+    TLOG() << ss.str();
+    ss.str("");
   }
 
 #if 0

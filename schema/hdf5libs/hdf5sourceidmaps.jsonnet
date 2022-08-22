@@ -9,6 +9,12 @@ local types = {
 
     geo_id_value : s.number("GeoIDValue", "u8", doc="64-bit number"),
 
+    source_id : s.record("SourceID", [
+        s.field("subsys", self.numeric_value, 0, doc="SourceID subsystem"),
+        s.field("id", self.numeric_value, 0, doc="SourceID ID"),
+        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used")
+    ], doc="A single SourceID"),
+
     source_id_path_pair : s.record("SourceIDPathPair", [
         s.field("subsys", self.numeric_value, 0, doc="SourceID subsystem"),
         s.field("id", self.numeric_value, 0, doc="SourceID ID"),
@@ -18,7 +24,6 @@ local types = {
     list_of_path_map_entries : s.sequence("PathMapEntryList", self.source_id_path_pair, doc="List of SourceID to HDF5 path map entries"),
 
     source_id_path_map : s.record("SourceIDPathMap", [
-        #s.field("source_id_path_map_version", self.numeric_value, 1, doc="Version of the encoding of the source-id-path map into JSON"),
         s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used"),
         s.field("map_entries", self.list_of_path_map_entries, doc="The list of entries in the map"),
     ], doc="Information that is needed to build up the map of SourceIDs to HDF5 DataSet paths"),

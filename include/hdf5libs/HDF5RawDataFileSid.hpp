@@ -225,11 +225,11 @@ public:
   std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid, const std::string typestring);
 
   // get all fragment dataset paths for a SourceID
-  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID element_id);
+  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID source_id);
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type,
-  const uint32_t element_id); // NOLINT(build/unsigned)
+  const uint32_t id); // NOLINT(build/unsigned)
   std::vector<std::string> get_fragment_dataset_paths(const std::string typestring,
-  const uint32_t element_id); // NOLINT(build/unsigned)
+  const uint32_t id); // NOLINT(build/unsigned)
 
   // get a list of all the source ids from a list of fragment dataset paths
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
@@ -244,6 +244,20 @@ public:
                                                     const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_source_ids(std::make_pair(rec_num, seq_num));
+  }
+
+  daqdataformats::SourceID get_record_header_source_id(const record_id_t rid);
+  daqdataformats::SourceID get_record_header_source_id(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                       const daqdataformats::sequence_number_t seq_num = 0)
+  {
+    return get_record_header_source_id(std::make_pair(rec_num, seq_num));
+  }
+
+  std::set<daqdataformats::SourceID> get_fragment_source_ids(const record_id_t rid);
+  std::set<daqdataformats::SourceID> get_fragment_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                             const daqdataformats::sequence_number_t seq_num = 0)
+  {
+    return get_fragment_source_ids(std::make_pair(rec_num, seq_num));
   }
 
 #if 0
@@ -284,36 +298,36 @@ public:
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
-#if 0
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
+#if 0
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const std::string& dataset_name);
 #endif
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
-                                                         const daqdataformats::SourceID element_id);
+                                                         const daqdataformats::SourceID source_id);
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
-                                                         const daqdataformats::SourceID element_id);
+                                                         const daqdataformats::SourceID source_id);
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
                                                          const daqdataformats::SourceID::Subsystem type,
-                                                         const uint32_t element_id); // NOLINT(build/unsigned)
+                                                         const uint32_t id); // NOLINT(build/unsigned)
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,     // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
                                                          const daqdataformats::SourceID::Subsystem type,
-                                                         const uint32_t element_id); // NOLINT(build/unsigned)
+                                                         const uint32_t id); // NOLINT(build/unsigned)
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
                                                          const std::string typestring,
-                                                         const uint32_t element_id); // NOLINT(build/unsigned)
+                                                         const uint32_t id); // NOLINT(build/unsigned)
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,     // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
                                                          const std::string typestring,
-                                                         const uint32_t element_id); // NOLINT(build/unsigned)
+                                                         const uint32_t id); // NOLINT(build/unsigned)
 
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
-                                                                   const daqdataformats::sequence_number_t seq_num = 0);
-  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid)
+                                                                   const daqdataformats::sequence_number_t seq_num = 0)
   {
-    return get_trh_ptr(rid.first, rid.second);
+    return get_trh_ptr(std::make_pair(trig_num, seq_num));
   }
 
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
@@ -370,6 +384,8 @@ private:
   uint32_t m_source_id_handler_version = 1; // NOLINT(build/unsigned)
   HDF5SourceIDHandler::source_id_geo_id_map_t m_file_level_source_id_geo_id_map;
   std::map<record_id_t, std::set<daqdataformats::SourceID>> m_source_id_cache;
+  std::map<record_id_t, daqdataformats::SourceID> m_record_header_source_id_cache;
+  std::map<record_id_t, std::set<daqdataformats::SourceID>> m_fragment_source_id_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_path_map_t> m_source_id_path_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_geo_id_map_t> m_source_id_geo_id_cache;
 };

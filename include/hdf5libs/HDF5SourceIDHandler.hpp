@@ -37,7 +37,7 @@ namespace hdf5libs {
  * translation (to/from strings) when *reading* data.  For writing data,
  * the interface is currently designed to only support the current version
  * of the translation.  If we ever decide to add support for writing of
- * different versions, then the 'write' methods would become non-static.
+ * different versions, then the 'store' methods would become non-static.
  */
 
 class HDF5SourceIDHandler
@@ -52,9 +52,9 @@ public:
   static constexpr uint32_t s_source_id_param_version = 3; // NOLINT(build/unsigned)
 
   /**
-   * Writes the current version of this class into the specified file.
+   * Stores the current version of this class in the specified file.
    */
-  static void write_version_info(HighFive::File& h5_file);
+  static void store_version_info(HighFive::File& h5_file);
 
   /**
    * Populates the specified source_id_geo_id map with information contained in the
@@ -64,14 +64,19 @@ public:
                                             source_id_geo_id_map_t& the_map);
 
   /**
-   * Writes the map from SourceID to GeoID into the specified HighFive::File.
+   * Stores the map from SourceID to GeoID in the specified HighFive::File.
    */
-  static void write_file_level_geo_id_info(HighFive::File& h5_file, const source_id_geo_id_map_t& the_map);
+  static void store_file_level_geo_id_info(HighFive::File& h5_file, const source_id_geo_id_map_t& the_map);
 
   /**
-   * Writes the map from SourceID to HDF5 Path into the specified HighFive::Group.
+   * Stores the SourceID of the record header DataSet in the specified HighFive::Group.
    */
-  static void write_record_level_path_info(HighFive::Group& record_group, const source_id_path_map_t& the_map);
+  static void store_record_header_source_id(HighFive::Group& record_group, const daqdataformats::SourceID& source_id);
+
+  /**
+   * Stores the map from SourceID to HDF5 Path in the specified HighFive::Group.
+   */
+  static void store_record_level_path_info(HighFive::Group& record_group, const source_id_path_map_t& the_map);
 
   /**
    * Determines the version of this class that was used when the
@@ -95,6 +100,12 @@ public:
    * stored at the record level in the specified HighFive::Group.
    */
   void fetch_record_level_geo_id_info(const HighFive::Group& record_group, source_id_geo_id_map_t& the_map);
+
+  /**
+   * Fetches the record header SourceID using information
+   * stored at the record level in the specified HighFive::Group.
+   */
+  daqdataformats::SourceID fetch_record_header_source_id(const HighFive::Group& record_group);
 
   /**
    * Adds entries to the specified SourceID-to-HDF5-Path map using information
@@ -123,6 +134,11 @@ private:
   uint32_t m_version; // NOLINT(build/unsigned)
 
   /**
+   * Produces the JSON string that corresponds to the specified source_id
+   */
+  static std::string get_json_string(const daqdataformats::SourceID& source_id);
+
+  /**
    * Produces the JSON string that corresponds to the specified source_id_path map
    */
   static std::string get_json_string(const source_id_path_map_t& source_id_path_map);
@@ -131,6 +147,11 @@ private:
    * Produces the JSON string that corresponds to the specified source_id_geo_id map
    */
   static std::string get_json_string(const source_id_geo_id_map_t& source_id_geo_id_map);
+
+  /**
+   * Parses the specified JSON string into the specified source_id
+   */
+  static void parse_json_string(const std::string& json_string, daqdataformats::SourceID& source_id);
 
   /**
    * Parses the specified JSON string into the specified source_id_path map
