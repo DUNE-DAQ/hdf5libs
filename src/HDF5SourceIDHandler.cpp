@@ -37,7 +37,8 @@ HDF5SourceIDHandler::store_file_level_geo_id_info(HighFive::File& h5_file, const
 }
 
 void
-HDF5SourceIDHandler::store_record_header_source_id(HighFive::Group& record_group, const daqdataformats::SourceID& source_id)
+HDF5SourceIDHandler::store_record_header_source_id(HighFive::Group& record_group,
+                                                   const daqdataformats::SourceID& source_id)
 {
   write_attribute(record_group, "record_header_source_id", get_json_string(source_id));
 }
@@ -48,13 +49,13 @@ HDF5SourceIDHandler::store_record_level_path_info(HighFive::Group& record_group,
   write_attribute(record_group, "source_id_path_map", get_json_string(the_map));
 }
 
-uint32_t
-HDF5SourceIDHandler::determine_version_from_file(const HighFive::File& h5_file) // NOLINT(build/unsigned)
+uint32_t // NOLINT(build/unsigned)
+HDF5SourceIDHandler::determine_version_from_file(const HighFive::File& h5_file)
 {
-  uint32_t version = 1;
+  uint32_t version = 1; // NOLINT(build/unsigned)
 
   try {
-    version = get_attribute<HighFive::File, uint32_t>(h5_file, "source_id_metadata_version");
+    version = get_attribute<HighFive::File, uint32_t>(h5_file, "source_id_metadata_version"); // NOLINT(build/unsigned)
   } catch (...) {
   }
 
@@ -66,14 +67,27 @@ HDF5SourceIDHandler::HDF5SourceIDHandler(const uint32_t version) // NOLINT(build
 {}
 
 void
-HDF5SourceIDHandler::fetch_file_level_geo_id_info(const HighFive::File& /*h5_file*/,
-                                                  source_id_geo_id_map_t& /*the_map*/)
-{}
+HDF5SourceIDHandler::fetch_file_level_geo_id_info(const HighFive::File& h5_file,
+                                                  source_id_geo_id_map_t& source_id_geo_id_map)
+{
+  if (m_version == 3) {
+    try {
+      std::string map_string = get_attribute<HighFive::File, std::string>(h5_file, "source_id_geo_id_map");
+      parse_json_string(map_string, source_id_geo_id_map);
+    } catch (...) {
+    }
+  }
+}
 
 void
 HDF5SourceIDHandler::fetch_record_level_geo_id_info(const HighFive::Group& /*record_group*/,
-                                                    source_id_geo_id_map_t& /*the_map*/)
-{}
+                                                    source_id_geo_id_map_t& /*source_id_geo_id_map*/)
+{
+  // In version 3, there is no record-level geo_id information stored in the file
+  if (m_version == 3) {
+    return;
+  }
+}
 
 daqdataformats::SourceID
 HDF5SourceIDHandler::fetch_record_header_source_id(const HighFive::Group& record_group)
@@ -201,9 +215,23 @@ HDF5SourceIDHandler::parse_json_string(const std::string& json_string, source_id
 }
 
 void
-HDF5SourceIDHandler::parse_json_string(const std::string& /*json_string*/,
-                                       source_id_geo_id_map_t& /*source_id_geo_id_map*/)
-{}
+HDF5SourceIDHandler::parse_json_string(const std::string& json_string, source_id_geo_id_map_t& source_id_geo_id_map)
+{
+  hdf5sourceidmaps::SourceIDGeoIDMap json_struct;
+  hdf5sourceidmaps::data_t json_tmp_data = nlohmann::json::parse(json_string);
+  hdf5sourceidmaps::from_json(json_tmp_data, json_struct);
+  for (auto const& json_element : json_struct.map_entries) {
+    daqdataformats::SourceID::Subsystem subsys = static_cast<daqdataformats::SourceID::Subsystem>(json_element.subsys);
+    daqdataformats::SourceID::ID_t id = static_cast<daqdataformats::SourceID::ID_t>(json_element.id);
+    daqdataformats::SourceID source_id(subsys, id);
+    std::vector<uint64_t> local_geo_id_list; // NOLINT(build/unsigned)
+    hdf5sourceidmaps::GeoIDList json_geo_id_list = json_element.geoids;
+    for (hdf5sourceidmaps::GeoIDValue json_geo_id_value : json_geo_id_list) {
+      local_geo_id_list.push_back(json_geo_id_value);
+    }
+    source_id_geo_id_map[source_id] = local_geo_id_list;
+  }
+}
 
 } // namespace hdf5libs
 } // namespace dunedaq

@@ -198,37 +198,37 @@ public:
   std::vector<std::string> get_trigger_record_header_dataset_paths();
   std::vector<std::string> get_timeslice_header_dataset_paths();
 
-  std::string get_record_header_dataset_path(const record_id_t rid);
+  std::string get_record_header_dataset_path(const record_id_t& rid);
   std::string get_record_header_dataset_path(const uint64_t rec_num, // NOLINT (build/unsigned)
   const daqdataformats::sequence_number_t seq_num = 0);
-  std::string get_trigger_record_header_dataset_path(const record_id_t rid);
+  std::string get_trigger_record_header_dataset_path(const record_id_t& rid);
   std::string get_trigger_record_header_dataset_path(const daqdataformats::trigger_number_t trig_num,
   const daqdataformats::sequence_number_t seq_num = 0);
-  std::string get_timeslice_header_dataset_path(const record_id_t rid);
+  std::string get_timeslice_header_dataset_path(const record_id_t& rid);
   std::string get_timeslice_header_dataset_path(const daqdataformats::timeslice_number_t trig_num);
 
   // get all fragment dataset paths
   std::vector<std::string> get_all_fragment_dataset_paths();
 
   // get all fragment dataset paths for given record ID
-  std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid);
+  std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid);
   std::vector<std::string> get_fragment_dataset_paths(const uint64_t rec_num, // NOLINT (build/unsigned)
   const daqdataformats::sequence_number_t seq_num = 0);
 
   // get all fragment dataset paths for a SystemType
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type);
-  std::vector<std::string> get_fragment_dataset_paths(const std::string typestring);
+  std::vector<std::string> get_fragment_dataset_paths(const std::string& typestring);
 
   // get all fragment dataset paths for a record ID and SystemType
-  std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid,
+  std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid,
   const daqdataformats::SourceID::Subsystem type);
-  std::vector<std::string> get_fragment_dataset_paths(const record_id_t rid, const std::string typestring);
+  std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid, const std::string& typestring);
 
   // get all fragment dataset paths for a SourceID
-  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID source_id);
+  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID& source_id);
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type,
   const uint32_t id); // NOLINT(build/unsigned)
-  std::vector<std::string> get_fragment_dataset_paths(const std::string typestring,
+  std::vector<std::string> get_fragment_dataset_paths(const std::string& typestring,
   const uint32_t id); // NOLINT(build/unsigned)
 
   // get a list of all the source ids from a list of fragment dataset paths
@@ -239,21 +239,21 @@ public:
 #endif
 
   // get SourceIDs in a record
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid);
+  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid);
   std::set<daqdataformats::SourceID> get_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                     const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_source_ids(std::make_pair(rec_num, seq_num));
   }
 
-  daqdataformats::SourceID get_record_header_source_id(const record_id_t rid);
+  daqdataformats::SourceID get_record_header_source_id(const record_id_t& rid);
   daqdataformats::SourceID get_record_header_source_id(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                        const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_record_header_source_id(std::make_pair(rec_num, seq_num));
   }
 
-  std::set<daqdataformats::SourceID> get_fragment_source_ids(const record_id_t rid);
+  std::set<daqdataformats::SourceID> get_fragment_source_ids(const record_id_t& rid);
   std::set<daqdataformats::SourceID> get_fragment_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                              const daqdataformats::sequence_number_t seq_num = 0)
   {
@@ -262,12 +262,12 @@ public:
 
 #if 0
   // get SourceIDs for given system type in a record
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid,
+  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid,
                                                     const daqdataformats::SourceID::Subsystem type)
   {
     return get_source_ids(get_fragment_dataset_paths(rid, type));
   }
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t rid, const std::string typestring)
+  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid, const std::string& typestring)
   {
     return get_source_ids(get_fragment_dataset_paths(rid, typestring));
   }
@@ -279,7 +279,7 @@ public:
   }
   std::set<daqdataformats::SourceID> get_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                     const daqdataformats::sequence_number_t seq_num,
-                                                    const std::string typestring)
+                                                    const std::string& typestring)
   {
     return get_source_ids(std::make_pair(rec_num, seq_num), typestring);
   }
@@ -289,7 +289,7 @@ public:
   {
     return get_source_ids(get_fragment_dataset_paths(type));
   }
-  std::set<daqdataformats::SourceID> get_source_ids(const std::string typestring)
+  std::set<daqdataformats::SourceID> get_source_ids(const std::string& typestring)
   {
     return get_source_ids(get_fragment_dataset_paths(typestring));
   }
@@ -303,27 +303,27 @@ public:
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const std::string& dataset_name);
 #endif
 
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
-                                                         const daqdataformats::SourceID source_id);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t& rid,
+                                                         const daqdataformats::SourceID& source_id);
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
-                                                         const daqdataformats::SourceID source_id);
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
+                                                         const daqdataformats::SourceID& source_id);
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t& rid,
                                                          const daqdataformats::SourceID::Subsystem type,
-                                                         const uint32_t id); // NOLINT(build/unsigned)
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,     // NOLINT(build/unsigned)
+                                                         const uint32_t id);     // NOLINT(build/unsigned)
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
                                                          const daqdataformats::SourceID::Subsystem type,
                                                          const uint32_t id); // NOLINT(build/unsigned)
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t rid,
-                                                         const std::string typestring,
-                                                         const uint32_t id); // NOLINT(build/unsigned)
-  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num,     // NOLINT(build/unsigned)
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t& rid,
+                                                         const std::string& typestring,
+                                                         const uint32_t id);     // NOLINT(build/unsigned)
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                          const daqdataformats::sequence_number_t seq_num,
-                                                         const std::string typestring,
+                                                         const std::string& typestring,
                                                          const uint32_t id); // NOLINT(build/unsigned)
 
-  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t rid);
+  std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t& rid);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                                                                    const daqdataformats::sequence_number_t seq_num = 0)
   {
@@ -331,12 +331,15 @@ public:
   }
 
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
-  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t rid) { return get_tsh_ptr(rid.first); }
+  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t& rid)
+  {
+    return get_tsh_ptr(rid.first);
+  }
 
 #if 0
   daqdataformats::TriggerRecord get_trigger_record(const daqdataformats::trigger_number_t trig_num,
                                                    const daqdataformats::sequence_number_t seq_num = 0);
-  daqdataformats::TriggerRecord get_trigger_record(const record_id_t rid)
+  daqdataformats::TriggerRecord get_trigger_record(const record_id_t& rid)
   {
     return get_trigger_record(rid.first, rid.second);
   }
@@ -344,6 +347,9 @@ public:
   daqdataformats::TimeSlice get_timeslice(const daqdataformats::timeslice_number_t ts_num);
   daqdataformats::TimeSlice get_timeslice(record_id_t rid) { return get_timeslice(rid.first); }
 #endif
+
+  std::vector<uint64_t> get_geo_ids_for_source_id(const record_id_t& rid, // NOLINT(build/unsigned)
+                                                  const daqdataformats::SourceID& source_id);
 
 private:
   HDF5RawDataFileSid(const HDF5RawDataFileSid&) = delete;

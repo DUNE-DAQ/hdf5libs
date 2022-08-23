@@ -22,6 +22,7 @@
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
 using namespace dunedaq::detdataformats;
+using namespace dunedaq::detchannelmaps;
 
 void
 print_usage()
@@ -100,7 +101,15 @@ main(int argc, char** argv)
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
       ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
-         << " has size = " << frag_ptr->get_size();
+         << " has size = " << frag_ptr->get_size() << " and data from:";
+      // need to exclude Trigger Fragments
+      std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
+      for (auto const& geo_id : geo_id_list) {
+        HardwareMapService::GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+        ss << "\n\t\t"
+           << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
+           << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
+      }
     }
     TLOG() << ss.str();
     ss.str("");
