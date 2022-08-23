@@ -99,16 +99,20 @@ main(int argc, char** argv)
     std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
     for (auto const& source_id : frag_sid_list) {
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
-      ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment from subdetector "
+      ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
+         << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
-         << " has size = " << frag_ptr->get_size() << " and data from:";
-      // need to exclude Trigger Fragments
-      std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
-      for (auto const& geo_id : geo_id_list) {
-        HardwareMapService::GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+         << " has size = " << frag_ptr->get_size();
+      if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
-           << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
-           << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
+           << "It may contain data from the following detector components:";
+        std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
+        for (auto const& geo_id : geo_id_list) {
+          HardwareMapService::GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+          ss << "\n\t\t\t"
+             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
+             << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
+        }
       }
     }
     TLOG() << ss.str();
