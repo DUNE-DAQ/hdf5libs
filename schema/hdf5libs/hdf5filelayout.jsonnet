@@ -35,6 +35,10 @@ local types = {
                 doc="Number of digits to use for the sequence number in the TriggerRecord name inside the HDF5 file"),
         s.field("record_header_dataset_name", self.hdf_string, "TriggerRecordHeader",
                 doc="Dataset name for the record header"),
+        s.field("raw_data_group_name", self.hdf_string, "RawData",
+                doc="Group name to use for raw data"),
+        s.field("view_group_name", self.hdf_string, "Views",
+                doc="Group name to use for views of the raw data"),
         s.field("path_param_list", self.list_of_path_params, doc=""),
     ], doc="Parameters for the layout of Groups and DataSets within the HDF5 file"),
 

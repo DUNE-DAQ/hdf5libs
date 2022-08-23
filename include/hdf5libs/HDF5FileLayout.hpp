@@ -20,7 +20,6 @@
 #include "daqdataformats/SourceID.hpp"
 #include "daqdataformats/TimeSliceHeader.hpp"
 #include "daqdataformats/TriggerRecordHeader.hpp"
-#include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 
 #include "nlohmann/json.hpp"
