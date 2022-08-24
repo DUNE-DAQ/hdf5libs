@@ -113,11 +113,17 @@ HDF5RawDataFileSid::write(const daqdataformats::TriggerRecord& tr)
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
+  // the map of fragment types to SourceIDS
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+
+  // the map of subdetectors to SourceIDS
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
+
   // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(tr.get_header_ref(), source_id_path_map);
 
-  // store the SourceID of the reacord header in the HDF5 file/group
-  // (since there should only be one entry in the map at this point, we make use of it...)
+  // store the SourceID of the record header in the HDF5 file/group
+  // (since there should only be one entry in the map at this point, we'll take advantage of that...)
   for (auto const& source_id_path : source_id_path_map) {
     HDF5SourceIDHandler::store_record_header_source_id(record_level_group, source_id_path.first);
   }
@@ -125,10 +131,18 @@ HDF5RawDataFileSid::write(const daqdataformats::TriggerRecord& tr)
   // write all of the fragments into the HDF5 file/group
   for (auto const& frag_ptr : tr.get_fragments_ref()) {
     write(*frag_ptr, source_id_path_map);
+    HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
+      fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
+    HDF5SourceIDHandler::add_subdetector_source_id_to_map(
+      subdetector_source_id_map,
+      static_cast<detdataformats::DetID::Subdetector>(frag_ptr->get_detector_id()),
+      frag_ptr->get_element_id());
   }
 
-  // store the map of SourceIDs to DataSet paths in the HDF5 file/group
+  // store all of the record-level maps in the HDF5 file/group
   HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
+  HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
+  HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
 }
 
 /**
@@ -397,21 +411,33 @@ HDF5RawDataFileSid::add_record_level_info_to_caches_if_needed(record_id_t rid)
   daqdataformats::SourceID rh_sid = sid_handler.fetch_record_header_source_id(record_group);
   std::set<daqdataformats::SourceID> full_source_id_set;
   std::set<daqdataformats::SourceID> fragment_source_id_set;
+  HDF5SourceIDHandler::subsystem_source_id_map_t subsystem_source_id_map;
   for (auto const& source_id_path : source_id_path_map) {
     full_source_id_set.insert(source_id_path.first);
     if (source_id_path.first != rh_sid) {
       fragment_source_id_set.insert(source_id_path.first);
     }
+    HDF5SourceIDHandler::add_subsystem_source_id_to_map(subsystem_source_id_map, source_id_path.first.subsystem,
+                                                        source_id_path.first);
   }
 
   // note that even if the "fetch" methods above fail to add anything to the specified
   // maps, the maps will still be valid (though, possibly empty), and once we add them
-  // to the caches here, we are assured that lookups from the caches will not fail.
+  // to the caches here, we will be assured that lookups from the caches will not fail.
   m_source_id_cache[rid] = full_source_id_set;
   m_record_header_source_id_cache[rid] = rh_sid;
   m_fragment_source_id_cache[rid] = fragment_source_id_set;
   m_source_id_geo_id_cache[rid] = local_source_id_geo_id_map;
   m_source_id_path_cache[rid] = source_id_path_map;
+  m_subsystem_source_id_cache[rid] = subsystem_source_id_map;
+
+  // to-do: actually fetch the map from the data file
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+  m_fragment_type_source_id_cache[rid] = fragment_type_source_id_map;
+
+  // to-do: actually fetch the map from the data file
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
+  m_subdetector_source_id_cache[rid] = subdetector_source_id_map;
 }
 
 #if 0
@@ -779,6 +805,19 @@ HDF5RawDataFileSid::get_fragment_source_ids(const record_id_t& rid)
   add_record_level_info_to_caches_if_needed(rid);
 
   return m_fragment_source_id_cache[rid];
+}
+
+std::set<daqdataformats::SourceID>
+HDF5RawDataFileSid::get_source_ids_for_subsystem(const record_id_t& rid,
+                                                 const daqdataformats::SourceID::Subsystem subsystem)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_subsystem_source_id_cache[rid][subsystem];
 }
 
 std::unique_ptr<char[]>

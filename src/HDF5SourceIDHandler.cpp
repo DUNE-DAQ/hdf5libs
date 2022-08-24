@@ -138,6 +138,20 @@ HDF5SourceIDHandler::add_source_id_geo_id_to_map(source_id_geo_id_map_t& source_
   }
 }
 
+void
+HDF5SourceIDHandler::add_subsystem_source_id_to_map(subsystem_source_id_map_t& subsystem_source_id_map,
+                                                    const daqdataformats::SourceID::Subsystem subsystem,
+                                                    const daqdataformats::SourceID& source_id)
+{
+  if (subsystem_source_id_map.count(subsystem) == 0) {
+    std::set<daqdataformats::SourceID> tmp_set;
+    tmp_set.insert(source_id);
+    subsystem_source_id_map[subsystem] = tmp_set;
+  } else {
+    subsystem_source_id_map[subsystem].insert(source_id);
+  }
+}
+
 std::string
 HDF5SourceIDHandler::get_json_string(const daqdataformats::SourceID& source_id)
 {

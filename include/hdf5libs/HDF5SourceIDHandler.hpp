@@ -12,11 +12,12 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5SOURCEIDHANDLER_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5SOURCEIDHANDLER_HPP_
 
+#include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
 #include "detchannelmaps/HardwareMapService.hpp"
+#include "detdataformats/DetID.hpp"
 
 //#include "hdf5libs/hdf5filelayout/Structs.hpp"
-//#include "daqdataformats/Fragment.hpp"
 //#include "daqdataformats/TimeSliceHeader.hpp"
 //#include "daqdataformats/TriggerRecordHeader.hpp"
 //#include "logging/Logging.hpp"
@@ -26,6 +27,7 @@
 
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -45,6 +47,9 @@ class HDF5SourceIDHandler
 public:
   typedef std::map<daqdataformats::SourceID, std::string> source_id_path_map_t;
   typedef std::map<daqdataformats::SourceID, std::vector<uint64_t>> source_id_geo_id_map_t; // NOLINT(build/unsigned)
+  typedef std::map<daqdataformats::SourceID::Subsystem, std::set<daqdataformats::SourceID>> subsystem_source_id_map_t;
+  typedef std::map<daqdataformats::FragmentType, std::set<daqdataformats::SourceID>> fragment_type_source_id_map_t;
+  typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
   /**
    * The current version of the SourceID parameter translation logic.
@@ -77,6 +82,20 @@ public:
    * Stores the map from SourceID to HDF5 Path in the specified HighFive::Group.
    */
   static void store_record_level_path_info(HighFive::Group& record_group, const source_id_path_map_t& the_map);
+
+  /**
+   * Stores the map from FragmentType to SourceID in the specified HighFive::Group.
+   */
+  static void store_record_level_fragment_type_map(HighFive::Group& /*record_group*/,
+                                                   const fragment_type_source_id_map_t& /*the_map*/)
+  {}
+
+  /**
+   * Stores the map from DetID::Subdetector to SourceID in the specified HighFive::Group.
+   */
+  static void store_record_level_subdetector_map(HighFive::Group& /*record_group*/,
+                                                 const subdetector_source_id_map_t& /*the_map*/)
+  {}
 
   /**
    * Determines the version of this class that was used when the
@@ -126,6 +145,29 @@ public:
   static void add_source_id_geo_id_to_map(source_id_geo_id_map_t& source_id_geo_id_map,
                                           const daqdataformats::SourceID& source_id,
                                           uint64_t geo_id); // NOLINT(build/unsigned)
+
+  /**
+   * Adds the specified FragmentType and SourceId to the specified fragment_type_source_id map.
+   */
+  static void add_fragment_type_source_id_to_map(fragment_type_source_id_map_t& /*fragment_type_source_id_map*/,
+                                                 const daqdataformats::FragmentType /*fragment_type*/,
+                                                 const daqdataformats::SourceID& /*source_id*/)
+  {}
+
+  /**
+   * Adds the specified Subdetector and SourceId to the specified subdetector_source_id map.
+   */
+  static void add_subdetector_source_id_to_map(subdetector_source_id_map_t& /*subdetector_source_id_map*/,
+                                               const detdataformats::DetID::Subdetector /*subdetector*/,
+                                               const daqdataformats::SourceID& /*source_id*/)
+  {}
+
+  /**
+   * Adds the specified Subsystem and SourceId to the specified subsystem_source_id map.
+   */
+  static void add_subsystem_source_id_to_map(subsystem_source_id_map_t& subsystem_source_id_map,
+                                             const daqdataformats::SourceID::Subsystem subsystem,
+                                             const daqdataformats::SourceID& source_id);
 
 private:
   /**

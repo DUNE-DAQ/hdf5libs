@@ -260,30 +260,29 @@ public:
     return get_fragment_source_ids(std::make_pair(rec_num, seq_num));
   }
 
-#if 0
-  // get SourceIDs for given system type in a record
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid,
-                                                    const daqdataformats::SourceID::Subsystem type)
+  // get SourceIDs for given subsystem in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(const record_id_t& rid,
+                                                                  const daqdataformats::SourceID::Subsystem subsystem);
+  std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(const record_id_t& rid,
+                                                                  const std::string& subsystem_name)
   {
-    return get_source_ids(get_fragment_dataset_paths(rid, type));
+    daqdataformats::SourceID::Subsystem subsys = daqdataformats::SourceID::string_to_subsystem(subsystem_name);
+    return get_source_ids_for_subsystem(rid, subsys);
   }
-  std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid, const std::string& typestring)
+  std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                  const daqdataformats::sequence_number_t seq_num,
+                                                                  const daqdataformats::SourceID::Subsystem subsystem)
   {
-    return get_source_ids(get_fragment_dataset_paths(rid, typestring));
+    return get_source_ids_for_subsystem(std::make_pair(rec_num, seq_num), subsystem);
   }
-  std::set<daqdataformats::SourceID> get_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
-                                                    const daqdataformats::sequence_number_t seq_num,
-                                                    const daqdataformats::SourceID::Subsystem type)
+  std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                  const daqdataformats::sequence_number_t seq_num,
+                                                                  const std::string& subsystem_name)
   {
-    return get_source_ids(std::make_pair(rec_num, seq_num), type);
-  }
-  std::set<daqdataformats::SourceID> get_source_ids(const uint64_t rec_num, // NOLINT(build/unsigned)
-                                                    const daqdataformats::sequence_number_t seq_num,
-                                                    const std::string& typestring)
-  {
-    return get_source_ids(std::make_pair(rec_num, seq_num), typestring);
+    return get_source_ids_for_subsystem(std::make_pair(rec_num, seq_num), subsystem_name);
   }
 
+#if 0
   // get SourceIDs for a system type
   std::set<daqdataformats::SourceID> get_source_ids(const daqdataformats::SourceID::Subsystem type)
   {
@@ -394,6 +393,9 @@ private:
   std::map<record_id_t, std::set<daqdataformats::SourceID>> m_fragment_source_id_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_path_map_t> m_source_id_path_cache;
   std::map<record_id_t, HDF5SourceIDHandler::source_id_geo_id_map_t> m_source_id_geo_id_cache;
+  std::map<record_id_t, HDF5SourceIDHandler::subsystem_source_id_map_t> m_subsystem_source_id_cache;
+  std::map<record_id_t, HDF5SourceIDHandler::fragment_type_source_id_map_t> m_fragment_type_source_id_cache;
+  std::map<record_id_t, HDF5SourceIDHandler::subdetector_source_id_map_t> m_subdetector_source_id_cache;
 };
 
 // HDF5RawDataFileSid attribute writers/getters definitions
