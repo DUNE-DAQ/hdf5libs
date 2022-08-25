@@ -115,6 +115,18 @@ public:
   void fetch_source_id_path_info(const HighFive::Group& record_group, source_id_path_map_t& the_map);
 
   /**
+   * Adds entries to the specified FragmentType-to-SourceID map using information
+   * stored at the record level in the specified HighFive::Group.
+   */
+  void fetch_fragment_type_source_id_info(const HighFive::Group& record_group, fragment_type_source_id_map_t& the_map);
+
+  /**
+   * Adds entries to the specified Subdetector-to-SourceID map using information
+   * stored at the record level in the specified HighFive::Group.
+   */
+  void fetch_subdetector_source_id_info(const HighFive::Group& record_group, subdetector_source_id_map_t& the_map);
+
+  /**
    * Adds the specified SourceID and HDF5 Path to the specified source_id_path map.
    */
   static void add_source_id_path_to_map(source_id_path_map_t& source_id_path_map,
@@ -194,6 +206,16 @@ private:
    * Parses the specified JSON string into the specified source_id_geo_id map
    */
   static void parse_json_string(const std::string& json_string, source_id_geo_id_map_t& source_id_geo_id_map);
+
+  /**
+   * Parses the specified JSON string into the specified fragment_type_source_id_map
+   */
+  static void parse_json_string(const std::string& json_string, fragment_type_source_id_map_t& fragment_type_source_id_map);
+
+  /**
+   * Parses the specified JSON string into the specified subdetector_source_id_map
+   */
+  static void parse_json_string(const std::string& json_string, subdetector_source_id_map_t& subdetector_source_id_map);
 
   /**
    * Writes the specified attribute name and value to the specified HightFive File or Group.

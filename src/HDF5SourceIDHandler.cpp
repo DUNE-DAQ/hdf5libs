@@ -112,6 +112,32 @@ HDF5SourceIDHandler::fetch_source_id_path_info(const HighFive::Group& record_gro
 }
 
 void
+HDF5SourceIDHandler::fetch_fragment_type_source_id_info(const HighFive::Group& record_group,
+                                                        fragment_type_source_id_map_t& fragment_type_source_id_map)
+{
+  if (m_version == 3) {
+    try {
+      std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "fragment_type_source_id_map");
+      parse_json_string(map_string, fragment_type_source_id_map);
+    } catch (...) {
+    }
+  }
+}
+
+void
+HDF5SourceIDHandler::fetch_subdetector_source_id_info(const HighFive::Group& record_group,
+                                                      subdetector_source_id_map_t& subdetector_source_id_map)
+{
+  if (m_version == 3) {
+    try {
+      std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "subdetector_source_id_map");
+      parse_json_string(map_string, subdetector_source_id_map);
+    } catch (...) {
+    }
+  }
+}
+
+void
 HDF5SourceIDHandler::add_source_id_path_to_map(source_id_path_map_t& source_id_path_map,
                                                const daqdataformats::SourceID& source_id,
                                                const std::string& hdf5_path)
@@ -308,6 +334,46 @@ HDF5SourceIDHandler::parse_json_string(const std::string& json_string, source_id
       local_geo_id_list.push_back(json_geo_id_value);
     }
     source_id_geo_id_map[source_id] = local_geo_id_list;
+  }
+}
+
+void
+HDF5SourceIDHandler::parse_json_string(const std::string& json_string, fragment_type_source_id_map_t& fragment_type_source_id_map)
+{
+  hdf5sourceidmaps::FragmentTypeSourceIDMap json_struct;
+  hdf5sourceidmaps::data_t json_tmp_data = nlohmann::json::parse(json_string);
+  hdf5sourceidmaps::from_json(json_tmp_data, json_struct);
+  for (auto const& json_element : json_struct.map_entries) {
+    daqdataformats::FragmentType fragment_type = static_cast<daqdataformats::FragmentType>(json_element.fragment_type);
+    std::set<daqdataformats::SourceID> local_source_id_list;
+    hdf5sourceidmaps::SourceIDList json_source_id_list = json_element.sourceids;
+    for (hdf5sourceidmaps::SourceID json_source_id : json_source_id_list) {
+      daqdataformats::SourceID::Subsystem subsys = static_cast<daqdataformats::SourceID::Subsystem>(json_source_id.subsys);
+      daqdataformats::SourceID::ID_t id = static_cast<daqdataformats::SourceID::ID_t>(json_source_id.id);
+      daqdataformats::SourceID source_id(subsys, id);
+      local_source_id_list.insert(source_id);
+    }
+    fragment_type_source_id_map[fragment_type] = local_source_id_list;
+  }
+}
+
+void
+HDF5SourceIDHandler::parse_json_string(const std::string& json_string, subdetector_source_id_map_t& subdetector_source_id_map)
+{
+  hdf5sourceidmaps::SubdetectorSourceIDMap json_struct;
+  hdf5sourceidmaps::data_t json_tmp_data = nlohmann::json::parse(json_string);
+  hdf5sourceidmaps::from_json(json_tmp_data, json_struct);
+  for (auto const& json_element : json_struct.map_entries) {
+    detdataformats::DetID::Subdetector subdetector = static_cast<detdataformats::DetID::Subdetector>(json_element.subdetector);
+    std::set<daqdataformats::SourceID> local_source_id_list;
+    hdf5sourceidmaps::SourceIDList json_source_id_list = json_element.sourceids;
+    for (hdf5sourceidmaps::SourceID json_source_id : json_source_id_list) {
+      daqdataformats::SourceID::Subsystem subsys = static_cast<daqdataformats::SourceID::Subsystem>(json_source_id.subsys);
+      daqdataformats::SourceID::ID_t id = static_cast<daqdataformats::SourceID::ID_t>(json_source_id.id);
+      daqdataformats::SourceID source_id(subsys, id);
+      local_source_id_list.insert(source_id);
+    }
+    subdetector_source_id_map[subdetector] = local_source_id_list;
   }
 }
 

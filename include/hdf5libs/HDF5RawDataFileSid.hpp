@@ -282,6 +282,50 @@ public:
     return get_source_ids_for_subsystem(std::make_pair(rec_num, seq_num), subsystem_name);
   }
 
+  // get SourceIDs for given fragment type in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const record_id_t& rid,
+                                                                      const daqdataformats::FragmentType frag_type);
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const record_id_t& rid,
+                                                                      const std::string& frag_type_name)
+  {
+    daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+    return get_source_ids_for_fragment_type(rid, frag_type);
+  }
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                      const daqdataformats::sequence_number_t seq_num,
+                                                                      const daqdataformats::FragmentType frag_type)
+  {
+    return get_source_ids_for_fragment_type(std::make_pair(rec_num, seq_num), frag_type);
+  }
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                      const daqdataformats::sequence_number_t seq_num,
+                                                                      const std::string& frag_type_name)
+  {
+    return get_source_ids_for_fragment_type(std::make_pair(rec_num, seq_num), frag_type_name);
+  }
+
+  // get SourceIDs for given subdetector in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,
+                                                                    const detdataformats::DetID::Subdetector subdet);
+  std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,
+                                                                    const std::string& subdet_name)
+  {
+    detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
+    return get_source_ids_for_subdetector(rid, subdet);
+  }
+  std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                    const daqdataformats::sequence_number_t seq_num,
+                                                                    const detdataformats::DetID::Subdetector subdet)
+  {
+    return get_source_ids_for_subdetector(std::make_pair(rec_num, seq_num), subdet);
+  }
+  std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                                    const daqdataformats::sequence_number_t seq_num,
+                                                                    const std::string& subdet_name)
+  {
+    return get_source_ids_for_subdetector(std::make_pair(rec_num, seq_num), subdet_name);
+  }
+
 #if 0
   // get SourceIDs for a system type
   std::set<daqdataformats::SourceID> get_source_ids(const daqdataformats::SourceID::Subsystem type)
