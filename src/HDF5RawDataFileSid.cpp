@@ -75,7 +75,6 @@ HDF5RawDataFileSid::HDF5RawDataFileSid(std::string file_name,
   // write the SourceID-related attributes
   HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
   HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
-  HDF5SourceIDHandler::store_version_info(*m_file_ptr);
 
   // write the record type
   m_record_type = fl_params.record_name_prefix;
@@ -301,8 +300,9 @@ HDF5RawDataFileSid::HDF5RawDataFileSid(const std::string& file_name)
 
   check_file_layout();
 
-  m_source_id_handler_version = HDF5SourceIDHandler::determine_version_from_file(*m_file_ptr);
-  HDF5SourceIDHandler sid_handler(m_source_id_handler_version);
+  // HDF5SourceIDHandler operations need to come *after* read_file_layout()
+  // because they count on the filelayout_version, which is set in read_file_layout().
+  HDF5SourceIDHandler sid_handler(get_version());
   sid_handler.fetch_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 }
 
@@ -389,7 +389,7 @@ HDF5RawDataFileSid::add_record_level_info_to_caches_if_needed(record_id_t rid)
   }
 
   // create the handler to do the work
-  HDF5SourceIDHandler sid_handler(m_source_id_handler_version);
+  HDF5SourceIDHandler sid_handler(get_version());
 
   // determine the HDF5 Group that corresponds to the specified record
   std::string record_level_group_name = m_file_layout_ptr->get_record_number_string(rid.first, rid.second);
@@ -417,8 +417,8 @@ HDF5RawDataFileSid::add_record_level_info_to_caches_if_needed(record_id_t rid)
     if (source_id_path.first != rh_sid) {
       fragment_source_id_set.insert(source_id_path.first);
     }
-    HDF5SourceIDHandler::add_subsystem_source_id_to_map(subsystem_source_id_map, source_id_path.first.subsystem,
-                                                        source_id_path.first);
+    HDF5SourceIDHandler::add_subsystem_source_id_to_map(
+      subsystem_source_id_map, source_id_path.first.subsystem, source_id_path.first);
   }
 
   // note that even if the "fetch" methods above fail to add anything to the specified

@@ -386,7 +386,6 @@ private:
 
   // caches of full-file and record-specific information
   record_id_set m_all_record_ids_in_file;
-  uint32_t m_source_id_handler_version = 1; // NOLINT(build/unsigned)
   HDF5SourceIDHandler::source_id_geo_id_map_t m_file_level_source_id_geo_id_map;
   std::map<record_id_t, std::set<daqdataformats::SourceID>> m_source_id_cache;
   std::map<record_id_t, daqdataformats::SourceID> m_record_header_source_id_cache;

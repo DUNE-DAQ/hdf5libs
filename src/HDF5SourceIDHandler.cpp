@@ -14,12 +14,6 @@ namespace dunedaq {
 namespace hdf5libs {
 
 void
-HDF5SourceIDHandler::store_version_info(HighFive::File& h5_file)
-{
-  write_attribute(h5_file, "source_id_metadata_version", s_source_id_param_version);
-}
-
-void
 HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
                                                    source_id_geo_id_map_t& source_id_geo_id_map)
 {
@@ -61,19 +55,6 @@ HDF5SourceIDHandler::store_record_level_subdetector_map(HighFive::Group& record_
                                                         const subdetector_source_id_map_t& the_map)
 {
   write_attribute(record_group, "subdetector_source_id_map", get_json_string(the_map));
-}
-
-uint32_t // NOLINT(build/unsigned)
-HDF5SourceIDHandler::determine_version_from_file(const HighFive::File& h5_file)
-{
-  uint32_t version = 1; // NOLINT(build/unsigned)
-
-  try {
-    version = get_attribute<HighFive::File, uint32_t>(h5_file, "source_id_metadata_version"); // NOLINT(build/unsigned)
-  } catch (...) {
-  }
-
-  return version;
 }
 
 HDF5SourceIDHandler::HDF5SourceIDHandler(const uint32_t version) // NOLINT(build/unsigned)

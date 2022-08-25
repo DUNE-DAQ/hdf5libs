@@ -52,16 +52,6 @@ public:
   typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
   /**
-   * The current version of the SourceID parameter translation logic.
-   */
-  static constexpr uint32_t s_source_id_param_version = 3; // NOLINT(build/unsigned)
-
-  /**
-   * Stores the current version of this class in the specified file.
-   */
-  static void store_version_info(HighFive::File& h5_file);
-
-  /**
    * Populates the specified source_id_geo_id map with information contained in the
    * specified Hardware Map.
    */
@@ -94,12 +84,6 @@ public:
    */
   static void store_record_level_subdetector_map(HighFive::Group& record_group,
                                                  const subdetector_source_id_map_t& the_map);
-
-  /**
-   * Determines the version of this class that was used when the
-   * specified file was written.
-   */
-  static uint32_t determine_version_from_file(const HighFive::File& h5_file);
 
   /**
    * @brief Constructor.

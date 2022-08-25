@@ -71,7 +71,7 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriter. Version always most recent.
    */
-  explicit HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version = 2); // NOLINT(build/unsigned)
+  explicit HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version = 3); // NOLINT(build/unsigned)
 
   uint32_t get_version() const noexcept // NOLINT(build/unsigned)
   {
