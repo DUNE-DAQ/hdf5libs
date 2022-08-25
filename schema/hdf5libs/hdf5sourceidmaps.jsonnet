@@ -12,7 +12,6 @@ local types = {
     source_id : s.record("SourceID", [
         s.field("subsys", self.numeric_value, 0, doc="SourceID subsystem"),
         s.field("id", self.numeric_value, 0, doc="SourceID ID"),
-        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used")
     ], doc="A single SourceID"),
 
     # -------------------- #
@@ -26,7 +25,6 @@ local types = {
     list_of_path_map_entries : s.sequence("PathMapEntryList", self.source_id_path_pair, doc="List of SourceID to HDF5 path map entries"),
 
     source_id_path_map : s.record("SourceIDPathMap", [
-        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used"),
         s.field("map_entries", self.list_of_path_map_entries, doc="The list of entries in the map"),
     ], doc="Information that is needed to build up the map of SourceIDs to HDF5 DataSet paths"),
 
@@ -43,7 +41,6 @@ local types = {
     list_of_geo_id_map_entries : s.sequence("GeoIDMapEntryList", self.source_id_geo_id_pair, doc="List of SourceID to GeoID map entries"),
 
     source_id_geo_id_map : s.record("SourceIDGeoIDMap", [
-        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used"),
         s.field("map_entries", self.list_of_geo_id_map_entries, doc="The list of entries in the map"),
     ], doc="Information that is needed to build up the map of SourceIDs to GeoIDs"),
 
@@ -59,7 +56,6 @@ local types = {
     list_of_fragment_type_map_entries : s.sequence("FragmentTypeMapEntryList", self.fragment_type_source_id_pair, doc="List of FragmentType to SourceID map entries"),
 
     fragment_type_source_id_map : s.record("FragmentTypeSourceIDMap", [
-        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used"),
         s.field("map_entries", self.list_of_fragment_type_map_entries, doc="The list of entries in the map"),
     ], doc="Information that is needed to build up the map of FragmentTypes to SourceIDs"),
 
@@ -73,7 +69,6 @@ local types = {
     list_of_subdetector_map_entries : s.sequence("SubdetectorMapEntryList", self.subdetector_source_id_pair, doc="List of Subdetector to SourceID map entries"),
 
     subdetector_source_id_map : s.record("SubdetectorSourceIDMap", [
-        s.field("source_id_version", self.numeric_value, 1, doc="Version of the SourceID class that was/should be used"),
         s.field("map_entries", self.list_of_subdetector_map_entries, doc="The list of entries in the map"),
     ], doc="Information that is needed to build up the map of Subdetectors to SourceIDs"),
 };

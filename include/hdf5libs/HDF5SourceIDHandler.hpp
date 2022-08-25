@@ -86,16 +86,14 @@ public:
   /**
    * Stores the map from FragmentType to SourceID in the specified HighFive::Group.
    */
-  static void store_record_level_fragment_type_map(HighFive::Group& /*record_group*/,
-                                                   const fragment_type_source_id_map_t& /*the_map*/)
-  {}
+  static void store_record_level_fragment_type_map(HighFive::Group& record_group,
+                                                   const fragment_type_source_id_map_t& the_map);
 
   /**
    * Stores the map from DetID::Subdetector to SourceID in the specified HighFive::Group.
    */
-  static void store_record_level_subdetector_map(HighFive::Group& /*record_group*/,
-                                                 const subdetector_source_id_map_t& /*the_map*/)
-  {}
+  static void store_record_level_subdetector_map(HighFive::Group& record_group,
+                                                 const subdetector_source_id_map_t& the_map);
 
   /**
    * Determines the version of this class that was used when the
@@ -149,18 +147,16 @@ public:
   /**
    * Adds the specified FragmentType and SourceId to the specified fragment_type_source_id map.
    */
-  static void add_fragment_type_source_id_to_map(fragment_type_source_id_map_t& /*fragment_type_source_id_map*/,
-                                                 const daqdataformats::FragmentType /*fragment_type*/,
-                                                 const daqdataformats::SourceID& /*source_id*/)
-  {}
+  static void add_fragment_type_source_id_to_map(fragment_type_source_id_map_t& fragment_type_source_id_map,
+                                                 const daqdataformats::FragmentType fragment_type,
+                                                 const daqdataformats::SourceID& source_id);
 
   /**
    * Adds the specified Subdetector and SourceId to the specified subdetector_source_id map.
    */
-  static void add_subdetector_source_id_to_map(subdetector_source_id_map_t& /*subdetector_source_id_map*/,
-                                               const detdataformats::DetID::Subdetector /*subdetector*/,
-                                               const daqdataformats::SourceID& /*source_id*/)
-  {}
+  static void add_subdetector_source_id_to_map(subdetector_source_id_map_t& subdetector_source_id_map,
+                                               const detdataformats::DetID::Subdetector subdetector,
+                                               const daqdataformats::SourceID& source_id);
 
   /**
    * Adds the specified Subsystem and SourceId to the specified subsystem_source_id map.
@@ -189,6 +185,16 @@ private:
    * Produces the JSON string that corresponds to the specified source_id_geo_id map
    */
   static std::string get_json_string(const source_id_geo_id_map_t& source_id_geo_id_map);
+
+  /**
+   * Produces the JSON string that corresponds to the specified fragment_type_source_id map
+   */
+  static std::string get_json_string(const fragment_type_source_id_map_t& fragment_type_source_id_map);
+
+  /**
+   * Produces the JSON string that corresponds to the specified subdetector_source_id map
+   */
+  static std::string get_json_string(const subdetector_source_id_map_t& subdetector_source_id_map);
 
   /**
    * Parses the specified JSON string into the specified source_id
