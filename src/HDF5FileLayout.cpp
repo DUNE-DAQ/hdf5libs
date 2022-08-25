@@ -114,8 +114,8 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TriggerRecordHeader& trh
   // then the RawData group name
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
-  // then the SourceID
-  path_elements.push_back(trh.get_header().element_id.to_string());
+  // then the SourceID plus record header name
+  path_elements.push_back(trh.get_header().element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
 
   return path_elements;
 }
@@ -157,8 +157,8 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
   // then the RawData group name
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
-  // then the SourceID
-  path_elements.push_back(fh.element_id.to_string());
+  // then the SourceID plus FragmentType
+  path_elements.push_back(fh.element_id.to_string() + "_" + daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
 
   return path_elements;
 }
