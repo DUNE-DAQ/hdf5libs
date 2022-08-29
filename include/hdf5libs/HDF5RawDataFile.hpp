@@ -181,9 +181,7 @@ public:
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
 
-#if 0
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
-#endif
 
   record_id_set get_all_record_ids();
   record_id_set get_all_trigger_record_ids();
@@ -202,24 +200,28 @@ public:
   const daqdataformats::sequence_number_t seq_num = 0);
   std::string get_timeslice_header_dataset_path(const record_id_t& rid);
   std::string get_timeslice_header_dataset_path(const daqdataformats::timeslice_number_t trig_num);
+#endif
 
   // get all fragment dataset paths
   std::vector<std::string> get_all_fragment_dataset_paths();
 
+#if 0
   // get all fragment dataset paths for given record ID
   std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid);
   std::vector<std::string> get_fragment_dataset_paths(const uint64_t rec_num, // NOLINT (build/unsigned)
   const daqdataformats::sequence_number_t seq_num = 0);
+#endif
 
-  // get all fragment dataset paths for a SystemType
-  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type);
-  std::vector<std::string> get_fragment_dataset_paths(const std::string& typestring);
+  // get all fragment dataset paths for a Subsystem
+  std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem subsystem);
+  std::vector<std::string> get_fragment_dataset_paths(const std::string& subsystem_name);
 
-  // get all fragment dataset paths for a record ID and SystemType
+  // get all fragment dataset paths for a record ID and Subsystem
   std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid,
-  const daqdataformats::SourceID::Subsystem type);
-  std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid, const std::string& typestring);
+                                                      const daqdataformats::SourceID::Subsystem subsystem);
+  std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid, const std::string& subsystem_name);
 
+#if 0
   // get all fragment dataset paths for a SourceID
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID& source_id);
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type,
