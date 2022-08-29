@@ -504,20 +504,6 @@ HDF5RawDataFile::get_all_record_ids()
 }
 
 #if 0
-std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_all_record_numbers()
-{
-  ers::warning(DeprecatedUsage(ERS_HERE,
-                               "get_all_record_numbers()",
-                               "Use get_all_record_ids(), which returns a record_number,sequence_number pair."));
-
-  std::set<uint64_t> record_numbers; // NOLINT(build/unsigned)
-  for (auto const& rid : get_all_record_ids())
-    record_numbers.insert(rid.first);
-
-  return record_numbers;
-}
-
 HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_trigger_record_ids()
 {
@@ -525,29 +511,11 @@ HDF5RawDataFile::get_all_trigger_record_ids()
   return get_all_record_ids();
 }
 
-std::set<daqdataformats::trigger_number_t>
-HDF5RawDataFile::get_all_trigger_record_numbers()
-{
-  ers::warning(
-    DeprecatedUsage(ERS_HERE,
-                    "get_all_trigger_record_numbers()",
-                    "Use get_all_trigger_record_ids(), which returns a record_number,sequence_number pair."));
-
-  return get_all_record_numbers();
-}
-
 HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_timeslice_ids()
 {
   check_record_type("TimeSlice");
   return get_all_record_ids();
-}
-
-std::set<daqdataformats::timeslice_number_t>
-HDF5RawDataFile::get_all_timeslice_numbers()
-{
-  check_record_type("TimeSlice");
-  return get_all_record_numbers();
 }
 
 /**

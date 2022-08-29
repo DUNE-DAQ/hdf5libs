@@ -19,7 +19,7 @@ daq_codegen( *.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2 )
 
 ##############################################################################
 # Main library
-daq_add_library (HDF5FileLayout.cpp HDF5SourceIDHandler.cpp HDF5RawDataFile.cpp HDF5RawDataFileSid.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats detdataformats::detdataformats detchannelmaps::detchannelmaps logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
+daq_add_library (HDF5FileLayout.cpp HDF5SourceIDHandler.cpp HDF5RawDataFile.cpp LINK_LIBRARIES stdc++fs ers::ers HighFive daqdataformats::daqdataformats detdataformats::detdataformats detchannelmaps::detchannelmaps logging::logging nlohmann_json::nlohmann_json ${CETLIB} ${CETLIB_EXCEPT})
 
 ##############################################################################
 # Unit tests
@@ -28,7 +28,7 @@ daq_add_unit_test( HDF5WriteReadTriggerRecord_test LINK_LIBRARIES hdf5libs )
 
 ##############################################################################
 # Python bindings
-daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daqdataformats detdataformats::detdataformats detchannelmaps::detchannelmaps)
+#daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daqdataformats detdataformats::detdataformats detchannelmaps::detchannelmaps)
 
 ##############################################################################
 # Applications

@@ -253,13 +253,13 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
 
-  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+  auto timeslices = h5file_ptr->get_all_timeslice_ids();
   BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
 
   auto first_timeslice = *(timeslices.begin());
   auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_timeslice);
-  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
+  BOOST_REQUIRE_EQUAL(1, first_timeslice.first);
+  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
@@ -285,7 +285,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice,first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type, element
@@ -344,13 +344,13 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
 
-  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+  auto timeslices = h5file_ptr->get_all_timeslice_ids();
   BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
 
   auto first_timeslice = *(timeslices.begin());
   auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_timeslice);
-  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
+  BOOST_REQUIRE_EQUAL(1, first_timeslice.first);
+  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice,first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type, element

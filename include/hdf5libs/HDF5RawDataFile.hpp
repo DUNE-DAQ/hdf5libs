@@ -190,10 +190,6 @@ public:
   record_id_set get_all_timeslice_ids();
 
 #if 0
-  std::set<uint64_t> get_all_record_numbers(); // NOLINT(build/unsigned)
-  std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
-  std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers();
-
   std::vector<std::string> get_record_header_dataset_paths();
   std::vector<std::string> get_trigger_record_header_dataset_paths();
   std::vector<std::string> get_timeslice_header_dataset_paths();

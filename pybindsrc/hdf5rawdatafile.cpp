@@ -51,13 +51,6 @@ register_hdf5rawdatafile(py::module& m)
          &HDF5RawDataFile::get_all_trigger_record_ids,"Get all trigger record/sequence number pairs.")
     .def("get_all_timeslice_ids",
          &HDF5RawDataFile::get_all_timeslice_ids,"Get all timeslice/sequence number pairs.")
-    .def("get_all_record_numbers",
-         &HDF5RawDataFile::get_all_record_numbers,
-	       "Get all record numbers in file")
-    .def("get_all_trigger_record_numbers",
-         &HDF5RawDataFile::get_all_trigger_record_numbers,"Get all trigger record numbers in file")
-    .def("get_all_timeslice_numbers",
-         &HDF5RawDataFile::get_all_timeslice_numbers,"Get all timeslice numbers in file")
 
     .def("get_record_header_dataset_paths",
 	       &HDF5RawDataFile::get_record_header_dataset_paths,"Get all paths to record header datasets")
