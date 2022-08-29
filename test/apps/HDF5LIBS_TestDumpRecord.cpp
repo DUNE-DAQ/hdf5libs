@@ -9,7 +9,7 @@
  * received with this code.
  */
 
-#include "hdf5libs/HDF5RawDataFileSid.hpp"
+#include "hdf5libs/HDF5RawDataFile.hpp"
 
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
@@ -42,7 +42,7 @@ main(int argc, char** argv)
   const std::string ifile_name = std::string(argv[1]);
 
   // open our file reading
-  HDF5RawDataFileSid h5_raw_data_file(ifile_name);
+  HDF5RawDataFile h5_raw_data_file(ifile_name);
 
   std::ostringstream ss;
 

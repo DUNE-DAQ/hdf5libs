@@ -1,13 +1,13 @@
 /**
  * @file HDF5WriteReadTriggerRecord_test.cxx Application that tests and demonstrates
- * the write/read functions of the HDF5RawDataFileSid class.
+ * the write/read functions of the HDF5RawDataFile class.
  *
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
  * received with this code.
  */
 
-#include "hdf5libs/HDF5RawDataFileSid.hpp"
+#include "hdf5libs/HDF5RawDataFile.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
 
@@ -244,14 +244,15 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
 
   // create the file
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> blah(new dunedaq::detchannelmaps::HardwareMapService(""));
-  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(new HDF5RawDataFileSid(file_path + "/" + filename,
-                                                                        run_number,
-                                                                        file_index,
-                                                                        application_name,
-                                                                        // create_file_layout_params()));
-                                                                        flp_json_in,
-                                                                        blah));
+  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> blah(
+    new dunedaq::detchannelmaps::HardwareMapService(""));
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  // create_file_layout_params()));
+                                                                  flp_json_in,
+                                                                  blah));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
@@ -268,7 +269,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   BOOST_REQUIRE_EQUAL(file_list.size(), 1);
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
 
   // check attributes
   auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
@@ -303,7 +304,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   delete_files_matching_pattern(file_path, delete_pattern);
 
   // create the file
-  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(new HDF5RawDataFileSid(
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
     file_path + "/" + filename, run_number, file_index, application_name, create_file_layout_params()));
 
   // write several events, each with several fragments
@@ -313,7 +314,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   h5file_ptr.reset(); // explicit destruction
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
 
   auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
   BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
@@ -394,8 +395,8 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   fl_pars.digits_for_sequence_number = 4;
 
   // create the file
-  std::unique_ptr<HDF5RawDataFileSid> h5file_ptr(
-    new HDF5RawDataFileSid(file_path + "/" + filename, run_number, file_index, application_name, fl_pars));
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(
+    new HDF5RawDataFile(file_path + "/" + filename, run_number, file_index, application_name, fl_pars));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
@@ -404,7 +405,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   h5file_ptr.reset(); // explicit destruction
 
   // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFileSid(file_path + "/" + filename));
+  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + filename));
 
   auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
   BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());

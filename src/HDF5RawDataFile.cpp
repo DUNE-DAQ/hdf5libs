@@ -8,6 +8,8 @@
 #include "hdf5libs/HDF5RawDataFile.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
+#include "logging/Logging.hpp"
+
 #include <algorithm>
 #include <filesystem>
 #include <map>
@@ -31,6 +33,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  size_t file_index,
                                  std::string application_name,
                                  const hdf5filelayout::FileLayoutParams& fl_params,
+                                 std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -69,6 +72,10 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
   write_file_layout();
 
+  // write the SourceID-related attributes
+  HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
+  HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
+
   // write the record type
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
@@ -101,11 +108,40 @@ HDF5RawDataFile::~HDF5RawDataFile()
 void
 HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 {
-  write(tr.get_header_ref());
+  // the source_id_path map that we will build up as we write the TR header
+  // and fragments (and then write the map into the HDF5 TR_record Group)
+  HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  for (auto const& frag_ptr : tr.get_fragments_ref()) {
-    write(*frag_ptr);
+  // the map of fragment types to SourceIDS
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+
+  // the map of subdetectors to SourceIDS
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
+
+  // write the record header into the HDF5 file/group
+  HighFive::Group record_level_group = write(tr.get_header_ref(), source_id_path_map);
+
+  // store the SourceID of the record header in the HDF5 file/group
+  // (since there should only be one entry in the map at this point, we'll take advantage of that...)
+  for (auto const& source_id_path : source_id_path_map) {
+    HDF5SourceIDHandler::store_record_header_source_id(record_level_group, source_id_path.first);
   }
+
+  // write all of the fragments into the HDF5 file/group
+  for (auto const& frag_ptr : tr.get_fragments_ref()) {
+    write(*frag_ptr, source_id_path_map);
+    HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
+      fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
+    HDF5SourceIDHandler::add_subdetector_source_id_to_map(
+      subdetector_source_id_map,
+      static_cast<detdataformats::DetID::Subdetector>(frag_ptr->get_detector_id()),
+      frag_ptr->get_element_id());
+  }
+
+  // store all of the record-level maps in the HDF5 file/group
+  HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
+  HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
+  HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
 }
 
 /**
@@ -114,46 +150,60 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 void
 HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
 {
-  write(ts.get_header());
+  HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
+
+  HighFive::Group record_level_group = write(ts.get_header(), source_id_path_map);
 
   for (auto const& frag_ptr : ts.get_fragments_ref()) {
-    write(*frag_ptr);
+    write(*frag_ptr, source_id_path_map);
   }
+
+  HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
 }
 
 /**
  * @brief Write a TriggerRecordHeader to the file.
  */
-void
-HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh)
+HighFive::Group
+HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
+                       HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-
-  m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(trh),
-                              static_cast<const char*>(trh.get_storage_location()),
-                              trh.get_total_size_bytes());
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
+    do_write(m_file_layout_ptr->get_path_elements(trh),
+             static_cast<const char*>(trh.get_storage_location()),
+             trh.get_total_size_bytes());
+  m_recorded_size += std::get<0>(write_results);
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<1>(write_results));
+  return std::get<2>(write_results);
 }
 
 /**
  * @brief Write a TimeSliceHeader to the file.
  */
-void
-HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh)
+HighFive::Group
+HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-
-  m_recorded_size +=
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(tsh), (const char*)(&tsh), sizeof(daqdataformats::TimeSliceHeader));
+  m_recorded_size += std::get<0>(write_results);
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
+  return std::get<2>(write_results);
 }
 
 /**
  * @brief Write a Fragment to the file.
  */
 void
-HDF5RawDataFile::write(const daqdataformats::Fragment& frag)
+HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
+    do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
+             static_cast<const char*>(frag.get_storage_location()),
+             frag.get_size());
+  m_recorded_size += std::get<0>(write_results);
 
-  m_recorded_size += do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
-                              static_cast<const char*>(frag.get_storage_location()),
-                              frag.get_size());
+  daqdataformats::SourceID source_id = frag.get_element_id();
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, source_id, std::get<1>(write_results));
 }
 
 /**
@@ -171,7 +221,7 @@ HDF5RawDataFile::write_file_layout()
 /**
  * @brief write bytes to a dataset in the file, at the appropriate path
  */
-size_t
+std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
                           const char* raw_data_ptr,
                           size_t raw_data_size_bytes)
@@ -188,6 +238,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   if (!sub_group.isValid()) {
     throw InvalidHDF5Group(ERS_HERE, top_level_group_name);
   }
+  HighFive::Group top_level_group = sub_group;
 
   // Create the remaining subgroups
   for (size_t idx = 1; idx < group_and_dataset_path_elements.size() - 1; ++idx) {
@@ -215,24 +266,10 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
     m_file_ptr->flush();
-    return raw_data_size_bytes;
+    return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
-
-  return 0;
-}
-
-size_t
-get_free_space(const std::string& the_path)
-{
-  struct statvfs vfs_results;
-  int retval = statvfs(the_path.c_str(), &vfs_results);
-  if (retval < 0) {
-    return 0;
-  }
-
-  return vfs_results.f_bfree * vfs_results.f_bsize;
 }
 
 /**
@@ -241,7 +278,6 @@ get_free_space(const std::string& the_path)
 HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
   : m_open_flags(HighFive::File::ReadOnly)
 {
-
   // do the file open
   try {
     m_file_ptr = std::make_unique<HighFive::File>(file_name, m_open_flags);
@@ -262,6 +298,11 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
     m_record_type = m_file_layout_ptr->get_record_name_prefix();
 
   check_file_layout();
+
+  // HDF5SourceIDHandler operations need to come *after* read_file_layout()
+  // because they count on the filelayout_version, which is set in read_file_layout().
+  HDF5SourceIDHandler sid_handler(get_version());
+  sid_handler.fetch_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 }
 
 void
@@ -297,6 +338,7 @@ HDF5RawDataFile::check_file_layout()
     throw BadRecordType(ERS_HERE, record_type, m_file_layout_ptr->get_record_name_prefix());
 }
 
+#if 0
 void
 HDF5RawDataFile::check_record_type(std::string rt_name)
 {
@@ -310,8 +352,8 @@ HDF5RawDataFile::check_record_type(std::string rt_name)
 // HDF5 Utility function to recursively traverse a file
 void
 HDF5RawDataFile::explore_subgroup(const HighFive::Group& parent_group,
-                                  std::string relative_path,
-                                  std::vector<std::string>& path_list)
+                                     std::string relative_path,
+                                     std::vector<std::string>& path_list)
 {
   if (relative_path.size() > 0 && relative_path.compare(relative_path.size() - 1, 1, "/") == 0)
     relative_path.pop_back();
@@ -332,7 +374,74 @@ HDF5RawDataFile::explore_subgroup(const HighFive::Group& parent_group,
     }
   }
 }
+#endif
 
+void
+HDF5RawDataFile::add_record_level_info_to_caches_if_needed(record_id_t rid)
+{
+  // we should probably check that all relevant caches have an entry for the
+  // specified record ID, but we will just check one, in the interest of
+  // performance, and trust the "else" part of this routine to fill in *all*
+  // of the appropriate caches
+  if (m_source_id_path_cache.count(rid) != 0) {
+    return;
+  }
+
+  // create the handler to do the work
+  HDF5SourceIDHandler sid_handler(get_version());
+
+  // determine the HDF5 Group that corresponds to the specified record
+  std::string record_level_group_name = m_file_layout_ptr->get_record_number_string(rid.first, rid.second);
+  HighFive::Group record_group = m_file_ptr->getGroup(record_level_group_name);
+  if (!record_group.isValid()) {
+    throw InvalidHDF5Group(ERS_HERE, record_level_group_name);
+  }
+
+  // start with a copy of the file-level source-id-to-geo-id map and give the
+  // handler an opportunity to add any record-level additions
+  HDF5SourceIDHandler::source_id_geo_id_map_t local_source_id_geo_id_map = m_file_level_source_id_geo_id_map;
+  sid_handler.fetch_record_level_geo_id_info(record_group, local_source_id_geo_id_map);
+
+  // fetch the record-level source-id-to-path map
+  HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
+  sid_handler.fetch_source_id_path_info(record_group, source_id_path_map);
+
+  // fetch the record-level fragment-type-to-source-id map
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+  sid_handler.fetch_fragment_type_source_id_info(record_group, fragment_type_source_id_map);
+
+  // fetch the record-level subdetector-to-source-id map
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
+  sid_handler.fetch_subdetector_source_id_info(record_group, subdetector_source_id_map);
+
+  // loop through the source-id-to-path map to create various lists of SourceIDs in the record
+  daqdataformats::SourceID rh_sid = sid_handler.fetch_record_header_source_id(record_group);
+  std::set<daqdataformats::SourceID> full_source_id_set;
+  std::set<daqdataformats::SourceID> fragment_source_id_set;
+  HDF5SourceIDHandler::subsystem_source_id_map_t subsystem_source_id_map;
+  for (auto const& source_id_path : source_id_path_map) {
+    full_source_id_set.insert(source_id_path.first);
+    if (source_id_path.first != rh_sid) {
+      fragment_source_id_set.insert(source_id_path.first);
+    }
+    HDF5SourceIDHandler::add_subsystem_source_id_to_map(
+      subsystem_source_id_map, source_id_path.first.subsystem, source_id_path.first);
+  }
+
+  // note that even if the "fetch" methods above fail to add anything to the specified
+  // maps, the maps will still be valid (though, possibly empty), and once we add them
+  // to the caches here, we will be assured that lookups from the caches will not fail.
+  m_source_id_cache[rid] = full_source_id_set;
+  m_record_header_source_id_cache[rid] = rh_sid;
+  m_fragment_source_id_cache[rid] = fragment_source_id_set;
+  m_source_id_geo_id_cache[rid] = local_source_id_geo_id_map;
+  m_source_id_path_cache[rid] = source_id_path_map;
+  m_subsystem_source_id_cache[rid] = subsystem_source_id_map;
+  m_fragment_type_source_id_cache[rid] = fragment_type_source_id_map;
+  m_subdetector_source_id_cache[rid] = subdetector_source_id_map;
+}
+
+#if 0
 /**
  * @brief Return a vector of dataset names
  */
@@ -353,6 +462,7 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
 
   return path_list;
 }
+#endif
 
 /**
  * @brief Return all of the record numbers in the file.
@@ -360,8 +470,8 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
 HDF5RawDataFile::record_id_set // NOLINT(build/unsigned)
 HDF5RawDataFile::get_all_record_ids()
 {
-  if (!m_record_ids.empty())
-    return m_record_ids;
+  if (!m_all_record_ids_in_file.empty())
+    return m_all_record_ids_in_file;
 
   // records are at the top level
 
@@ -381,20 +491,21 @@ HDF5RawDataFile::get_all_record_ids()
 
     loc = rec_num_string.find(".");
     if (loc == std::string::npos) {
-      m_record_ids.insert(std::make_pair(std::stoi(rec_num_string), 0));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), 0));
     } else {
       auto seq_num_string = rec_num_string.substr(loc + 1);
       rec_num_string.resize(loc); // remove anything from '.' onwards
-      m_record_ids.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
     }
 
   } // end loop over childNames
 
-  return m_record_ids;
+  return m_all_record_ids_in_file;
 }
 
-std::set<uint64_t>
-HDF5RawDataFile::get_all_record_numbers() // NOLINT(build/unsigned)
+#if 0
+std::set<uint64_t> // NOLINT(build/unsigned)
+HDF5RawDataFile::get_all_record_numbers()
 {
   ers::warning(DeprecatedUsage(ERS_HERE,
                                "get_all_record_numbers()",
@@ -481,7 +592,7 @@ HDF5RawDataFile::get_timeslice_header_dataset_paths()
 }
 
 std::string
-HDF5RawDataFile::get_record_header_dataset_path(const record_id_t rid)
+HDF5RawDataFile::get_record_header_dataset_path(const record_id_t& rid)
 {
   auto rec_id = get_all_record_ids().find(rid);
   if (rec_id == get_all_record_ids().end())
@@ -492,13 +603,13 @@ HDF5RawDataFile::get_record_header_dataset_path(const record_id_t rid)
 
 std::string
 HDF5RawDataFile::get_record_header_dataset_path(const uint64_t rec_num, // NOLINT (build/unsigned)
-                                                const daqdataformats::sequence_number_t seq_num)
+                                                   const daqdataformats::sequence_number_t seq_num)
 {
   return get_record_header_dataset_path(std::make_pair(rec_num, seq_num));
 }
 
 std::string
-HDF5RawDataFile::get_trigger_record_header_dataset_path(const record_id_t rid)
+HDF5RawDataFile::get_trigger_record_header_dataset_path(const record_id_t& rid)
 {
   check_record_type("TriggerRecord");
   return get_record_header_dataset_path(rid);
@@ -506,14 +617,14 @@ HDF5RawDataFile::get_trigger_record_header_dataset_path(const record_id_t rid)
 
 std::string
 HDF5RawDataFile::get_trigger_record_header_dataset_path(const daqdataformats::trigger_number_t trig_num,
-                                                        const daqdataformats::sequence_number_t seq_num)
+                                                           const daqdataformats::sequence_number_t seq_num)
 {
   check_record_type("TriggerRecord");
   return get_record_header_dataset_path(trig_num, seq_num);
 }
 
 std::string
-HDF5RawDataFile::get_timeslice_header_dataset_path(const record_id_t rid)
+HDF5RawDataFile::get_timeslice_header_dataset_path(const record_id_t& rid)
 {
   check_record_type("TimeSlice");
   return get_record_header_dataset_path(rid.first, 0);
@@ -547,7 +658,7 @@ HDF5RawDataFile::get_all_fragment_dataset_paths()
 
 // get all fragment dataset paths for given record ID
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid)
+HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid)
 {
   std::vector<std::string> frag_paths;
 
@@ -568,7 +679,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid)
 // get all fragment dataset paths for given record ID
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const uint64_t rec_num, // NOLINT (build/unsigned)
-                                            const daqdataformats::sequence_number_t seq_num)
+                                               const daqdataformats::sequence_number_t seq_num)
 {
   return get_fragment_dataset_paths(std::make_pair(rec_num, seq_num));
 }
@@ -587,14 +698,14 @@ HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID::Subs
 }
 
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const std::string typestring)
+HDF5RawDataFile::get_fragment_dataset_paths(const std::string& typestring)
 {
   daqdataformats::SourceID::Subsystem type = daqdataformats::SourceID::string_to_subsystem(typestring);
   return get_fragment_dataset_paths(type);
 }
 
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid, const daqdataformats::SourceID::Subsystem type)
+HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid, const daqdataformats::SourceID::Subsystem type)
 {
   std::vector<std::string> frag_paths;
 
@@ -607,7 +718,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid, const daqdata
 }
 
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid, const std::string typestring)
+HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid, const std::string& typestring)
 {
   daqdataformats::SourceID::Subsystem type = daqdataformats::SourceID::string_to_subsystem(typestring);
   return get_fragment_dataset_paths(rid, type);
@@ -615,29 +726,29 @@ HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t rid, const std::st
 
 // get all fragment dataset paths for a SourceID
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID element_id)
+HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID& source_id)
 {
   std::vector<std::string> frag_paths;
 
   for (auto const& rid : get_all_record_ids())
     frag_paths.push_back(m_file_ptr->getPath() +
-                         m_file_layout_ptr->get_fragment_path(rid.first, rid.second, element_id));
+                         m_file_layout_ptr->get_fragment_path(rid.first, rid.second, source_id));
 
   return frag_paths;
 }
 
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem type,
-                                            const uint32_t element_id) // NOLINT(build/unsigned)
+                                               const uint32_t id) // NOLINT(build/unsigned)
 {
-  return get_fragment_dataset_paths(daqdataformats::SourceID(type, element_id));
+  return get_fragment_dataset_paths(daqdataformats::SourceID(type, source_id));
 }
 std::vector<std::string>
-HDF5RawDataFile::get_fragment_dataset_paths(const std::string typestring,
-                                            const uint32_t element_id) // NOLINT(build/unsigned)
+HDF5RawDataFile::get_fragment_dataset_paths(const std::string& typestring,
+                                               const uint32_t id) // NOLINT(build/unsigned)
 {
   return get_fragment_dataset_paths(
-    daqdataformats::SourceID(daqdataformats::SourceID::string_to_subsystem(typestring), element_id));
+    daqdataformats::SourceID(daqdataformats::SourceID::string_to_subsystem(typestring), source_id));
 }
 
 std::set<daqdataformats::SourceID>
@@ -657,6 +768,81 @@ HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_pat
   }
 
   return source_ids;
+}
+#endif
+
+// get all SourceIDs for given record ID
+std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids(const record_id_t& rid)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_source_id_cache[rid];
+}
+
+daqdataformats::SourceID
+HDF5RawDataFile::get_record_header_source_id(const record_id_t& rid)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_record_header_source_id_cache[rid];
+}
+
+std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_fragment_source_ids(const record_id_t& rid)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_fragment_source_id_cache[rid];
+}
+
+std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids_for_subsystem(const record_id_t& rid,
+                                              const daqdataformats::SourceID::Subsystem subsystem)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_subsystem_source_id_cache[rid][subsystem];
+}
+
+std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids_for_fragment_type(const record_id_t& rid, const daqdataformats::FragmentType frag_type)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_fragment_type_source_id_cache[rid][frag_type];
+}
+
+std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_subdetector_source_id_cache[rid][subdet];
 }
 
 std::unique_ptr<char[]>
@@ -686,69 +872,67 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 }
 
 std::unique_ptr<daqdataformats::Fragment>
-HDF5RawDataFile::get_frag_ptr(const record_id_t rid, const daqdataformats::SourceID element_id)
+HDF5RawDataFile::get_frag_ptr(const record_id_t& rid, const daqdataformats::SourceID& source_id)
 {
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, element_id));
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return get_frag_ptr(m_source_id_path_cache[rid][source_id]);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
-                              const daqdataformats::SourceID element_id)
+                              const daqdataformats::SourceID& source_id)
 {
-  if (get_version() < 2)
-    throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
-
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, element_id));
+  record_id_t rid = std::make_pair(rec_num, seq_num);
+  return get_frag_ptr(rid, source_id);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
-HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
+HDF5RawDataFile::get_frag_ptr(const record_id_t& rid,
                               const daqdataformats::SourceID::Subsystem type,
-                              const uint32_t element_id) // NOLINT(build/unsigned)
+                              const uint32_t id) // NOLINT(build/unsigned)
 {
-  if (get_version() < 2)
-    throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
-
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, type, element_id));
+  daqdataformats::SourceID source_id(type, id);
+  return get_frag_ptr(rid, source_id);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
                               const daqdataformats::SourceID::Subsystem type,
-                              const uint32_t element_id) // NOLINT(build/unsigned)
+                              const uint32_t id) // NOLINT(build/unsigned)
 {
-  if (get_version() < 2)
-    throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
-
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, type, element_id));
+  record_id_t rid = std::make_pair(rec_num, seq_num);
+  daqdataformats::SourceID source_id(type, id);
+  return get_frag_ptr(rid, source_id);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
-HDF5RawDataFile::get_frag_ptr(const record_id_t rid,
-                              const std::string typestring,
-                              const uint32_t element_id) // NOLINT(build/unsigned)
+HDF5RawDataFile::get_frag_ptr(const record_id_t& rid,
+                              const std::string& typestring,
+                              const uint32_t id) // NOLINT(build/unsigned)
 {
-  if (get_version() < 2)
-    throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
-
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rid.first, rid.second, typestring, element_id));
+  daqdataformats::SourceID source_id(daqdataformats::SourceID::string_to_subsystem(typestring), id);
+  return get_frag_ptr(rid, source_id);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
                               const daqdataformats::sequence_number_t seq_num,
-                              const std::string typestring,
-                              const uint32_t element_id) // NOLINT(build/unsigned)
+                              const std::string& typestring,
+                              const uint32_t id) // NOLINT(build/unsigned)
 {
-  if (get_version() < 2)
-    throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
-
-  return get_frag_ptr(m_file_layout_ptr->get_fragment_path(rec_num, seq_num, typestring, element_id));
+  record_id_t rid = std::make_pair(rec_num, seq_num);
+  daqdataformats::SourceID source_id(daqdataformats::SourceID::string_to_subsystem(typestring), id);
+  return get_frag_ptr(rid, source_id);
 }
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader>
@@ -760,15 +944,22 @@ HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 }
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader>
-HDF5RawDataFile::get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
-                             const daqdataformats::sequence_number_t seq_num)
+HDF5RawDataFile::get_trh_ptr(const record_id_t& rid)
 {
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  return get_trh_ptr(m_file_layout_ptr->get_trigger_record_header_path(trig_num, seq_num));
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  daqdataformats::SourceID rh_source_id = m_record_header_source_id_cache[rid];
+  return get_trh_ptr(m_source_id_path_cache[rid][rh_source_id]);
 }
 
+#if 0
 std::unique_ptr<daqdataformats::TimeSliceHeader>
 HDF5RawDataFile::get_tsh_ptr(const std::string& dataset_name)
 {
@@ -789,7 +980,7 @@ HDF5RawDataFile::get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num)
 
 daqdataformats::TriggerRecord
 HDF5RawDataFile::get_trigger_record(const daqdataformats::trigger_number_t trig_num,
-                                    const daqdataformats::sequence_number_t seq_num)
+                                       const daqdataformats::sequence_number_t seq_num)
 {
   daqdataformats::TriggerRecord trigger_record(*get_trh_ptr(trig_num, seq_num));
   for (auto const& frag_path : get_fragment_dataset_paths(trig_num, seq_num)) {
@@ -808,6 +999,20 @@ HDF5RawDataFile::get_timeslice(const daqdataformats::timeslice_number_t ts_num)
   }
 
   return timeslice;
+}
+
+#endif
+
+std::vector<uint64_t> // NOLINT(build/unsigned)
+HDF5RawDataFile::get_geo_ids_for_source_id(const record_id_t& rid, const daqdataformats::SourceID& source_id)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  return m_source_id_geo_id_cache[rid][source_id];
 }
 
 } // namespace hdf5libs
