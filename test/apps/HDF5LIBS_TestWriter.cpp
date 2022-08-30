@@ -12,6 +12,7 @@
 #include "hdf5libs/HDF5RawDataFile.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
+#include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 
 #include <fstream>
@@ -23,25 +24,27 @@
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
+using namespace dunedaq::detdataformats;
 
 void
 print_usage()
 {
-  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <output_file_name>";
+  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <hardware_map_file> <output_file_name>";
 }
 
 int
 main(int argc, char** argv)
 {
 
-  if (argc != 3) {
+  if (argc != 4) {
     print_usage();
     return 1;
   }
 
   const std::string app_name = std::string(argv[0]);
   const std::string ifile_name = std::string(argv[1]);
-  const std::string ofile_name = std::string(argv[2]);
+  const std::string hw_map_file_name = std::string(argv[2]);
+  const std::string ofile_name = std::string(argv[3]);
 
   // read in configuration
   nlohmann::json j_in, fl_conf;
@@ -65,25 +68,30 @@ main(int argc, char** argv)
 
   const int trigger_count = j_in["trigger_count"].get<int>();
   const int fragment_size = j_in["data_size"].get<int>() + sizeof(FragmentHeader);
-  const GeoID::SystemType gtype_to_use = GeoID::string_to_system_type(j_in["fragment_type"].get<std::string>());
-  const int region_count = j_in["region_count"].get<int>();
+  const SourceID::Subsystem stype_to_use = SourceID::string_to_subsystem(j_in["subsystem_type"].get<std::string>());
+  const DetID::Subdetector dtype_to_use = DetID::string_to_subdetector(j_in["subdetector_type"].get<std::string>());
+  const FragmentType ftype_to_use = string_to_fragment_type(j_in["fragment_type"].get<std::string>());
   const int element_count = j_in["element_count"].get<int>();
 
   TLOG() << "\nOutput file: " << ofile_name << "\nRun number: " << run_number << "\nFile index: " << file_index
-         << "\nNumber of trigger records: " << trigger_count
-         << "\nNumber of fragments: " << region_count * element_count << "  (Regions=" << region_count
-         << ",Elements=" << element_count << ")"
-         << "\nFragment type: " << GeoID::system_type_to_string(gtype_to_use)
+         << "\nNumber of trigger records: " << trigger_count << "\nNumber of fragments: " << element_count
+         << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
+  // create the HardwareMapService
+  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+    new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
+
   // open our file for writing
-  HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
-                                                     run_number,                 // run_number
-                                                     file_index,                 // file_index,
-                                                     app_name,                   // app_name
-                                                     fl_conf,                    // file_layout_confs
-						     ".writing",                 // optional: suffix to use for files being written
-                                                     HighFive::File::Overwrite); // optional: overwrite existing file
+  HDF5RawDataFile h5_raw_data_file =
+    HDF5RawDataFile(ofile_name,
+                    run_number, // run_number
+                    file_index, // file_index,
+                    app_name,   // app_name
+                    fl_conf,    // file_layout_confs
+                    hw_map_service,
+                    ".writing",                 // optional: suffix to use for files being written
+                    HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
 
@@ -101,39 +109,39 @@ main(int argc, char** argv)
     TriggerRecordHeaderData trh_data;
     trh_data.trigger_number = trig_num;
     trh_data.trigger_timestamp = ts;
-    trh_data.num_requested_components = region_count * element_count;
+    trh_data.num_requested_components = element_count;
     trh_data.run_number = run_number;
     trh_data.sequence_number = 0;
     trh_data.max_sequence_number = 1;
+    trh_data.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 0);
 
     TriggerRecordHeader trh(&trh_data);
 
     // create out TriggerRecord
     TriggerRecord tr(trh);
 
-    // loop over regions and elements
-    for (int reg_num = 0; reg_num < region_count; ++reg_num) {
-      for (int ele_num = 0; ele_num < element_count; ++ele_num) {
+    // loop over elements
+    for (int ele_num = 0; ele_num < element_count; ++ele_num) {
 
-        // create our fragment
-        FragmentHeader fh;
-        fh.trigger_number = trig_num;
-        fh.trigger_timestamp = ts;
-        fh.window_begin = ts - 10;
-        fh.window_end = ts;
-        fh.run_number = run_number;
-        fh.fragment_type = 0;
-	fh.sequence_number = 0;
-        fh.element_id = GeoID(gtype_to_use, reg_num, ele_num);
+      // create our fragment
+      FragmentHeader fh;
+      fh.trigger_number = trig_num;
+      fh.trigger_timestamp = ts;
+      fh.window_begin = ts - 10;
+      fh.window_end = ts;
+      fh.run_number = run_number;
+      fh.fragment_type = static_cast<fragment_type_t>(ftype_to_use);
+      fh.sequence_number = 0;
+      fh.detector_id = static_cast<uint16_t>(dtype_to_use);
+      fh.element_id = SourceID(stype_to_use, ele_num);
 
-	auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
-        frag_ptr->set_header_fields(fh);
+      auto frag_ptr = std::make_unique<Fragment>(dummy_data.data(), dummy_data.size());
+      frag_ptr->set_header_fields(fh);
 
-        // add fragment to TriggerRecord
-        tr.add_fragment(std::move(frag_ptr));
+      // add fragment to TriggerRecord
+      tr.add_fragment(std::move(frag_ptr));
 
-      } // end loop over elements
-    }   // end loop over regions
+    } // end loop over elements
 
     // write trigger record to file
     h5_raw_data_file.write(tr);

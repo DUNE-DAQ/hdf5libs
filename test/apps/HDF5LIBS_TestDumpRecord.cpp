@@ -1,9 +1,8 @@
 /**
- * @file demo_tpc_decoder.cpp
+ * @file HDF5TestDumpRecord.cpp
  *
- * Demo of HDF5 file reader for TPC fragments: this example shows how to extract fragments from a file and decode WIB
- * frames.
- *
+ * Demo of HDF5 file reader for TPC fragments: this example demonstrates
+ * simple 'record-dump' functionality.
  *
  * This is part of the DUNE DAQ Software Suite, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
@@ -11,8 +10,8 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
+#include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 
 #include <fstream>
@@ -22,11 +21,13 @@
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
+using namespace dunedaq::detdataformats;
+using namespace dunedaq::detchannelmaps;
 
 void
 print_usage()
 {
-  TLOG() << "Usage: HDF5LIBS_TestReader <input_file_name>";
+  TLOG() << "Usage: HDF5LIBS_TestDumpRecord <input_file_name>";
 }
 
 int
@@ -54,10 +55,10 @@ main(int argc, char** argv)
   auto record_type = h5_raw_data_file.get_record_type();
   ss << "\nRecord type = " << record_type;
 
-  nlohmann::json flp_json;
-  auto flp = h5_raw_data_file.get_file_layout().get_file_layout_params();
-  hdf5filelayout::to_json(flp_json, flp);
-  ss << "\nFile Layout Parameters:\n" << flp_json;
+  // nlohmann::json flp_json;
+  // auto flp = h5_raw_data_file.get_file_layout().get_file_layout_params();
+  // hdf5filelayout::to_json(flp_json, flp);
+  // ss << "\nFile Layout Parameters:\n" << flp_json;
 
   TLOG() << ss.str();
   ss.str("");
@@ -92,18 +93,31 @@ main(int argc, char** argv)
   TLOG() << ss.str();
   ss.str("");
 
-  // for(auto const& rid : records)
-  //   ss << "\n\t\tRecord: (" << rid.first << "," << rid.second << ")";
-  // TLOG() << ss.str();
-  // ss.str("");
-
-  // do this to get all datasets....
-  //  auto all_datasets = h5_raw_data_file.get_dataset_paths();
-  //  ss << "\nAll datasets found:";
-  //  for (auto const& path : all_datasets)
-  //  	ss << "\n\t" << path;
-  //  TLOG() << ss.str();
-  //  ss.str("");
+  for (auto const& record_id : records) {
+    auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+    ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
+    std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
+    for (auto const& source_id : frag_sid_list) {
+      auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
+      ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
+         << frag_ptr->get_element_id().to_string() << " from subdetector "
+         << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
+         << " has size = " << frag_ptr->get_size();
+      if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
+        ss << "\n\t\t"
+           << "It may contain data from the following detector components:";
+        std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
+        for (auto const& geo_id : geo_id_list) {
+          HardwareMapService::GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+          ss << "\n\t\t\t"
+             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
+             << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
+        }
+      }
+    }
+    TLOG() << ss.str();
+    ss.str("");
+  }
 
 #if 0
   // 11-Aug-2022, KAB: what value do we get from seeing the header dataset paths?
