@@ -976,6 +976,23 @@ HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
   return get_frag_ptr(rid, source_id);
 }
 
+std::unique_ptr<daqdataformats::Fragment>
+HDF5RawDataFile::get_frag_ptr(const record_id_t& rid,
+                              const uint64_t geo_id) // NOLINT(build/unsigned)
+{
+  daqdataformats::SourceID sid = get_source_id_for_geo_id(rid, geo_id);
+  return get_frag_ptr(rid, sid);
+}
+
+std::unique_ptr<daqdataformats::Fragment>
+HDF5RawDataFile::get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                              const daqdataformats::sequence_number_t seq_num,
+                              const uint64_t geo_id) // NOLINT(build/unsigned)
+{
+  record_id_t rid = std::make_pair(rec_num, seq_num);
+  return get_frag_ptr(rid, geo_id);
+}
+
 std::unique_ptr<daqdataformats::TriggerRecordHeader>
 HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
@@ -1060,6 +1077,31 @@ HDF5RawDataFile::get_geo_ids_for_source_id(const record_id_t& rid, const daqdata
   add_record_level_info_to_caches_if_needed(rid);
 
   return m_source_id_geo_id_cache[rid][source_id];
+}
+
+daqdataformats::SourceID 
+HDF5RawDataFile::get_source_id_for_geo_id(const record_id_t& rid,
+                                          const uint64_t requested_geo_id) // NOLINT(build/unsigned)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  // if we want to make this faster, we could build a reverse lookup cache in
+  // add_record_level_info_to_caches_if_needed() and just look up the requested geo_id here
+  for (auto const& map_entry : m_source_id_geo_id_cache[rid]) {
+    auto geoid_list = map_entry.second;
+    for (auto const& geoid_from_list : geoid_list) {
+      if (geoid_from_list == requested_geo_id) {
+        return map_entry.first;
+      }
+    }
+  }
+
+  daqdataformats::SourceID empty_sid;
+  return empty_sid;
 }
 
 } // namespace hdf5libs

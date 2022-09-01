@@ -366,6 +366,12 @@ public:
                                                          const std::string& typestring,
                                                          const uint32_t id); // NOLINT(build/unsigned)
 
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t& rid,
+                                                         const uint64_t geo_id); // NOLINT(build/unsigned)
+  std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const uint64_t rec_num, // NOLINT(build/unsigned)
+                                                         const daqdataformats::sequence_number_t seq_num,
+                                                         const uint64_t geo_id); // NOLINT(build/unsigned)
+
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const record_id_t& rid);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const daqdataformats::trigger_number_t trig_num,
                                                                    const daqdataformats::sequence_number_t seq_num = 0)
@@ -393,6 +399,9 @@ public:
 
   std::vector<uint64_t> get_geo_ids_for_source_id(const record_id_t& rid, // NOLINT(build/unsigned)
                                                   const daqdataformats::SourceID& source_id);
+
+  daqdataformats::SourceID get_source_id_for_geo_id(const record_id_t& rid,
+                                                    const uint64_t geo_id); // NOLINT(build/unsigned)
 
 private:
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
