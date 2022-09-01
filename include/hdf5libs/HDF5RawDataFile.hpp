@@ -187,6 +187,10 @@ public:
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
 
+  std::set<uint64_t> get_all_record_numbers(); // NOLINT(build/unsigned)
+  std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
+  std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers();
+
 #if 0
   std::vector<std::string> get_record_header_dataset_paths();
   std::vector<std::string> get_trigger_record_header_dataset_paths();
@@ -340,9 +344,7 @@ public:
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
   std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name);
-#if 0
   std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const std::string& dataset_name);
-#endif
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const record_id_t& rid,
                                                          const daqdataformats::SourceID& source_id);
@@ -371,10 +373,10 @@ public:
     return get_trh_ptr(std::make_pair(trig_num, seq_num));
   }
 
-  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num);
-  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t& rid)
+  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const record_id_t& rid);
+  std::unique_ptr<daqdataformats::TimeSliceHeader> get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num)
   {
-    return get_tsh_ptr(rid.first);
+    return get_tsh_ptr(std::make_pair(ts_num, 0));
   }
 
 #if 0
