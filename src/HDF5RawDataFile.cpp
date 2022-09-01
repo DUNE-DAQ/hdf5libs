@@ -150,15 +150,40 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 void
 HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
 {
+  // the source_id_path map that we will build up as we write the TR header
+  // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
+  // the map of fragment types to SourceIDS
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+
+  // the map of subdetectors to SourceIDS
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
+
+  // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(ts.get_header(), source_id_path_map);
 
-  for (auto const& frag_ptr : ts.get_fragments_ref()) {
-    write(*frag_ptr, source_id_path_map);
+  // store the SourceID of the record header in the HDF5 file/group
+  // (since there should only be one entry in the map at this point, we'll take advantage of that...)
+  for (auto const& source_id_path : source_id_path_map) {
+    HDF5SourceIDHandler::store_record_header_source_id(record_level_group, source_id_path.first);
   }
 
+  // write all of the fragments into the HDF5 file/group
+  for (auto const& frag_ptr : ts.get_fragments_ref()) {
+    write(*frag_ptr, source_id_path_map);
+    HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
+      fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
+    HDF5SourceIDHandler::add_subdetector_source_id_to_map(
+      subdetector_source_id_map,
+      static_cast<detdataformats::DetID::Subdetector>(frag_ptr->get_detector_id()),
+      frag_ptr->get_element_id());
+  }
+
+  // store all of the record-level maps in the HDF5 file/group
   HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
+  HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
+  HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
 }
 
 /**
@@ -499,6 +524,20 @@ HDF5RawDataFile::get_all_record_ids()
   return m_all_record_ids_in_file;
 }
 
+std::set<uint64_t>
+HDF5RawDataFile::get_all_record_numbers() // NOLINT(build/unsigned)
+{
+  ers::warning(DeprecatedUsage(ERS_HERE,
+                               "get_all_record_numbers()",
+                               "Use get_all_record_ids(), which returns a record_number,sequence_number pair."));
+
+  std::set<uint64_t> record_numbers; // NOLINT(build/unsigned)
+  for (auto const& rid : get_all_record_ids())
+    record_numbers.insert(rid.first);
+
+  return record_numbers;
+}
+
 HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_trigger_record_ids()
 {
@@ -506,11 +545,29 @@ HDF5RawDataFile::get_all_trigger_record_ids()
   return get_all_record_ids();
 }
 
+std::set<daqdataformats::trigger_number_t>
+HDF5RawDataFile::get_all_trigger_record_numbers()
+{
+  ers::warning(
+    DeprecatedUsage(ERS_HERE,
+                    "get_all_trigger_record_numbers()",
+                    "Use get_all_trigger_record_ids(), which returns a record_number,sequence_number pair."));
+
+  return get_all_record_numbers();
+}
+
 HDF5RawDataFile::record_id_set
 HDF5RawDataFile::get_all_timeslice_ids()
 {
   check_record_type("TimeSlice");
   return get_all_record_ids();
+}
+
+std::set<daqdataformats::timeslice_number_t>
+HDF5RawDataFile::get_all_timeslice_numbers()
+{
+  check_record_type("TimeSlice");
+  return get_all_record_numbers();
 }
 
 #if 0
@@ -943,7 +1000,6 @@ HDF5RawDataFile::get_trh_ptr(const record_id_t& rid)
   return get_trh_ptr(m_source_id_path_cache[rid][rh_source_id]);
 }
 
-#if 0
 std::unique_ptr<daqdataformats::TimeSliceHeader>
 HDF5RawDataFile::get_tsh_ptr(const std::string& dataset_name)
 {
@@ -954,14 +1010,22 @@ HDF5RawDataFile::get_tsh_ptr(const std::string& dataset_name)
 }
 
 std::unique_ptr<daqdataformats::TimeSliceHeader>
-HDF5RawDataFile::get_tsh_ptr(const daqdataformats::timeslice_number_t ts_num)
+HDF5RawDataFile::get_tsh_ptr(const record_id_t& rid)
 {
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  return get_tsh_ptr(m_file_layout_ptr->get_trigger_record_header_path(ts_num));
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  daqdataformats::SourceID rh_source_id = m_record_header_source_id_cache[rid];
+  return get_tsh_ptr(m_source_id_path_cache[rid][rh_source_id]);
 }
 
+#if 0
 daqdataformats::TriggerRecord
 HDF5RawDataFile::get_trigger_record(const daqdataformats::trigger_number_t trig_num,
                                        const daqdataformats::sequence_number_t seq_num)
@@ -984,7 +1048,6 @@ HDF5RawDataFile::get_timeslice(const daqdataformats::timeslice_number_t ts_num)
 
   return timeslice;
 }
-
 #endif
 
 std::vector<uint64_t> // NOLINT(build/unsigned)
