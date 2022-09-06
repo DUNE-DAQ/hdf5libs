@@ -58,7 +58,7 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::unique_ptr&lt;daqdataformats::TimeSliceHeader&gt; get_tsh_ptr(record_id_t& rid) |
 | std::unique_ptr&lt;daqdataformats::TimeSliceHeader&gt; get_tsh_ptr(daqdataformats::timeslice_number_t ts_num) |
 | daqdataformats::TriggerRecord get_trigger_record(record_id_t rid) |
-| daqdataformats::TriggerRecord get_trigger_record(daqdataformats::trigger_number_t trig_num,daqdataformats::sequence_number_t seq_num = 0) |
+| daqdataformats::TriggerRecord get_trigger_record(daqdataformats::trigger_number_t trig_num,daqdataformats::sequence_number_t seq_num) |
 | daqdataformats::TimeSlice get_timeslice(record_id_t rid) |
 | daqdataformats::TimeSlice get_timeslice(daqdataformats::timeslice_number_t ts_num) |
 
@@ -94,3 +94,34 @@ Note that in some cases, some of the detail of a method signature may have been 
 | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID::SystemType type, uint16_t region_id, uint32_t element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector det_id, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
 | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, string typestring, uint16_t region_id, uint32_t element_id) |unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, string subdetector_name, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
 | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string typestring, uint16_t region_id, uint32_t element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string subdetector_name, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
+
+### `HDF5RawDataFile` C++ methods that were added for file format version 3
+
+Note that in some cases, some of the detail of a method signature may have been omitted to save space (e.g. `const` declarations, full namespace details, etc.)  Please see the latest version of the `HDF5RawDataFile.hpp` header file for the full details.
+
+| New HDF5RawDataFile methods |
+| --- |
+| std::set<daqdataformats::SourceID> get_source_ids(record_id_t& rid) |
+| std::set<daqdataformats::SourceID> get_source_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num) |
+| daqdataformats::SourceID get_record_header_source_id(record_id_t& rid) |
+| daqdataformats::SourceID get_record_header_source_id(uint64_t rec_num, daqdataformats::sequence_number_t seq_num) |
+| std::set<daqdataformats::SourceID> get_fragment_source_ids(record_id_t& rid) |
+| std::set<daqdataformats::SourceID> get_fragment_source_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(record_id_t& rid, daqdataformats::SourceID::Subsystem subsystem) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(record_id_t& rid, std::string& subsystem_name) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::SourceID::Subsystem subsystem) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subsystem(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, std::string& subsystem_name) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(record_id_t& rid, daqdataformats::FragmentType frag_type) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(record_id_t& rid, std::string& frag_type_name) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::FragmentType frag_type) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, std::string& frag_type_name) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(record_id_t& rid, detdataformats::DetID::Subdetector subdet) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(record_id_t& rid, std::string& subdet_name) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector subdet) |
+| std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, std::string& subdet_name) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t& rid, daqdataformats::SourceID& source_id) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::SourceID& source_id) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t& rid, daqdataformats::SourceID::Subsystem type, uint32_t id) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::SourceID::Subsystem type, uint32_t id);
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t& rid, std::string& subsystem_name, uint32_t id) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, std::string& subsystem_name, uint32_t id) |
