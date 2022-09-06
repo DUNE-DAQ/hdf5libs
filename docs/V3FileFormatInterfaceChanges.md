@@ -35,7 +35,20 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::set<uint64_t> get_all_record_numbers(); // deprecated |
 | std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers(); // deprecated |
 | std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers(); // deprecated |
-  
+| std::vector<std::string> get_record_header_dataset_paths(); |
+| std::vector<std::string> get_trigger_record_header_dataset_paths(); |
+| std::vector<std::string> get_timeslice_header_dataset_paths(); |
+| std::string get_record_header_dataset_path(const record_id_t& rid); |
+| std::string get_record_header_dataset_path(uint64_t rec_num, daqdataformats::sequence_number_t seq_num; |
+| std::string get_trigger_record_header_dataset_path(const record_id_t& rid); |
+| std::string get_trigger_record_header_dataset_path(daqdataformats::trigger_number_t trig_num, daqdataformats::sequence_number_t seq_num);
+| std::string get_timeslice_header_dataset_path(const record_id_t& rid); |
+| std::string get_timeslice_header_dataset_path(const daqdataformats::timeslice_number_t trig_num); |
+| std::vector<std::string> get_all_fragment_dataset_paths(); |
+| std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid); |
+| std::vector<std::string> get_fragment_dataset_paths(uint64_t rec_num, daqdataformats::sequence_number_t seq_num); |
+
+
 ### `HDF5RawDataFile` C++ interface changes between file format version 2 and version 3:
 
 | Version 2 method | Corresponding Version 3 method |
