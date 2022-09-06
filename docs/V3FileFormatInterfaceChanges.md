@@ -49,6 +49,10 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::vector&lt;std::string&gt; get_all_fragment_dataset_paths(); |
 | std::vector&lt;std::string&gt; get_fragment_dataset_paths(const record_id_t& rid); |
 | std::vector&lt;std::string&gt; get_fragment_dataset_paths(uint64_t rec_num, daqdataformats::sequence_number_t seq_num); |
+| std::unique_ptr&lt;char[]&gt; get_dataset_raw_data(const std::string& dataset_path) |
+| std::unique_ptr<daqdataformats::Fragment>            get_frag_ptr(const std::string& dataset_name) |
+| std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name) |
+| std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const std::string& dataset_name) |
 
 
 ### `HDF5RawDataFile` C++ interface changes between file format version 2 and version 3:
@@ -74,3 +78,6 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(record_id_t, string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(record_id_t, string subdetector_name)
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID::SystemType type) | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector subdet)
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string subdetector_name) |
+| std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(daqdataformats::GeoID::SystemType type) | std::set&lt;uint64_t&gt; get_geo_ids(detdataformats::DetID::Subdetector subdet) | 
+| std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(std::string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(std::string subdetector_name) |
+
