@@ -130,3 +130,5 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::SourceID::Subsystem type, uint32_t id);
 | std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t& rid, std::string& subsystem_name, uint32_t id) |
 | std::unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, std::string& subsystem_name, uint32_t id) |
+| std::vector&lt;uint64_t&gt; get_geo_ids_for_source_id(record_id_t& rid, daqdataformats::SourceID& source_id) |
+| daqdataformats::SourceID get_source_id_for_geo_id(record_id_t& rid, uint64_t geo_id) |
