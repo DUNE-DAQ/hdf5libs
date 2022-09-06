@@ -14,7 +14,7 @@ Note that in some cases, some of the detail of a method signature may have been 
 
 | Unchanged HDF5RawDataFile methods |
 | --- | 
-| [file read constructor]  HDF5RawDataFile(const std::string& file_name); |
+| [file read constructor]  HDF5RawDataFile(const std::string& file_name) |
 | std::string get_file_name() |
 | size_t get_recorded_size() |
 | std::string get_record_type() |
@@ -24,35 +24,43 @@ Note that in some cases, some of the detail of a method signature may have been 
 | uint32_t get_version() |
 | void write(const daqdataformats::TriggerRecord& tr) |
 | void write(const daqdataformats::TimeSlice& ts) |
-| template&lt;typename T&gt; void write_attribute(const std::string& name, T value); |
-| template&lt;typename T&gt; void write_attribute(HighFive::Group& grp, const std::string& name, T value); |
-| template&lt;typename T&gt; void write_attribute(HighFive::DataSet& dset, const std::string& name, T value); |
-| template&lt;typename T&gt; T get_attribute(const std::string& name); |
-| template&lt;typename T&gt; T get_attribute(const HighFive::Group& grp, const std::string& name); |
-| template&lt;typename T&gt; T get_attribute(const HighFive::DataSet& dset, const std::string& name); |
-| std::vector&lt;std::string&gt; get_dataset_paths(std::string top_level_group_name = ""); |
-| record_id_set get_all_record_ids(); |
-| record_id_set get_all_trigger_record_ids(); |
-| record_id_set get_all_timeslice_ids(); |
-| std::set&lt;uint64_t&gt; get_all_record_numbers(); // deprecated |
-| std::set&lt;daqdataformats::trigger_number_t&gt; get_all_trigger_record_numbers(); // deprecated |
-| std::set&lt;daqdataformats::timeslice_number_t&gt; get_all_timeslice_numbers(); // deprecated |
-| std::vector&lt;std::string&gt; get_record_header_dataset_paths(); |
-| std::vector&lt;std::string&gt; get_trigger_record_header_dataset_paths(); |
-| std::vector&lt;std::string&gt; get_timeslice_header_dataset_paths(); |
-| std::string get_record_header_dataset_path(const record_id_t& rid); |
+| template&lt;typename T&gt; void write_attribute(const std::string& name, T value) |
+| template&lt;typename T&gt; void write_attribute(HighFive::Group& grp, const std::string& name, T value) |
+| template&lt;typename T&gt; void write_attribute(HighFive::DataSet& dset, const std::string& name, T value) |
+| template&lt;typename T&gt; T get_attribute(const std::string& name) |
+| template&lt;typename T&gt; T get_attribute(const HighFive::Group& grp, const std::string& name) |
+| template&lt;typename T&gt; T get_attribute(const HighFive::DataSet& dset, const std::string& name) |
+| std::vector&lt;std::string&gt; get_dataset_paths(std::string top_level_group_name = "") |
+| record_id_set get_all_record_ids() |
+| record_id_set get_all_trigger_record_ids() |
+| record_id_set get_all_timeslice_ids() |
+| std::set&lt;uint64_t&gt; get_all_record_numbers() // deprecated |
+| std::set&lt;daqdataformats::trigger_number_t&gt; get_all_trigger_record_numbers() // deprecated |
+| std::set&lt;daqdataformats::timeslice_number_t&gt; get_all_timeslice_numbers() // deprecated |
+| std::vector&lt;std::string&gt; get_record_header_dataset_paths() |
+| std::vector&lt;std::string&gt; get_trigger_record_header_dataset_paths() |
+| std::vector&lt;std::string&gt; get_timeslice_header_dataset_paths() |
+| std::string get_record_header_dataset_path(record_id_t& rid) |
 | std::string get_record_header_dataset_path(uint64_t rec_num, daqdataformats::sequence_number_t seq_num; |
-| std::string get_trigger_record_header_dataset_path(const record_id_t& rid); |
-| std::string get_trigger_record_header_dataset_path(daqdataformats::trigger_number_t trig_num, daqdataformats::sequence_number_t seq_num);
-| std::string get_timeslice_header_dataset_path(const record_id_t& rid); |
-| std::string get_timeslice_header_dataset_path(const daqdataformats::timeslice_number_t trig_num); |
-| std::vector&lt;std::string&gt; get_all_fragment_dataset_paths(); |
-| std::vector&lt;std::string&gt; get_fragment_dataset_paths(const record_id_t& rid); |
-| std::vector&lt;std::string&gt; get_fragment_dataset_paths(uint64_t rec_num, daqdataformats::sequence_number_t seq_num); |
-| std::unique_ptr&lt;char[]&gt; get_dataset_raw_data(const std::string& dataset_path) |
-| std::unique_ptr<daqdataformats::Fragment>            get_frag_ptr(const std::string& dataset_name) |
-| std::unique_ptr<daqdataformats::TriggerRecordHeader> get_trh_ptr(const std::string& dataset_name) |
-| std::unique_ptr<daqdataformats::TimeSliceHeader>     get_tsh_ptr(const std::string& dataset_name) |
+| std::string get_trigger_record_header_dataset_path(record_id_t& rid) |
+| std::string get_trigger_record_header_dataset_path(daqdataformats::trigger_number_t trig_num, daqdataformats::sequence_number_t seq_num)
+| std::string get_timeslice_header_dataset_path(record_id_t& rid) |
+| std::string get_timeslice_header_dataset_path(daqdataformats::timeslice_number_t trig_num) |
+| std::vector&lt;std::string&gt; get_all_fragment_dataset_paths() |
+| std::vector&lt;std::string&gt; get_fragment_dataset_paths(record_id_t& rid) |
+| std::vector&lt;std::string&gt; get_fragment_dataset_paths(uint64_t rec_num, daqdataformats::sequence_number_t seq_num) |
+| std::unique_ptr&lt;char[]&gt; get_dataset_raw_data(std::string& dataset_path) |
+| std::unique_ptr&lt;daqdataformats::Fragment&gt;            get_frag_ptr(std::string& dataset_name) |
+| std::unique_ptr&lt;daqdataformats::TriggerRecordHeader&gt; get_trh_ptr(std::string& dataset_name) |
+| std::unique_ptr&lt;daqdataformats::TimeSliceHeader&gt;     get_tsh_ptr(std::string& dataset_name) |
+| std::unique_ptr&lt;daqdataformats::TriggerRecordHeader&gt; get_trh_ptr(record_id_t& rid) |
+| std::unique_ptr&lt;daqdataformats::TriggerRecordHeader&gt; get_trh_ptr(daqdataformats::trigger_number_t trig_num, daqdataformats::sequence_number_t seq_num) |
+| std::unique_ptr&lt;daqdataformats::TimeSliceHeader&gt; get_tsh_ptr(record_id_t& rid) |
+| std::unique_ptr&lt;daqdataformats::TimeSliceHeader&gt; get_tsh_ptr(daqdataformats::timeslice_number_t ts_num) |
+| daqdataformats::TriggerRecord get_trigger_record(record_id_t rid) |
+| daqdataformats::TriggerRecord get_trigger_record(daqdataformats::trigger_number_t trig_num,daqdataformats::sequence_number_t seq_num = 0) |
+| daqdataformats::TimeSlice get_timeslice(record_id_t rid) |
+| daqdataformats::TimeSlice get_timeslice(daqdataformats::timeslice_number_t ts_num) |
 
 
 ### `HDF5RawDataFile` C++ interface changes between file format version 2 and version 3:
@@ -73,11 +81,16 @@ Note that in some cases, some of the detail of a method signature may have been 
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(vector&lt;string&gt; frag_dataset_paths) | std::set&lt;uint64_t&gt; get_geo_ids(vector&lt;string&gt; frag_dataset_paths) |
 | std::set&lt;daqdataformats::GeoID&gt; get_all_geo_ids() | std::set&lt;uint64_t&gt; get_all_geo_ids() | 
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(record_id_t rid) | std::set&lt;uint64_t&gt; get_geo_ids(record_id_t rid) |
-| std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, const daqdataformats::sequence_number_t seq_num | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, const daqdataformats::sequence_number_t seq_num |
+| std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num |
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(record_id_t, daqdataformats::GeoID::SystemType) | std::set&lt;uint64_t&gt; get_geo_ids(record_id_t, detdataformats::DetID::Subdetector) | 
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(record_id_t, string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(record_id_t, string subdetector_name)
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID::SystemType type) | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector subdet)
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string subdetector_name) |
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(daqdataformats::GeoID::SystemType type) | std::set&lt;uint64_t&gt; get_geo_ids(detdataformats::DetID::Subdetector subdet) | 
 | std::set&lt;daqdataformats::GeoID&gt; get_geo_ids(std::string typestring) | std::set&lt;uint64_t&gt; get_geo_ids(std::string subdetector_name) |
-
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, daqdataformats::GeoID element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, uint64_t geoid) |
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, uint64_t geo_id) | 
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, daqdataformats::GeoID::SystemType type, uint16_t region_id, uint32_t element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, detdataformats::DetID::Subdetector det_id, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID::SystemType type, uint16_t region_id, uint32_t element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector det_id, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, string typestring, uint16_t region_id, uint32_t element_id) |unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(record_id_t rid, string subdetector_name, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
+| unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string typestring, uint16_t region_id, uint32_t element_id) | unique_ptr&lt;daqdataformats::Fragment&gt; get_frag_ptr(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string subdetector_name, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
