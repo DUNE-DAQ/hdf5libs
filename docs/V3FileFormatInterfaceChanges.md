@@ -6,6 +6,8 @@ The changes associated with the introduction of _SourceIDs_ in _dunedaq-v3.2.0_ 
 
 Many of the methods in the `HDF5RawDataFile` interface do *not* change for file layout version 3, and those are listed in the first table below.  The second table has rows that list each of the methods that *have* changed and the new method signature.  And, the third table lists new methods that become available with the introduction of SourceIDs in the DAQ data.
 
+Note that type `record_id_t` is defined as `std::pair<uint64_t, daqdataformats::sequence_number_t>`.
+
 ### `HDF5RawDataFile` C++ methods that did *not* change between file format version 2 and version 3
 
 Note that in some cases, some of the detail of a method signature may have been omitted to save space (e.g. `const` declarations, full namespace details, etc.)  Please see the latest version of the `HDF5RawDataFile.hpp` header file for the full details.
@@ -57,4 +59,20 @@ Note that in some cases, some of the detail of a method signature may have been 
 | (public) void write(TriggerRecordHeader&) | (private) HighFive::Group write(TriggerRecordHeader&, HDF5SourceIDHandler::source_id_path_map_t&) |
 | (public) void write(TimeSliceHeader&) | (private) HighFive::Group write(TimeSliceHeader&, HDF5SourceIDHandler::source_id_path_map_t&) |
 | (public) void write(Fragment&) | (private) HighFive::Group write(Fragment&, HDF5SourceIDHandler::source_id_path_map_t&) |
+  
+| vector<string> get_fragment_dataset_paths(daqdataformats::GeoID::SystemType type) | vector<string> get_fragment_dataset_paths(detdataformats::DetID::Subdetector subdet) |
+
+| vector<string> get_fragment_dataset_paths(std::string typestring) | vector<string> get_fragment_dataset_paths(string& subdetector_name) |
+  
+| vector<string> get_fragment_dataset_paths(record_id_t, daqdataformats::GeoID::SystemType) | vector<string> get_fragment_dataset_paths(record_id_t, detdataformats::DetID::Subdetector) |
+
+| vector<string> get_fragment_dataset_paths(record_id_t, std::string typestring) | vector<string> get_fragment_dataset_paths(record_id_t, string& subdetector_name) |
+
+
+| vector<string> get_fragment_dataset_paths(daqdataformats::GeoID element_id) | 
+
+| vector<string> get_fragment_dataset_paths(daqdataformats::GeoID::SystemType type, uint16_t region_id, uint32_t element_id) |
+
+| vector<string> get_fragment_dataset_paths(string typestring, uint16_t region_id, uint32_t element_id) | 
+
 
