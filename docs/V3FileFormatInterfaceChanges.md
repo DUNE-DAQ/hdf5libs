@@ -66,3 +66,12 @@ Note that in some cases, some of the detail of a method signature may have been 
 | vector&lt;string&gt; get_fragment_dataset_paths(daqdataformats::GeoID element_id) | vector&lt;string&gt; get_fragment_dataset_paths(uint64_t geoid) | 
 | vector&lt;string&gt; get_fragment_dataset_paths(daqdataformats::GeoID::SystemType type, uint16_t region_id, uint32_t element_id) | vector&lt;string&gt; get_fragment_dataset_paths(detdataformats::DetID::Subdetector det_id, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
 | vector&lt;string&gt; get_fragment_dataset_paths(string typestring, uint16_t region_id, uint32_t element_id) | vector&lt;string&gt; get_fragment_dataset_paths(std::string subdetector_name, uint16_t det_crate, uint16_t det_slot, uint16_t det_link) |
+| std::set<daqdataformats::GeoID> get_geo_ids(vector<string> frag_dataset_paths) | std::set<uint64_t> get_geo_ids(vector<string> frag_dataset_paths) |
+| std::set<daqdataformats::GeoID> get_all_geo_ids() | std::set<uint64_t> get_all_geo_ids() | 
+| std::set<daqdataformats::GeoID> get_geo_ids(record_id_t rid) | std::set<uint64_t> get_geo_ids(record_id_t rid) |
+| std::set<daqdataformats::GeoID> get_geo_ids(uint64_t rec_num, const daqdataformats::sequence_number_t seq_num | std::set<uint64_t> get_geo_ids(uint64_t rec_num, const daqdataformats::sequence_number_t seq_num |
+| std::set<daqdataformats::GeoID> get_geo_ids(record_id_t, daqdataformats::GeoID::SystemType) | std::set<uint64_t> get_geo_ids(record_id_t, detdataformats::DetID::Subdetector) | 
+| std::set<daqdataformats::GeoID> get_geo_ids(record_id_t, string typestring) | std::set<uint64_t> get_geo_ids(record_id_t, string subdetector_name)
+| std::set<daqdataformats::GeoID> get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, daqdataformats::GeoID::SystemType type) | std::set<uint64_t> get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, detdataformats::DetID::Subdetector subdet)
+| std::set<daqdataformats::GeoID> get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string typestring) | std::set<uint64_t> get_geo_ids(uint64_t rec_num, daqdataformats::sequence_number_t seq_num, string subdetector_name) |
+
