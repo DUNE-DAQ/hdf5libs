@@ -105,8 +105,6 @@ main(int argc, char** argv)
   //  TLOG() << ss.str();
   //  ss.str("");
 
-#if 0
-  // 11-Aug-2022, KAB: what value do we get from seeing the header dataset paths?
   auto all_rh_paths = h5_raw_data_file.get_record_header_dataset_paths();
   ss << "\nAll record header datasets found:";
   for (auto const& path : all_rh_paths)
@@ -166,9 +164,9 @@ main(int argc, char** argv)
       ss << "\n\t" << *tsh_ptr;
     }
 
-    for (auto const& sid : h5_raw_data_file.get_source_ids(rid)) {
-      // ss << "\n\t" << sid << ": ";
-      auto frag_ptr = h5_raw_data_file.get_frag_ptr(rid, sid);
+    for (auto const& gid : h5_raw_data_file.get_geo_ids(rid)) {
+      // ss << "\n\t" << gid << ": ";
+      auto frag_ptr = h5_raw_data_file.get_frag_ptr(rid, gid);
       ss << "\n\t" << frag_ptr->get_header();
     }
 
@@ -213,7 +211,6 @@ main(int argc, char** argv)
     TLOG() << ss.str();
     ss.str("");
   }
-#endif
 
   return 0;
 } // NOLINT
