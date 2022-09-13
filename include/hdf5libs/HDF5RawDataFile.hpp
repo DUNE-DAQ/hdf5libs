@@ -191,30 +191,26 @@ public:
   std::set<daqdataformats::trigger_number_t> get_all_trigger_record_numbers();
   std::set<daqdataformats::timeslice_number_t> get_all_timeslice_numbers();
 
-#if 0
   std::vector<std::string> get_record_header_dataset_paths();
   std::vector<std::string> get_trigger_record_header_dataset_paths();
   std::vector<std::string> get_timeslice_header_dataset_paths();
 
   std::string get_record_header_dataset_path(const record_id_t& rid);
   std::string get_record_header_dataset_path(const uint64_t rec_num, // NOLINT (build/unsigned)
-  const daqdataformats::sequence_number_t seq_num = 0);
+                                             const daqdataformats::sequence_number_t seq_num = 0);
   std::string get_trigger_record_header_dataset_path(const record_id_t& rid);
   std::string get_trigger_record_header_dataset_path(const daqdataformats::trigger_number_t trig_num,
-  const daqdataformats::sequence_number_t seq_num = 0);
+                                                     const daqdataformats::sequence_number_t seq_num = 0);
   std::string get_timeslice_header_dataset_path(const record_id_t& rid);
   std::string get_timeslice_header_dataset_path(const daqdataformats::timeslice_number_t trig_num);
-#endif
 
   // get all fragment dataset paths
   std::vector<std::string> get_all_fragment_dataset_paths();
 
-#if 0
   // get all fragment dataset paths for given record ID
   std::vector<std::string> get_fragment_dataset_paths(const record_id_t& rid);
   std::vector<std::string> get_fragment_dataset_paths(const uint64_t rec_num, // NOLINT (build/unsigned)
-  const daqdataformats::sequence_number_t seq_num = 0);
-#endif
+                                                      const daqdataformats::sequence_number_t seq_num = 0);
 
   // get all fragment dataset paths for a Subsystem
   std::vector<std::string> get_fragment_dataset_paths(const daqdataformats::SourceID::Subsystem subsystem);
@@ -239,6 +235,17 @@ public:
   // get a list of all the source ids anywhere in the file
   std::set<daqdataformats::SourceID> get_all_source_ids() { return get_source_ids(get_all_fragment_dataset_paths()); }
 #endif
+
+  //get a list of all the geo ids anywhere in the file
+  std::set<uint64_t> get_all_geo_ids(); // NOLINT(build/unsigned)
+
+  //get GeoIDs in a record
+  std::set<uint64_t> get_geo_ids(const record_id_t rid); // NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                 const daqdataformats::sequence_number_t seq_num = 0)
+  {
+    return get_geo_ids(std::make_pair(rec_num, seq_num));
+  }
 
   // get SourceIDs in a record
   std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid);
@@ -385,17 +392,15 @@ public:
     return get_tsh_ptr(std::make_pair(ts_num, 0));
   }
 
-#if 0
+  daqdataformats::TriggerRecord get_trigger_record(const record_id_t& rid);
   daqdataformats::TriggerRecord get_trigger_record(const daqdataformats::trigger_number_t trig_num,
-                                                   const daqdataformats::sequence_number_t seq_num = 0);
-  daqdataformats::TriggerRecord get_trigger_record(const record_id_t& rid)
+                                                   const daqdataformats::sequence_number_t seq_num = 0)
   {
-    return get_trigger_record(rid.first, rid.second);
+    return get_trigger_record(std::make_pair(trig_num, seq_num));
   }
 
   daqdataformats::TimeSlice get_timeslice(const daqdataformats::timeslice_number_t ts_num);
   daqdataformats::TimeSlice get_timeslice(record_id_t rid) { return get_timeslice(rid.first); }
-#endif
 
   std::vector<uint64_t> get_geo_ids_for_source_id(const record_id_t& rid, // NOLINT(build/unsigned)
                                                   const daqdataformats::SourceID& source_id);
