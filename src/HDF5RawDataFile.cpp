@@ -831,7 +831,7 @@ HDF5RawDataFile::get_all_geo_ids()
 }
 
 std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_geo_ids(const record_id_t rid)
+HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
 {
   auto rec_id = get_all_record_ids().find(rid);
   if (rec_id == get_all_record_ids().end())
