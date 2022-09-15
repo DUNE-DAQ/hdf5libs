@@ -8,6 +8,7 @@ import os
 import sys
 
 
+FILELAYOUT_VERSION = 3
 # detdataformats/include/detdataformats/DetID.hpp
 DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
             4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
@@ -70,6 +71,11 @@ class DAQDataFile:
         self.record_type = 'TriggerRecord'
         self.clock_speed_hz = 50000000.0
         self.records = []
+        if 'filelayout_version' in self.h5file.attrs.keys() and \
+                self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
+            print(f"INFO: input file matches the supported file layout version: {FILELAYOUT_VERSION}")
+        else:
+            sys.exit(f"ERROR: HDF5 file {self.name} with file layout version {FILELAYOUT_VERSION} is not supported!")
         if 'record_type' in self.h5file.attrs.keys():
             self.record_type = self.h5file.attrs['record_type']
         for i in self.h5file.keys():
