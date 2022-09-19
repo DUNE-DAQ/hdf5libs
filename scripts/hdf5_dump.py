@@ -40,7 +40,7 @@ DATA_FORMAT = {
     },
     # daqdataformats/include/daqdataformats/FragmentHeader.hpp
     "Fragment Header":{
-        "keys": ['Marker word', 'Version', 'Fragment zize', 'Trigger number',      # I I Q Q
+        "keys": ['Marker word', 'Version', 'Fragment size', 'Trigger number',      # I I Q Q
                  'Trigger timestamp', 'Window begin', 'Window end', 'Run number',  # Q Q Q I
                  'Error bits', 'Fragment type', 'Sequence number',                 # I I H
                  'Detector',                                                       # H
@@ -63,9 +63,12 @@ class DAQDataFile:
     def __init__(self, name):
         self.name = name
         if os.path.exists(self.name):
-            self.h5file = h5py.File(self.name, 'r')
+            try:
+                self.h5file = h5py.File(self.name, 'r')
+            except OSError:
+                sys.exit(f"ERROR: file \"{self.name}\" couldn't be opened; is it an HDF5 file?")
         else:
-            sys.exit(f"ERROR: HDF5 file {self.name} is not found!")
+            sys.exit(f"ERROR: HDF5 file \"{self.name}\" is not found!")
         # Assume HDf5 files without file attributes field "record_type"
         # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
@@ -75,7 +78,7 @@ class DAQDataFile:
                 self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
             print(f"INFO: input file matches the supported file layout version: {FILELAYOUT_VERSION}")
         else:
-            sys.exit(f"ERROR: HDF5 file {self.name} with file layout version {FILELAYOUT_VERSION} is not supported!")
+            sys.exit(f"ERROR: this script expects a file layout version {FILELAYOUT_VERSION} but this wasn't confirmed in the HDF5 file \"{self.name}\"")
         if 'record_type' in self.h5file.attrs.keys():
             self.record_type = self.h5file.attrs['record_type']
         for i in self.h5file.keys():
@@ -85,7 +88,10 @@ class DAQDataFile:
             self.records.append(record)
 
     def __del__(self):
-        self.h5file.close()
+        try:
+            self.h5file.close()
+        except:
+            pass  # OK if the file was never opened
 
     def set_clock_speed_hz(self, k_clock_speed_hz):
         self.clock_speed_hz = k_clock_speed_hz
@@ -286,7 +292,7 @@ def parse_args():
                         default=0)
 
     parser.add_argument('-s', '--speed-of-clock', type=float,
-                        help='''specify clock spped in Hz, default is
+                        help='''specify clock speed in Hz, default is
                         50000000.0 (50MHz)''',
                         default=50000000.0)
 

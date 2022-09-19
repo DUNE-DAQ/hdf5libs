@@ -101,7 +101,7 @@ def parse_args():
                         default=0)
 
     parser.add_argument('-s', '--speed-of-clock', type=float,
-                        help='''specify clock spped in Hz, default is
+                        help='''specify clock speed in Hz, default is
                         50000000.0 (50MHz)''',
                         default=50000000.0)
 
