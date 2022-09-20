@@ -145,7 +145,8 @@ create_timeslice(int ts_num)
     fh.window_end = timestamp;
     fh.run_number = run_number;
     fh.fragment_type = 0;
-    fh.fragment_type = static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kWIB);
+    fh.fragment_type =
+      static_cast<dunedaq::daqdataformats::fragment_type_t>(dunedaq::daqdataformats::FragmentType::kWIB);
     fh.sequence_number = 0;
     fh.detector_id = static_cast<uint16_t>(dunedaq::detdataformats::DetID::Subdetector::kHD_TPC);
     fh.element_id =
@@ -351,8 +352,8 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
 
   // clean up the files that were created
-  //delete_files_matching_pattern(file_path, hdf5_filename);
-  //delete_files_matching_pattern(file_path, hw_map_file);
+  delete_files_matching_pattern(file_path, hdf5_filename);
+  delete_files_matching_pattern(file_path, hw_map_file);
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
@@ -449,8 +450,8 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
 
   // clean up the files that were created
-  //delete_files_matching_pattern(file_path, hdf5_filename);
-  //delete_files_matching_pattern(file_path, hw_map_file);
+  delete_files_matching_pattern(file_path, hdf5_filename);
+  delete_files_matching_pattern(file_path, hw_map_file);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
