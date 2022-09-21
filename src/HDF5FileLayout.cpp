@@ -135,8 +135,8 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TimeSliceHeader& tsh) co
   // then the RawData group name
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
-  // then the SourceID
-  path_elements.push_back(tsh.element_id.to_string());
+  // then the SourceID plus record header name
+  path_elements.push_back(tsh.element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
 
   return path_elements;
 }
