@@ -13,7 +13,7 @@ FILELAYOUT_VERSION = 3
 DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
             4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
             10: 'VD_BottomTPC', 11: 'VD_TopTPC',
-            32: 'ND_LAr', 33: 'ND_GAr'}
+            32: 'NDLAr_TPC', 33: 'NDLAr_PDS', 'ND_GAr': 34}
 
 # daqdataformats/include/daqdataformats/SourceID.hpp
 SUBSYSTEM = {0: 'Unknown', 1: 'DetectorReadout', 2: 'HwSignalsInterface',
