@@ -65,7 +65,7 @@ void
 HDF5SourceIDHandler::fetch_file_level_geo_id_info(const HighFive::File& h5_file,
                                                   source_id_geo_id_map_t& source_id_geo_id_map)
 {
-  if (m_version == 3) {
+  if (m_version >= 3) {
     try {
       std::string map_string = get_attribute<HighFive::File, std::string>(h5_file, "source_id_geo_id_map");
       parse_json_string(map_string, source_id_geo_id_map);
@@ -78,8 +78,8 @@ void
 HDF5SourceIDHandler::fetch_record_level_geo_id_info(const HighFive::Group& /*record_group*/,
                                                     source_id_geo_id_map_t& /*source_id_geo_id_map*/)
 {
-  // In version 3, there is no record-level geo_id information stored in the file
-  if (m_version == 3) {
+  // In versions 3 and 4, there is no record-level geo_id information stored in the file
+  if (m_version >= 3) {
     return;
   }
 }
@@ -88,7 +88,7 @@ daqdataformats::SourceID
 HDF5SourceIDHandler::fetch_record_header_source_id(const HighFive::Group& record_group)
 {
   daqdataformats::SourceID source_id;
-  if (m_version == 3) {
+  if (m_version >= 3) {
     try {
       std::string sid_string = get_attribute<HighFive::Group, std::string>(record_group, "record_header_source_id");
       parse_json_string(sid_string, source_id);
@@ -102,7 +102,7 @@ void
 HDF5SourceIDHandler::fetch_source_id_path_info(const HighFive::Group& record_group,
                                                source_id_path_map_t& source_id_path_map)
 {
-  if (m_version == 3) {
+  if (m_version >= 3) {
     try {
       std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "source_id_path_map");
       parse_json_string(map_string, source_id_path_map);
@@ -115,7 +115,7 @@ void
 HDF5SourceIDHandler::fetch_fragment_type_source_id_info(const HighFive::Group& record_group,
                                                         fragment_type_source_id_map_t& fragment_type_source_id_map)
 {
-  if (m_version == 3) {
+  if (m_version >= 3) {
     try {
       std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "fragment_type_source_id_map");
       parse_json_string(map_string, fragment_type_source_id_map);
@@ -128,7 +128,7 @@ void
 HDF5SourceIDHandler::fetch_subdetector_source_id_info(const HighFive::Group& record_group,
                                                       subdetector_source_id_map_t& subdetector_source_id_map)
 {
-  if (m_version == 3) {
+  if (m_version >= 3) {
     try {
       std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "subdetector_source_id_map");
       parse_json_string(map_string, subdetector_source_id_map);
