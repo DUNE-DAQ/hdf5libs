@@ -131,6 +131,10 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_geo_ids),
          "Get all GeoIDs in a record/sequence number")
+    .def("get_geo_ids_for_subdetector",
+         py::overload_cast<const HDF5RawDataFile::record_id_t&,const detdataformats::DetID::Subdetector>
+         (&HDF5RawDataFile::get_geo_ids_for_subdetector),
+         "Get all GeoIDs in a record id with the specified Subdetector type")
     .def("get_source_ids",
          py::overload_cast<const HDF5RawDataFile::record_id_t&>
          (&HDF5RawDataFile::get_source_ids),
