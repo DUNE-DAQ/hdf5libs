@@ -848,6 +848,29 @@ HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
   return set_of_geo_ids;
 }
 
+std::set<uint64_t> // NOLINT(build/unsigned)
+HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
+                                             const detdataformats::DetID::Subdetector subdet)
+{
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  std::set<uint64_t> set_of_geo_ids;
+  for (auto const& map_entry : m_source_id_geo_id_cache[rid]) {
+    for (auto const& geo_id : map_entry.second) {
+      auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
+      if (geo_info.det_id == static_cast<uint16_t>(subdet)) {
+        set_of_geo_ids.insert(geo_id);
+      }
+    }
+  }
+  return set_of_geo_ids;
+}
+
+
 // get all SourceIDs for given record ID
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids(const record_id_t& rid)
@@ -936,7 +959,7 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 
   auto membuffer = std::make_unique<char[]>(data_size);
   data_set.read(membuffer.get());
-  return std::move(membuffer);
+  return membuffer;
 }
 
 std::unique_ptr<daqdataformats::Fragment>
@@ -945,7 +968,7 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
   auto membuffer = get_dataset_raw_data(dataset_name);
   auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
     membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
-  return std::move(frag_ptr);
+  return frag_ptr;
 }
 
 std::unique_ptr<daqdataformats::Fragment>
@@ -1034,7 +1057,7 @@ HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
   auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.release(), true);
-  return std::move(trh_ptr);
+  return trh_ptr;
 }
 
 std::unique_ptr<daqdataformats::TriggerRecordHeader>
@@ -1059,7 +1082,7 @@ HDF5RawDataFile::get_tsh_ptr(const std::string& dataset_name)
   auto membuffer = get_dataset_raw_data(dataset_name);
   auto tsh_ptr = std::make_unique<daqdataformats::TimeSliceHeader>(
     *(reinterpret_cast<daqdataformats::TimeSliceHeader*>(membuffer.release()))); // NOLINT
-  return std::move(tsh_ptr);
+  return tsh_ptr;
 }
 
 std::unique_ptr<daqdataformats::TimeSliceHeader>
