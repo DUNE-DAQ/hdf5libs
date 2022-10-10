@@ -243,6 +243,26 @@ public:
   {
     return get_geo_ids(std::make_pair(rec_num, seq_num));
   }
+  std::set<uint64_t> get_geo_ids_for_subdetector(const record_id_t& rid, // NOLINT(build/unsigned)
+                                                 const detdataformats::DetID::Subdetector subdet);
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                                 const daqdataformats::sequence_number_t seq_num,
+                                                 const detdataformats::DetID::Subdetector subdet)
+  {
+    return get_geo_ids_for_subdetector(std::make_pair(rec_num, seq_num), subdet);
+  }
+  std::set<uint64_t> get_geo_ids_for_subdetector(const record_id_t& rid, // NOLINT(build/unsigned)
+                                                 const std::string& subdet_name)
+  {
+    detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
+    return get_geo_ids_for_subdetector(rid, subdet);
+  }
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+                                                 const daqdataformats::sequence_number_t seq_num,
+                                                 const std::string& subdet_name)
+  {
+    return get_geo_ids_for_subdetector(std::make_pair(rec_num, seq_num), subdet_name);
+  }
 
   // get SourceIDs in a record
   std::set<daqdataformats::SourceID> get_source_ids(const record_id_t& rid);
