@@ -8,7 +8,7 @@ import os
 import sys
 
 
-FILELAYOUT_VERSION = 3
+FILELAYOUT_VERSION = 4
 # detdataformats/include/detdataformats/DetID.hpp
 DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
             4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
