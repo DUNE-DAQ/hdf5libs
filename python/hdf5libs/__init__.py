@@ -1,7 +1,6 @@
 from ._daq_hdf5libs_py import *
 
-class HDF5RawDataFile(HDF5RawDataFileCPP):
-#    pass
+class HDF5RawDataFile(_HDF5RawDataFile):
 
     #return sorted record numbers here
     def get_all_record_ids(self):
@@ -10,9 +9,3 @@ class HDF5RawDataFile(HDF5RawDataFileCPP):
         return sorted(super().get_all_trigger_record_ids())
     def get_all_timeslice_ids(self):
         return sorted(super().get_all_timeslice_ids())
-
-    #return sorted geo ids too
-    def get_all_geo_ids(self):
-        return sorted(super().get_all_geo_ids())
-    def get_geo_ids(self,*args,**kwargs):
-        return sorted(super().get_geo_ids(*args,**kwargs))

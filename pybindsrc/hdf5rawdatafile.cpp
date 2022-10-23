@@ -24,7 +24,7 @@ void
 register_hdf5rawdatafile(py::module& m)
 {
 
-  py::class_<HDF5RawDataFile>(m, "HDF5RawDataFileCPP")
+  py::class_<HDF5RawDataFile>(m, "_HDF5RawDataFile")
     .def(py::init<std::string>())
 
     .def("get_file_name",
