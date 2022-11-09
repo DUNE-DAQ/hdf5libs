@@ -93,10 +93,10 @@ main(int argc, char** argv)
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 
   std::vector<char> dummy_data(fragment_size);
-
+  double_t start_process_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(system_clock::now().time_since_epoch()).count();
+  double_t time = 0;
   // loop over desired number of triggers
   for (int trig_num = 1; trig_num <= trigger_count; ++trig_num) {
-
     // get a timestamp for this trigger
     uint64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>( // NOLINT(build/unsigned)
                     system_clock::now().time_since_epoch())
@@ -113,6 +113,8 @@ main(int argc, char** argv)
     trh_data.sequence_number = 0;
     trh_data.max_sequence_number = 1;
     trh_data.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 0);
+
+
 
     TriggerRecordHeader trh(&trh_data);
 
@@ -141,14 +143,21 @@ main(int argc, char** argv)
       tr.add_fragment(std::move(frag_ptr));
 
     } // end loop over elements
-
+  double_t start_writing_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(system_clock::now().time_since_epoch()).count();
     // write trigger record to file
     h5_raw_data_file.write(tr);
-
+    double_t stop_writing_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(system_clock::now().time_since_epoch()).count();
+    time = time + (stop_writing_timestamp - start_writing_timestamp)/1000;//microseconds->milliseconds
+  
   } // end loop over triggers
-
+  double_t stop_process_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(system_clock::now().time_since_epoch()).count();
+  double_t process_time = (stop_process_timestamp - start_process_timestamp)/1000;//microseconds->milliseconds
+  double_t rate = h5_raw_data_file.get_recorded_size()/time;
   TLOG() << "Finished writing to file " << h5_raw_data_file.get_file_name();
-  TLOG() << "Recorded size: " << h5_raw_data_file.get_recorded_size();
+  TLOG() << "Writing time is: " << time << " ms";
+  TLOG() << "Process time is: " << process_time << " ms";
+  TLOG() << "Recorded size: " << h5_raw_data_file.get_recorded_size() << " B";
+  TLOG() << "Writing rate is: " << rate << " kB/s";
 
   return 0;
 }
