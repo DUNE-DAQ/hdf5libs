@@ -96,6 +96,8 @@ main(int argc, char** argv)
       auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
     }
+    TLOG() << ss.str();
+    ss.str("");
     std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
     for (auto const& source_id : frag_sid_list) {
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
@@ -115,7 +117,7 @@ main(int argc, char** argv)
         }
       }
     }
-    TLOG() << ss.str();
+    std::cout << ss.str() << std::endl;
     ss.str("");
   }
 
