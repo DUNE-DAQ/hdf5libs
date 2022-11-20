@@ -98,10 +98,13 @@ main(int argc, char** argv)
     }
     TLOG() << ss.str();
     ss.str("");
+    bool first_frag = true;
     std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
     for (auto const& source_id : frag_sid_list) {
+      if (first_frag) {first_frag = false;}
+      else {ss << "\n";}
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
-      ss << "\n\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
+      ss << "\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
          << " has size = " << frag_ptr->get_size();
