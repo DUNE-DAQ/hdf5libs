@@ -17,7 +17,7 @@ void
 HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
                                                    source_id_geo_id_map_t& source_id_geo_id_map)
 {
-  std::vector<detchannelmaps::HardwareMapService::HWInfo> hw_info_list = hw_map_svc->get_all_hw_info();
+  std::vector<detchannelmaps::HardwareMapService::HWInfo> hw_info_list = hw_map_svc->get_hardware_map().link_infos;
   for (auto const& hw_info : hw_info_list) {
     daqdataformats::SourceID source_id(daqdataformats::SourceID::Subsystem::kDetectorReadout, hw_info.dro_source_id);
     add_source_id_geo_id_to_map(source_id_geo_id_map, source_id, hw_info.geo_id);
