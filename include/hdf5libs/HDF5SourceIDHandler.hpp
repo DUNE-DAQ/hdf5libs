@@ -210,8 +210,7 @@ private:
   /**
    * Parses the specified JSON string into the specified fragment_type_source_id_map
    */
-  static void parse_json_string(const std::string& json_string,
-                                fragment_type_source_id_map_t& fragment_type_source_id_map);
+  static void parse_json_string(const std::string& json_string, fragment_type_source_id_map_t& fragment_type_source_id_map);
 
   /**
    * Parses the specified JSON string into the specified subdetector_source_id_map
