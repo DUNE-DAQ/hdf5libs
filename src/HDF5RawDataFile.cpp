@@ -818,7 +818,7 @@ HDF5RawDataFile::get_all_geo_ids()
 {
   std::set<uint64_t> set_of_geo_ids;
   // 13-Sep-2022, KAB
-  // It would be safer, but slower, to fetch all of the geo_ids from the 
+  // It would be safer, but slower, to fetch all of the geo_ids from the
   // individual records, and we'll go with faster, for now.  If/when we
   // change the way that we determine the file-level and record-level
   // source_id-to-geo_id maps, we may need to change this code.
@@ -849,8 +849,7 @@ HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
 }
 
 std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
-                                             const detdataformats::DetID::Subdetector subdet)
+HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
   auto rec_id = get_all_record_ids().find(rid);
   if (rec_id == get_all_record_ids().end())
@@ -869,7 +868,6 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
   }
   return set_of_geo_ids;
 }
-
 
 // get all SourceIDs for given record ID
 std::set<daqdataformats::SourceID>
