@@ -158,9 +158,7 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
   // then the SourceID plus FragmentType
-  path_elements.push_back(
-    fh.element_id.to_string() + "_" +
-    daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
+  path_elements.push_back(fh.element_id.to_string() + "_" + daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
 
   return path_elements;
 }

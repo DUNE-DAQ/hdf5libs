@@ -233,19 +233,19 @@ public:
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
-  // get a list of all the geo ids anywhere in the file
+  //get a list of all the geo ids anywhere in the file
   std::set<uint64_t> get_all_geo_ids(); // NOLINT(build/unsigned)
 
-  // get GeoIDs in a record
+  //get GeoIDs in a record
   std::set<uint64_t> get_geo_ids(const record_id_t& rid); // NOLINT(build/unsigned)
-  std::set<uint64_t> get_geo_ids(const uint64_t rec_num,  // NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
                                  const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_geo_ids(std::make_pair(rec_num, seq_num));
   }
   std::set<uint64_t> get_geo_ids_for_subdetector(const record_id_t& rid, // NOLINT(build/unsigned)
                                                  const detdataformats::DetID::Subdetector subdet);
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const detdataformats::DetID::Subdetector subdet)
   {
@@ -257,7 +257,7 @@ public:
     detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
     return get_geo_ids_for_subdetector(rid, subdet);
   }
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const std::string& subdet_name)
   {
@@ -417,10 +417,7 @@ public:
   }
 
   daqdataformats::TimeSlice get_timeslice(const daqdataformats::timeslice_number_t ts_num);
-  daqdataformats::TimeSlice get_timeslice(const record_id_t& rid)
-  {
-    return get_timeslice(rid.first);
-  }
+  daqdataformats::TimeSlice get_timeslice(const record_id_t& rid) { return get_timeslice(rid.first); }
 
   std::vector<uint64_t> get_geo_ids_for_source_id(const record_id_t& rid, // NOLINT(build/unsigned)
                                                   const daqdataformats::SourceID& source_id);
