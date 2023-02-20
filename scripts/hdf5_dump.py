@@ -73,6 +73,7 @@ class DAQDataFile:
         # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
         self.clock_speed_hz = 50000000.0
+        #self.clock_speed_hz = 56000000.0 #TOAD CHANGE
         self.records = []
         if 'filelayout_version' in self.h5file.attrs.keys() and \
                 self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
@@ -196,11 +197,14 @@ class DAQDataFile:
 
 
 def tick_to_timestamp(ticks, clock_speed_hz):
-    ns = float(ticks)/clock_speed_hz
-    if ns < 3000000000:
-        return datetime.datetime.fromtimestamp(ns)
-    else:
-        return "InvalidDateString"
+    ns = int((float(ticks)/clock_speed_hz))
+    ns_56b = ns >> 8
+    print("clock_speed, ticks, ns, ns_56b:", clock_speed_hz, ticks, ns, ns_56b)
+    return datetime.datetime.fromtimestamp(ns_56b)
+    #if ns < 3000000000:
+    #    return datetime.datetime.fromtimestamp(ns)
+    #else:
+    #    return "InvalidDateString"
 
 
 def unpack_header(data_array, entry_type):
