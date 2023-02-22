@@ -324,6 +324,12 @@ HDF5FileLayout::get_v0_file_layout_params()
   pp.digits_for_element_number = 2;
   flp.path_param_list.push_back(pp);
 
+  pp.detector_group_type = "NDLArPDS";
+  pp.detector_group_name = "NDLArPDS";
+  pp.element_name_prefix = "Element";
+  pp.digits_for_element_number = 2;
+  flp.path_param_list.push_back(pp);
+
   pp.detector_group_type = "DataSelection";
   pp.detector_group_name = "Trigger";
   pp.element_name_prefix = "Element";
