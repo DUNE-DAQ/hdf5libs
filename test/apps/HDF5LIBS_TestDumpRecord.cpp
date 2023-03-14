@@ -108,7 +108,7 @@ main(int argc, char** argv)
            << "It may contain data from the following detector components:";
         std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
         for (auto const& geo_id : geo_id_list) {
-          HardwareMapService::GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+          GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
           ss << "\n\t\t\t"
              << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
              << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
