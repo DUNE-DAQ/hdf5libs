@@ -27,6 +27,11 @@ register_hdf5rawdatafile(py::module& m)
   py::class_<HDF5RawDataFile>(m, "_HDF5RawDataFile")
     .def(py::init<std::string>())
 
+    .def("get_attribute",
+         py::overload_cast<const std::string&>
+         (&HDF5RawDataFile::get_attribute<std::string>),
+         "Get attribute")
+
     .def("get_file_name",
          &HDF5RawDataFile::get_file_name,"Get file name")
     .def("get_recorded_size",
