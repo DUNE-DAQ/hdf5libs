@@ -72,7 +72,7 @@ class DAQDataFile:
         # Assume HDf5 files without file attributes field "record_type"
         # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
-        self.clock_speed_hz = 50000000.0
+        self.clock_speed_hz = 62500000.0
         self.records = []
         if 'filelayout_version' in self.h5file.attrs.keys() and \
                 self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
@@ -293,8 +293,8 @@ def parse_args():
 
     parser.add_argument('-s', '--speed-of-clock', type=float,
                         help='''specify clock speed in Hz, default is
-                        50000000.0 (50MHz)''',
-                        default=50000000.0)
+                        62500000.0 (62.5MHz)''',
+                        default=62500000.0)
 
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 2.0')
