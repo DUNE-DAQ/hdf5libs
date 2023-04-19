@@ -72,7 +72,7 @@ class DAQDataFile:
         # Assume HDf5 files without file attributes field "record_type"
         # are old data files which only contain "TriggerRecord" data.
         self.record_type = 'TriggerRecord'
-        self.clock_speed_hz = 62500000.0
+        self.clock_speed_hz = 50000000.0
         self.records = []
         if 'filelayout_version' in self.h5file.attrs.keys() and \
                 self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
