@@ -15,6 +15,7 @@
 #include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
+#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
@@ -129,6 +130,16 @@ public:
                   std::string application_name,
                   const hdf5filelayout::FileLayoutParams& fl_params,
                   std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
+                  std::string inprogress_filename_suffix = ".writing",
+                  unsigned open_flags = HighFive::File::Create);
+
+  // constructor for writing
+  HDF5RawDataFile(std::string file_name,
+                  daqdataformats::run_number_t run_number,
+                  size_t file_index,
+                  std::string application_name,
+                  const hdf5filelayout::FileLayoutParams& fl_params,
+                  hdf5rawdatafile::SourceGeoIDMap srcid_geoid_map,
                   std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 

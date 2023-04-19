@@ -8,8 +8,10 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 #include "hdf5libs/hdf5filelayout/Structs.hpp"
+#include "hdf5libs/hdf5filelayout/Nljs.hpp"
+#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
+#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -114,6 +116,93 @@ create_hardware_map_file(const std::string& filename)
   tmpfile << "6 0 1 1 2 np04-srv-017 0 0 2\n";
   tmpfile << "7 1 1 1 2 np04-srv-017 0 0 3\n";
   tmpfile.close();
+}
+
+
+hdf5rawdatafile::SourceGeoIDMap
+create_srcid_geoid_map(){
+  using nlohmann::json;
+
+  hdf5rawdatafile::SourceGeoIDMap map;
+  json srcid_geoid_map = json::parse(R"(
+    [
+    {
+      "source_id": 0,
+      "geo_id": {
+        "det_id": 3,
+        "crate_id": 1,
+        "slot_id": 0,
+        "stream_id": 0
+      }
+    },
+    {
+      "source_id": 1,
+      "geo_id": {
+        "det_id": 3,
+        "crate_id": 1,
+        "slot_id": 0,
+        "stream_id": 1
+      }
+    },
+    {
+      "source_id": 3,
+      "geo_id": {
+        "det_id": 3,
+        "crate_id": 1,
+        "slot_id": 1,
+        "stream_id": 0
+      }
+    },
+    {
+      "source_id": 4,
+      "geo_id": {
+        "det_id": 3,
+        "crate_id": 1,
+        "slot_id": 1,
+        "stream_id": 1
+      }
+    },
+    {
+      "source_id": 4,
+      "geo_id": {
+        "det_id": 2,
+        "crate_id": 1,
+        "slot_id": 0,
+        "stream_id": 0
+      }
+    },
+    {
+      "source_id": 5,
+      "geo_id": {
+        "det_id": 2,
+        "crate_id": 1,
+        "slot_id": 0,
+        "stream_id": 1
+      }
+    },
+    {
+      "source_id": 6,
+      "geo_id": {
+        "det_id": 2,
+        "crate_id": 1,
+        "slot_id": 1,
+        "stream_id": 0
+      }
+    },
+    {
+      "source_id": 7,
+      "geo_id": {
+        "det_id": 2,
+        "crate_id": 1,
+        "slot_id": 1,
+        "stream_id": 1
+      }
+    }
+  ]
+  )");
+
+  return srcid_geoid_map.get<hdf5rawdatafile::SourceGeoIDMap>();
+  
 }
 
 dunedaq::daqdataformats::TriggerRecord
@@ -265,15 +354,26 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   hdf5filelayout::data_t flp_json_in;
   hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
 
-  // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
+  // // create the hardware map service
+  // create_hardware_map_file(file_path + "/" + hw_map_file);
+  // std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+  //   new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
 
+  // // create the file
+  // std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
+  //   file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_json_in, hw_map_service));
+
+
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_json_in, hw_map_service));
-
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  flp_json_in,
+                                                                  srcid_geoid_map));
+                                                                  
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
     h5file_ptr->write(create_trigger_record(trigger_number));
@@ -320,18 +420,27 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   delete_files_matching_pattern(file_path, hw_map_file);
 
   // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
+  // create_hardware_map_file(file_path + "/" + hw_map_file);
+  // std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+  //   new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
 
+  // // create the file
+  // std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+  //                                                                 run_number,
+  //                                                                 file_index,
+  //                                                                 application_name,
+  //                                                                 create_file_layout_params(),
+  //                                                                 hw_map_service));
+
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
                                                                   run_number,
                                                                   file_index,
                                                                   application_name,
                                                                   create_file_layout_params(),
-                                                                  hw_map_service));
-
+                                                                  srcid_geoid_map));
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
     h5file_ptr->write(create_trigger_record(trigger_number));
