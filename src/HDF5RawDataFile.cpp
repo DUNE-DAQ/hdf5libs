@@ -90,7 +90,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  size_t file_index,
                                  std::string application_name,
                                  const hdf5filelayout::FileLayoutParams& fl_params,
-                                 hdf5rawdatafile::SourceGeoIDMap srcid_geoid_map,
+                                 hdf5rawdatafile::SrcGeoIDMap srcid_geoid_map,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)

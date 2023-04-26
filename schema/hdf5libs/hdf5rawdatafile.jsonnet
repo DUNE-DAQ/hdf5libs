@@ -17,11 +17,11 @@ local types = {
         doc="Geographic ID structure"),
 
     src_geo_id_entry : s.record("SrcGeoIDEntry", [
-        s.field("source_id", self.size, 0, doc="Source ID"),
+        s.field("src_id", self.size, 0, doc="Source ID"),
         s.field("geo_id", self.geo_id_params, doc="Geo ID")
     ], doc="Source GetoID Map entry"),
 
-    src_geo_id_map : s.sequence("SourceGeoIDMap", self.src_geo_id_entry, doc="Source to GeoID map" ),
+    src_geo_id_map : s.sequence("SrcGeoIDMap", self.src_geo_id_entry, doc="Source to GeoID map" ),
 
 };
 

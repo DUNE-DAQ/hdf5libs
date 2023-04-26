@@ -119,11 +119,11 @@ create_hardware_map_file(const std::string& filename)
 }
 
 
-hdf5rawdatafile::SourceGeoIDMap
+hdf5rawdatafile::SrcGeoIDMap
 create_srcid_geoid_map(){
   using nlohmann::json;
 
-  hdf5rawdatafile::SourceGeoIDMap map;
+  hdf5rawdatafile::SrcGeoIDMap map;
   json srcid_geoid_map = json::parse(R"(
     [
     {
@@ -201,7 +201,7 @@ create_srcid_geoid_map(){
   ]
   )");
 
-  return srcid_geoid_map.get<hdf5rawdatafile::SourceGeoIDMap>();
+  return srcid_geoid_map.get<hdf5rawdatafile::SrcGeoIDMap>();
   
 }
 
