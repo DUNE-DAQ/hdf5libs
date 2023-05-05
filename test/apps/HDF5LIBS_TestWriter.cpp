@@ -11,9 +11,12 @@
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
 #include "hdf5libs/hdf5filelayout/Nljs.hpp"
+#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -79,8 +82,17 @@ main(int argc, char** argv)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // create the HardwareMapService
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
+  // std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+  //   new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
+
+  std::ifstream f(hw_map_file_name);
+  nlohmann::json data = nlohmann::json::parse(f);
+
+  // hdf5rawdatafile::SrcGeoIDMap srcid_geoid_map;
+  // for (nlohmann::json::iterator it = data.begin(); it != data.end(); ++it) {
+  //   srcid_geoid_map.push_back(it->get<hdf5rawdatafile::SrcGeoIDEntry>())
+  // }
+  auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcGeoIDMap>();
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
@@ -88,7 +100,7 @@ main(int argc, char** argv)
                                                      file_index, // file_index,
                                                      app_name,   // app_name
                                                      fl_conf,    // file_layout_confs
-                                                     hw_map_service,
+                                                     srcid_geoid_map,
                                                      ".writing", // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 

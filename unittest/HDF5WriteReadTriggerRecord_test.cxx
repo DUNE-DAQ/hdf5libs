@@ -527,17 +527,28 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   delete_files_matching_pattern(file_path, hdf5_filename);
   delete_files_matching_pattern(file_path, hw_map_file);
 
-  // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
+  // // create the hardware map service
+  // create_hardware_map_file(file_path + "/" + hw_map_file);
+  // std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
+  //   new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
 
   auto fl_pars = create_file_layout_params();
   fl_pars.digits_for_sequence_number = 4;
 
+
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, hw_map_service));
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  fl_pars,
+                                                                  srcid_geoid_map));
+
+  // create the file
+  // std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
+  //   file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, hw_map_service));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)

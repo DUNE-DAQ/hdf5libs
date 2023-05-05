@@ -14,16 +14,16 @@
 namespace dunedaq {
 namespace hdf5libs {
 
-void
-HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
-                                                   source_id_geo_id_map_t& source_id_geo_id_map)
-{
-  std::vector<detchannelmaps::HWInfo> hw_info_list = hw_map_svc->get_hardware_map().link_infos;
-  for (auto const& hw_info : hw_info_list) {
-    daqdataformats::SourceID source_id(daqdataformats::SourceID::Subsystem::kDetectorReadout, hw_info.dro_source_id);
-    add_source_id_geo_id_to_map(source_id_geo_id_map, source_id, detchannelmaps::HardwareMapService::get_geo_id(hw_info));
-  }
-}
+// void
+// HDF5SourceIDHandler::populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
+//                                                    source_id_geo_id_map_t& source_id_geo_id_map)
+// {
+//   std::vector<detchannelmaps::HWInfo> hw_info_list = hw_map_svc->get_hardware_map().link_infos;
+//   for (auto const& hw_info : hw_info_list) {
+//     daqdataformats::SourceID source_id(daqdataformats::SourceID::Subsystem::kDetectorReadout, hw_info.dro_source_id);
+//     add_source_id_geo_id_to_map(source_id_geo_id_map, source_id, detchannelmaps::HardwareMapService::get_geo_id(hw_info));
+//   }
+// }
 
 void 
 HDF5SourceIDHandler::populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcGeoIDMap  src_id_geo_id_mp_struct,
@@ -32,7 +32,8 @@ HDF5SourceIDHandler::populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdat
 
   for( auto const& entry : src_id_geo_id_mp_struct ) {
     daqdataformats::SourceID source_id(daqdataformats::SourceID::Subsystem::kDetectorReadout, entry.src_id);
-      uint64_t geoid = (static_cast<uint64_t>(entry.geo_id.stream_id) << 48) | (static_cast<uint64_t>(entry.geo_id.slot_id) << 32) | (static_cast<uint64_t>(entry.geo_id.crate_id) << 16) | entry.geo_id.det_id;
+    // FIXME: replace with a proper coder/decoder
+    uint64_t geoid = (static_cast<uint64_t>(entry.geo_id.stream_id) << 48) | (static_cast<uint64_t>(entry.geo_id.slot_id) << 32) | (static_cast<uint64_t>(entry.geo_id.crate_id) << 16) | entry.geo_id.det_id;
     add_source_id_geo_id_to_map(source_id_geo_id_map, source_id, geoid);
   }
 }

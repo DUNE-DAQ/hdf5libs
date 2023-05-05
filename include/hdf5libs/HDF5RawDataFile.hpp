@@ -20,7 +20,6 @@
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
-#include "detchannelmaps/HardwareMapService.hpp"
 
 // External Packages
 #include <highfive/H5DataSet.hpp>
@@ -122,16 +121,6 @@ public:
   // that is a pair of the trigger record or timeslice number and sequence number
   typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
   typedef std::set<record_id_t, std::less<>> record_id_set;
-
-  // constructor for writing
-  HDF5RawDataFile(std::string file_name,
-                  daqdataformats::run_number_t run_number,
-                  size_t file_index,
-                  std::string application_name,
-                  const hdf5filelayout::FileLayoutParams& fl_params,
-                  std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
-                  std::string inprogress_filename_suffix = ".writing",
-                  unsigned open_flags = HighFive::File::Create);
 
   // constructor for writing
   HDF5RawDataFile(std::string file_name,

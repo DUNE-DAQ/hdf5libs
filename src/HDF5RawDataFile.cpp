@@ -33,63 +33,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  size_t file_index,
                                  std::string application_name,
                                  const hdf5filelayout::FileLayoutParams& fl_params,
-                                 std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
-                                 std::string inprogress_filename_suffix,
-                                 unsigned open_flags)
-  : m_bare_file_name(file_name)
-  , m_open_flags(open_flags)
-{
-
-  // check and make sure that the file isn't ReadOnly
-  if (m_open_flags == HighFive::File::ReadOnly) {
-    throw IncompatibleOpenFlags(ERS_HERE, file_name, m_open_flags);
-  }
-
-  auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
-
-  // do the file open
-  try {
-    m_file_ptr.reset(new HighFive::File(filename_to_open, m_open_flags));
-  } catch (std::exception const& excpt) {
-    throw FileOpenFailed(ERS_HERE, filename_to_open, excpt.what());
-  }
-
-  m_recorded_size = 0;
-
-  int64_t timestamp =
-    std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-  std::string file_creation_timestamp = std::to_string(timestamp);
-
-  TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
-
-  // write some file attributes
-  write_attribute("run_number", run_number);
-  write_attribute("file_index", file_index);
-  write_attribute("creation_timestamp", file_creation_timestamp);
-  write_attribute("application_name", application_name);
-
-  // set the file layout contents
-  m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
-  write_file_layout();
-
-  // write the SourceID-related attributes
-  HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
-  HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
-
-  // write the record type
-  m_record_type = fl_params.record_name_prefix;
-  write_attribute("record_type", m_record_type);
-}
-
-
-/**
- * @brief Constructor for writing a new file
- */
-HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
-                                 daqdataformats::run_number_t run_number,
-                                 size_t file_index,
-                                 std::string application_name,
-                                 const hdf5filelayout::FileLayoutParams& fl_params,
                                  hdf5rawdatafile::SrcGeoIDMap srcid_geoid_map,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
@@ -919,8 +862,11 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
   std::set<uint64_t> set_of_geo_ids;
   for (auto const& map_entry : m_source_id_geo_id_cache[rid]) {
     for (auto const& geo_id : map_entry.second) {
-      auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
-      if (geo_info.det_id == static_cast<uint16_t>(subdet)) {
+      // FIXME: replace with a proper coder/decoder
+
+      uint16_t det_id = 0xffff & geo_id;
+      // auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
+      if (det_id == static_cast<uint16_t>(subdet)) {
         set_of_geo_ids.insert(geo_id);
       }
     }
