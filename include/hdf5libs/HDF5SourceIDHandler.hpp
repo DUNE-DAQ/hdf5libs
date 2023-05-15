@@ -59,7 +59,7 @@ public:
   // static void populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
   //                                           source_id_geo_id_map_t& the_map);
 
-  static void populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcGeoIDMap  src_id_geo_id_mp_struct,
+  static void populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcIDGeoIDMap  src_id_geo_id_mp_struct,
                                             source_id_geo_id_map_t& the_map);
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.

@@ -128,7 +128,7 @@ public:
                   size_t file_index,
                   std::string application_name,
                   const hdf5filelayout::FileLayoutParams& fl_params,
-                  hdf5rawdatafile::SrcGeoIDMap srcid_geoid_map,
+                  hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map,
                   std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 

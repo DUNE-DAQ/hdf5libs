@@ -88,11 +88,11 @@ main(int argc, char** argv)
   std::ifstream f(hw_map_file_name);
   nlohmann::json data = nlohmann::json::parse(f);
 
-  // hdf5rawdatafile::SrcGeoIDMap srcid_geoid_map;
+  // hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map;
   // for (nlohmann::json::iterator it = data.begin(); it != data.end(); ++it) {
-  //   srcid_geoid_map.push_back(it->get<hdf5rawdatafile::SrcGeoIDEntry>())
+  //   srcid_geoid_map.push_back(it->get<hdf5rawdatafile::SrcIDGeoIDEntry>())
   // }
-  auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcGeoIDMap>();
+  auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,

@@ -16,12 +16,12 @@ local types = {
            s.field("stream_id", self.count, 0, doc="Stream ID") ],
         doc="Geographic ID structure"),
 
-    src_geo_id_entry : s.record("SrcGeoIDEntry", [
+    src_geo_id_entry : s.record("SrcIDGeoIDEntry", [
         s.field("src_id", self.size, 0, doc="Source ID"),
         s.field("geo_id", self.geo_id_params, doc="Geo ID")
-    ], doc="Source GetoID Map entry"),
+    ], doc="SourceID GeoID Map entry"),
 
-    src_geo_id_map : s.sequence("SrcGeoIDMap", self.src_geo_id_entry, doc="Source to GeoID map" ),
+    src_geo_id_map : s.sequence("SrcIDGeoIDMap", self.src_geo_id_entry, doc="SourceID to GeoID map" ),
 
 };
 

@@ -26,7 +26,7 @@ namespace hdf5libs {
 // }
 
 void 
-HDF5SourceIDHandler::populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcGeoIDMap  src_id_geo_id_mp_struct,
+HDF5SourceIDHandler::populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcIDGeoIDMap  src_id_geo_id_mp_struct,
                                   source_id_geo_id_map_t& source_id_geo_id_map)
 {
 
