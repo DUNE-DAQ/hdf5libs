@@ -32,7 +32,7 @@ using namespace dunedaq::detdataformats;
 void
 print_usage()
 {
-  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <hardware_map_file> <output_file_name>";
+  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <detector_readout_map_file> <output_file_name>";
 }
 
 int
