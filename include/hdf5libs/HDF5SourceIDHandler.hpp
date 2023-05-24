@@ -14,7 +14,7 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
-#include "detchannelmaps/HardwareMapService.hpp"
+#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 #include "detdataformats/DetID.hpp"
 
 //#include "hdf5libs/hdf5filelayout/Structs.hpp"
@@ -55,9 +55,8 @@ public:
    * Populates the specified source_id_geo_id map with information contained in the
    * specified Hardware Map.
    */
-  static void populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
+  static void populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdatafile::SrcIDGeoIDMap  src_id_geo_id_mp_struct,
                                             source_id_geo_id_map_t& the_map);
-
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.
    */
