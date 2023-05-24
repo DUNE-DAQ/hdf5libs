@@ -865,7 +865,6 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
       // FIXME: replace with a proper coder/decoder
 
       uint16_t det_id = 0xffff & geo_id;
-      // auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
       if (det_id == static_cast<uint16_t>(subdet)) {
         set_of_geo_ids.insert(geo_id);
       }

@@ -81,17 +81,10 @@ main(int argc, char** argv)
          << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
-  // create the HardwareMapService
-  // std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-  //   new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
-
+  // Read src-geo id map
   std::ifstream f(hw_map_file_name);
   nlohmann::json data = nlohmann::json::parse(f);
 
-  // hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map;
-  // for (nlohmann::json::iterator it = data.begin(); it != data.end(); ++it) {
-  //   srcid_geoid_map.push_back(it->get<hdf5rawdatafile::SrcIDGeoIDEntry>())
-  // }
   auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
 
   // open our file for writing
