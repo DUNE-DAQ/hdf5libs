@@ -220,8 +220,8 @@ namespace dunedaq
 
       HighFive::DataSetCreateProps data_set_create_props;
       data_set_create_props.add(HighFive::Chunking(std::vector<hsize_t>{chunk_size, 1}));
-      // if (allocate_early)
-      //   data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
+      if (allocate_early)
+        data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
       HighFive::DataSetAccessProps data_set_access_props;
 
       auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
@@ -339,8 +339,8 @@ namespace dunedaq
       // data_set_create_props.add(HighFive::Caching(0, 0));
       // data_set_create_props.add(HighFive::PageBufferSize(0));
       // data_set_create_props.add(HighFive::MetadataBlockSize(0));
-      // if (allocate_early)
-      //   data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
+      if (allocate_early)
+        data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
       HighFive::DataSetAccessProps data_set_access_props;
 
       auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
@@ -392,7 +392,7 @@ namespace dunedaq
      * @brief Write a TriggerRecord to the file.
      */
     void
-    HDF5RawDataFile::write(const daqdataformats::TriggerRecord &tr)
+    HDF5RawDataFile::write(const daqdataformats::TriggerRecord &tr, bool allocate_early)
     {
       // the source_id_path map that we will build up as we write the TR header
       // and fragments (and then write the map into the HDF5 TR_record Group)
@@ -417,7 +417,7 @@ namespace dunedaq
       // write all of the fragments into the HDF5 file/group
       for (auto const &frag_ptr : tr.get_fragments_ref())
       {
-        write(*frag_ptr, source_id_path_map);
+        write(*frag_ptr, source_id_path_map, allocate_early);
         HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
             fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
         HDF5SourceIDHandler::add_subdetector_source_id_to_map(
@@ -583,8 +583,8 @@ namespace dunedaq
       HighFive::DataSpace data_space = HighFive::DataSpace({raw_data_size_bytes, 1});
       HighFive::DataSetCreateProps data_set_create_props;
       // data_set_create_props.add(HighFive::Chunking(std::vector<hsize_t>{chunk_size, 1}));
-      // if (allocate_early)
-      //   data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
+      if (allocate_early)
+        data_set_create_props.add(HighFive::AllocationTime(H5D_ALLOC_TIME_EARLY));
       HighFive::DataSetAccessProps data_set_access_props;
 
       auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);

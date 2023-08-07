@@ -217,7 +217,6 @@ int main(int argc, char **argv)
     TriggerRecordHeader trh(&trh_data);
 
     // the source_id_path map that we will build up as we write the TR header
-    // and fragments (and then write the map into the HDF5 TR_record Group)
     HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
     // the map of fragment types to SourceIDS

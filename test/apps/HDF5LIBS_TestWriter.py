@@ -1,7 +1,6 @@
 import os
 import time
 import json
-import matplotlib.pyplot as plt
 import math
 import sys
 import threading

@@ -162,6 +162,7 @@ namespace dunedaq
       void write_fragment_only(std::unique_ptr<daqdataformats::Fragment> &frag_ptr, HDF5SourceIDHandler::source_id_path_map_t &source_id_path_map, HDF5SourceIDHandler::fragment_type_source_id_map_t &fragment_type_source_id_map, HDF5SourceIDHandler::subdetector_source_id_map_t &subdetector_source_id_map, bool allocate_early = false);
       void write_end_tr(HDF5SourceIDHandler::source_id_path_map_t &source_id_path_map, HighFive::Group &record_level_group, HDF5SourceIDHandler::fragment_type_source_id_map_t &fragment_type_source_id_map, HDF5SourceIDHandler::subdetector_source_id_map_t &subdetector_source_id_map);
 
+      // TODO: work in progress
       void write_fragment_thread(daqdataformats::FragmentHeader &fh,
                                  HDF5SourceIDHandler::source_id_path_map_t &source_id_path_map,
                                  HDF5SourceIDHandler::fragment_type_source_id_map_t &fragment_type_source_id_map,
@@ -176,7 +177,7 @@ namespace dunedaq
       void write_fragment_part(HighFive::DataSet &data_set, const char *buffer, const long unsigned int start_index, const long unsigned int end_index);
       void write_fragment_end(HDF5SourceIDHandler::fragment_type_source_id_map_t &fragment_type_source_id_map, HDF5SourceIDHandler::subdetector_source_id_map_t &subdetector_source_id_map, HDF5SourceIDHandler::source_id_path_map_t &source_id_path_map, std::string data_set_path, daqdataformats::FragmentHeader &fh);
 
-      void write(const daqdataformats::TriggerRecord &tr);
+      void write(const daqdataformats::TriggerRecord &tr, bool allocate_early = false);
       void write(const daqdataformats::TimeSlice &ts);
 
     private:
