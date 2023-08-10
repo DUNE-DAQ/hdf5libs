@@ -293,8 +293,8 @@ def parse_args():
 
     parser.add_argument('-s', '--speed-of-clock', type=float,
                         help='''specify clock speed in Hz, default is
-                        50000000.0 (50MHz)''',
-                        default=50000000.0)
+                        62500000.0 (62.5MHz)''',
+                        default=62500000.0)
 
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 2.0')

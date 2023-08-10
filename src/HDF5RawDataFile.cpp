@@ -33,7 +33,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  size_t file_index,
                                  std::string application_name,
                                  const hdf5filelayout::FileLayoutParams& fl_params,
-                                 std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
+                                 hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -73,13 +73,14 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   // write the SourceID-related attributes
-  HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
+  HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
   HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 
   // write the record type
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
 }
+
 
 HDF5RawDataFile::~HDF5RawDataFile()
 {
@@ -861,8 +862,10 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
   std::set<uint64_t> set_of_geo_ids;
   for (auto const& map_entry : m_source_id_geo_id_cache[rid]) {
     for (auto const& geo_id : map_entry.second) {
-      auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
-      if (geo_info.det_id == static_cast<uint16_t>(subdet)) {
+      // FIXME: replace with a proper coder/decoder
+
+      uint16_t det_id = 0xffff & geo_id;
+      if (det_id == static_cast<uint16_t>(subdet)) {
         set_of_geo_ids.insert(geo_id);
       }
     }

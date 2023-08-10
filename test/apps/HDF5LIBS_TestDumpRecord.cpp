@@ -13,6 +13,8 @@
 
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
+#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
+#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -22,7 +24,6 @@
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
 using namespace dunedaq::detdataformats;
-using namespace dunedaq::detchannelmaps;
 
 void
 print_usage()
@@ -113,10 +114,15 @@ main(int argc, char** argv)
            << "It may contain data from the following detector components:";
         std::vector<uint64_t> geo_id_list = h5_raw_data_file.get_geo_ids_for_source_id(record_id, source_id);
         for (auto const& geo_id : geo_id_list) {
-          GeoInfo geo_info = HardwareMapService::parse_geo_id(geo_id);
+          // FIXME
+          // GeoInfo = HardwareMapService::parse_geo_id(geo_id);
+          uint16_t det_id   =  geo_id & 0xffff;
+          uint16_t crate_id = (geo_id >> 16)& 0xffff;
+          uint16_t slot_id  = (geo_id >> 32) & 0xffff;
+          uint16_t link_id  = (geo_id >> 48) & 0xffff;
           ss << "\n\t\t\t"
-             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(geo_info.det_id))
-             << ", crate " << geo_info.det_crate << ", slot " << geo_info.det_slot << ", link " << geo_info.det_link;
+             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
+             << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
       }
     }
