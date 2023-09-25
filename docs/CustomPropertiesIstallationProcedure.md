@@ -33,6 +33,9 @@ export PATH=$PATH:/home/ljoly/openmpi-4.1.5/build/bin
 
 # Install hdf5 v1.14
 source the environment before installing
+
+hdf5 documentation :
+
 https://portal.hdfgroup.org/display/support/Building+HDF5+with+CMake
 
 ## Download CMake-hdf5-1.14.2.tar.gz
@@ -312,7 +315,7 @@ export HDF5_LIB=/home/ljoly/hdf5_folder/CMake-hdf5-1.14.2/HDF5-1.14.2-Linux/HDF_
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ljoly/hdf5_folder/CMake-hdf5-1.14.2/HDF5-1.14.2-Linux/HDF_Group/HDF5/1.14.2/lib
 ```
 
-## Entering the fun
+## Use example
 
 You can find a full example in test/apps/HighFive_full_bench.cpp test file.
 
