@@ -11,7 +11,7 @@
 
 using namespace std::chrono;
 
-#define DATASET_LENGHT 1073741824 / 8 // 1G double * 8 bytes = 8GB
+#define DATASET_LENGHT 1073741824 // 1G double * 8 bytes = 8GB
 #define DATASET_NUM 20
 
 std::vector<double> make_array(const std::vector<size_t> &dims)
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     size_t chunk_size = atoi(argv[2]);
     bool is_page_allocated = atoi(argv[3]);
     int alloc_time = atoi(argv[4]);
-    bool use_chunking = true;
+    bool use_chunking = false;
 
     int parts = DATASET_LENGHT / chunk_size;
     int dataset_num = parts;
@@ -154,8 +154,15 @@ int main(int argc, char *argv[])
     if (is_page_allocated)
         create_props.add(HighFive::FileSpacePageSize(pagesize));
 
-    auto access_props = HighFive::FileAccessProps::Default();
-    hid_t fapl_id = access_props.getId();
+    // auto access_props = HighFive::FileAccessProps::Default();
+    auto access_props = HighFive::RawPropertyList<HighFive::PropertyType::FILE_ACCESS>();
+
+    // Adding custom properties
+    size_t alignment_direct = 524288;     // 512K
+    size_t block_size_direct = 524288;    // 512K
+    size_t cbuf_size_direct = 1073741824; // 1G
+    // access_props.add(H5Pset_fapl_direct, alignment_direct, block_size_direct, cbuf_size_direct);
+    // hid_t fapl_id = access_props.getId();
 
     // H5Pset_file_image(fapl_id, NULL, 0);
 
@@ -168,10 +175,10 @@ int main(int argc, char *argv[])
     // double rdcc_w0 = 0.75;
     // H5Pset_cache(fapl_id, 0, rdcc_nslots, rdcc_nbytes, rdcc_w0);
 
-    access_props.add(HighFive::MetadataBlockSize(block_size)); // size Metadata block size in bytes
-    if (is_page_allocated)
-        access_props.add(HighFive::PageBufferSize(pagesize)); // maximum size of the page buffer in
-                                                              // bytes.
+    // Cannot add properties from HighFive with RAW properties list, need to use hdf5 one
+    // access_props.add(HighFive::MetadataBlockSize(block_size)); // size Metadata block size in bytes
+    // if (is_page_allocated)
+    //     access_props.add(HighFive::PageBufferSize(pagesize)); // maximum size of the page buffer in bytes.
 
     HighFive::File file(file_name,
                         HighFive::File::ReadWrite | HighFive::File::Create |
