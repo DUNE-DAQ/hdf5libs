@@ -17,8 +17,8 @@ find_package(Boost COMPONENTS iostreams unit_test_framework REQUIRED)
 
 daq_codegen( *.jsonnet TEMPLATES Structs.hpp.j2 Nljs.hpp.j2 )
 
-option(WITH_HIGHFIVE_AS_PACKAGE "HIGHFIVE externals as a dunedaq package" OFF)
-option(WITH_HDF5_AS_PACKAGE "HDF5 externals as a dunedaq package" OFF)
+option(WITH_HIGHFIVE_AS_PACKAGE "HIGHFIVE externals as a dunedaq package" ON)
+option(WITH_HDF5_AS_PACKAGE "HDF5 externals as a dunedaq package" ON)
 
 if(WITH_HDF5_AS_PACKAGE)
   set(HDF5_DEP 
