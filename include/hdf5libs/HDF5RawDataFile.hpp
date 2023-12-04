@@ -146,7 +146,7 @@ public:
   bool is_trigger_record_type() const noexcept { return m_record_type.compare("TriggerRecord") == 0; }
   bool is_timeslice_type() const noexcept { return m_record_type.compare("TimeSlice") == 0; }
 
-  HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
+  const HDF5FileLayout& get_file_layout() const { return *(m_file_layout_ptr.get()); }
 
   uint32_t get_version() const // NOLINT(build/unsigned)
   {
@@ -233,8 +233,10 @@ public:
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
+  hdf5rawdatafile::SrcIDGeoIDMap get_srcid_geoid_map() const;
+
   //get a list of all the geo ids anywhere in the file
-  std::set<uint64_t> get_all_geo_ids(); // NOLINT(build/unsigned)
+  std::set<uint64_t> get_all_geo_ids() const; // NOLINT(build/unsigned)
 
   //get GeoIDs in a record
   std::set<uint64_t> get_geo_ids(const record_id_t& rid); // NOLINT(build/unsigned)
