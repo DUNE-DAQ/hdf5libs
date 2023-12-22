@@ -814,8 +814,14 @@ HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_pat
 }
 #endif
 
+hdf5rawdatafile::SrcIDGeoIDMap
+HDF5RawDataFile::get_srcid_geoid_map() const {
+
+  return HDF5SourceIDHandler::rebuild_srcidgeoidmap(m_file_level_source_id_geo_id_map);
+}
+
 std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_all_geo_ids()
+HDF5RawDataFile::get_all_geo_ids() const
 {
   std::set<uint64_t> set_of_geo_ids;
   // 13-Sep-2022, KAB

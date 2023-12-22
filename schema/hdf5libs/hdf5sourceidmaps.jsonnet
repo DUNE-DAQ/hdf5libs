@@ -36,7 +36,7 @@ local types = {
         s.field("subsys", self.numeric_value, 0, doc="SourceID subsystem"),
         s.field("id", self.numeric_value, 0, doc="SourceID ID"),
         s.field("geoids", self.list_of_geo_ids, doc="List of GeoIDs contained within the SourceID")
-    ], doc="A single SourceID-to-HDF5-path map entry"),
+    ], doc="A single SourceID-to-GeoID map entry"),
 
     list_of_geo_id_map_entries : s.sequence("GeoIDMapEntryList", self.source_id_geo_id_pair, doc="List of SourceID to GeoID map entries"),
 

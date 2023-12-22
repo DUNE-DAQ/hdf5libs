@@ -27,6 +27,28 @@ HDF5SourceIDHandler::populate_source_id_geo_id_map(dunedaq::hdf5libs::hdf5rawdat
   }
 }
 
+hdf5rawdatafile::SrcIDGeoIDMap
+HDF5SourceIDHandler::rebuild_srcidgeoidmap(const source_id_geo_id_map_t& the_map) {
+
+  hdf5rawdatafile::SrcIDGeoIDMap m;
+  for( const auto& [sid, geoids] : the_map ) {
+      // There could be more than one, but we don't want to think about that
+      uint64_t geoid = *geoids.begin();
+      m.emplace_back(hdf5rawdatafile::SrcIDGeoIDEntry{
+        sid.id, 
+        hdf5rawdatafile::GeoID{
+          .det_id = (geoid >> 0) & 0xff,
+          .crate_id = (geoid >> 16) & 0xff,
+          .slot_id = (geoid >> 32) & 0xff,
+          .stream_id = (geoid >> 48) & 0xff,
+        }
+      }
+    );
+  } 
+
+  return m;
+}
+
 void
 HDF5SourceIDHandler::store_file_level_geo_id_info(HighFive::File& h5_file, const source_id_geo_id_map_t& the_map)
 {
