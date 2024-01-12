@@ -17,6 +17,8 @@ namespace hdf5libs {
 HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version) // NOLINT(build/unsigned)
   : m_conf_params(conf)
   , m_version(version)
+  , m_record_number_digit_warnings(0)
+  , m_sequence_number_digit_warnings(0)
 {
   if (m_version < 2)
     m_conf_params = get_v0_file_layout_params();
@@ -67,7 +69,10 @@ HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build
   int width = m_conf_params.digits_for_record_number;
 
   if (record_number >= m_powers_ten[m_conf_params.digits_for_record_number]) {
-    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
+    ++m_record_number_digit_warnings;
+    if (m_record_number_digit_warnings <= 10) {
+      ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
+    }
     width = 0; // tells it to revert to normal width
   }
 
@@ -77,7 +82,10 @@ HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build
 
     width = m_conf_params.digits_for_sequence_number;
     if (seq_num >= m_powers_ten[m_conf_params.digits_for_sequence_number]) {
-      ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
+      ++m_sequence_number_digit_warnings;
+      if (m_sequence_number_digit_warnings <= 10) {
+        ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
+      }
       width = 0; // tells it to revert to normal width
     }
     record_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;

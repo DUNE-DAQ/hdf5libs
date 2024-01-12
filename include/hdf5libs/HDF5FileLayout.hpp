@@ -245,6 +245,9 @@ private:
    * @brief Check configuration for any errors.
    */
   void check_config();
+
+  mutable size_t m_record_number_digit_warnings;
+  mutable size_t m_sequence_number_digit_warnings;
 };
 
 } // namespace hdf5libs
