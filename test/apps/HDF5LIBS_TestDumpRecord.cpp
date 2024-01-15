@@ -136,11 +136,17 @@ main(int argc, char** argv)
         ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
            << ", and candidate time = " << tcptr->data.time_candidate;
       }
-      auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-      ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
-      ss << "\n\t\t"
-         << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-         << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+      try {
+        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+        ss << "\n\t\t"
+           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
+           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+      }
+      catch (std::exception const& excpt) {
+        ss << "\n\t\t"
+           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
+      }
     }
     std::cout << ss.str() << std::endl;
     ss.str("");
