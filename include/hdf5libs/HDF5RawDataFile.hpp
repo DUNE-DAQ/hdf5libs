@@ -174,6 +174,7 @@ public:
   template<typename T>
   void write_attribute(HighFive::DataSet& dset, const std::string& name, T value);
 
+  std::vector<std::string> get_attribute_names();
   template<typename T>
   T get_attribute(const std::string& name);
   template<typename T>
@@ -504,6 +505,12 @@ HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& nam
   else
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
+
+std::vector<std::string> HDF5RawDataFile::get_attribute_names()
+{
+  return m_file_ptr->listAttributeNames();
+}
+
 template<typename T>
 T
 HDF5RawDataFile::get_attribute(const std::string& name)
