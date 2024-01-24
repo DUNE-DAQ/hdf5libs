@@ -402,13 +402,13 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record);
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type,  element
@@ -497,13 +497,13 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record);
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
@@ -529,7 +529,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type, element
@@ -595,16 +595,13 @@ BOOST_AUTO_TEST_CASE(LargeTriggerRecordNumbers)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
-
   auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
   BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record);
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
   BOOST_REQUIRE(trigger_number > 0xffffffff);
 
   // clean up the files that were created
