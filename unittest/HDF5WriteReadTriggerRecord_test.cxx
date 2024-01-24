@@ -188,7 +188,7 @@ create_srcid_geoid_map(){
 }
 
 dunedaq::daqdataformats::TriggerRecord
-create_trigger_record(int trig_num)
+create_trigger_record(uint64_t trig_num)
 {
   // setup our dummy_data
   std::vector<char> dummy_vector(fragment_size);
@@ -556,6 +556,56 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
                       dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+
+  // clean up the files that were created
+  delete_files_matching_pattern(file_path, hdf5_filename);
+}
+
+BOOST_AUTO_TEST_CASE(LargeTriggerRecordNumbers)
+{
+  std::string file_path(std::filesystem::temp_directory_path());
+  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
+  const uint64_t trigger_count = 10;
+
+  // delete any pre-existing files so that we start with a clean slate
+  delete_files_matching_pattern(file_path, hdf5_filename);
+
+  auto fl_pars = create_file_layout_params();
+  fl_pars.digits_for_sequence_number = 4;
+
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
+  // create the file
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  fl_pars,
+                                                                  srcid_geoid_map));
+
+  // write several events, each with several fragments
+  uint64_t trigger_number = 1;
+  for (uint64_t idx = 0; idx < trigger_count; ++idx) {
+    trigger_number = 1 + (idx * 2000000000);
+    h5file_ptr->write(create_trigger_record(trigger_number));
+  }
+
+  h5file_ptr.reset(); // explicit destruction
+
+  // open file for reading now
+  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
+
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+  auto first_trigger_record = *(trigger_records.begin());
+  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
+  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record);
+  BOOST_REQUIRE(trigger_number > 0xffffffff);
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
