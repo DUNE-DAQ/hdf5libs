@@ -11,10 +11,12 @@
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
 
+#include "daqdataformats/Fragment.hpp"
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
 #include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 #include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
+#include "trgdataformats/TriggerObjectOverlay.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -24,6 +26,7 @@
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
 using namespace dunedaq::detdataformats;
+using namespace dunedaq::trgdataformats;
 
 void
 print_usage()
@@ -124,6 +127,25 @@ main(int argc, char** argv)
              << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
+      }
+      if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
+        TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
+        ss << "\n\t\t" << "TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
+           << " (" << static_cast<int>(tcptr->data.type) << "), TC algorithm = "
+           << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
+        ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
+           << ", and candidate time = " << tcptr->data.time_candidate;
+      }
+      try {
+        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+        ss << "\n\t\t"
+           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
+           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+      }
+      catch (std::exception const& excpt) {
+        ss << "\n\t\t"
+           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
       }
     }
     std::cout << ss.str() << std::endl;
