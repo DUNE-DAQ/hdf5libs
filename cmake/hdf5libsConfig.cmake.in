@@ -7,6 +7,7 @@ find_dependency(ers)
 find_dependency(HighFive)
 find_dependency(daqdataformats)
 find_dependency(detdataformats)
+find_dependency(trgdataformats)
 find_dependency(cetlib)
 
 # Figure out whether or not this dependency is an installed package or
