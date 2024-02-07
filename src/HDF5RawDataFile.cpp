@@ -513,11 +513,11 @@ HDF5RawDataFile::get_all_record_ids()
 
     loc = rec_num_string.find(".");
     if (loc == std::string::npos) {
-      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), 0));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoll(rec_num_string), 0));
     } else {
       auto seq_num_string = rec_num_string.substr(loc + 1);
       rec_num_string.resize(loc); // remove anything from '.' onwards
-      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoll(rec_num_string), std::stoi(seq_num_string)));
     }
 
   } // end loop over childNames
