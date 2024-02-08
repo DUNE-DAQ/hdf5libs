@@ -129,12 +129,17 @@ main(int argc, char** argv)
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
-        TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
-           << " (" << static_cast<int>(tcptr->data.type) << "), TC algorithm = "
-           << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
-        ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
-           << ", and candidate time = " << tcptr->data.time_candidate;
+        if (frag_ptr->get_size() >= (sizeof(FragmentHeader) + sizeof(TriggerCandidateData))) {
+          TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
+          ss << "\n\t\t" << "TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
+             << " (" << static_cast<int>(tcptr->data.type) << "), TC algorithm = "
+             << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
+          ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
+             << ", and candidate time = " << tcptr->data.time_candidate;
+        }
+        else {
+          ss << "\n\t\t" << "*** Empty Trigger Candidate fragment, no information is available about the TC ***";
+        }
       }
       try {
         auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
