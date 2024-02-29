@@ -13,6 +13,7 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "detdataformats/DetID.hpp"
+#include "detdataformats/HSIFrame.hpp"
 #include "logging/Logging.hpp"
 #include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 #include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
@@ -135,6 +136,46 @@ main(int argc, char** argv)
            << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
         ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
            << ", and candidate time = " << tcptr->data.time_candidate;
+      }
+      if (frag_ptr->get_fragment_type() == FragmentType::kHardwareSignal) {
+        HSIFrame* hsi_ptr = static_cast<HSIFrame*>(frag_ptr->get_data());
+        ss << "\n\t\t" << "Detector ID = " << hsi_ptr->detector_id
+           << ", Crate = " << hsi_ptr->crate
+           << ", Slot = " << hsi_ptr->slot
+           << ", Link = " << hsi_ptr->link;
+        ss << ",\n\t\t" << "Sequence = " << hsi_ptr->sequence
+           << ", Trigger = " << hsi_ptr->trigger
+           << ", Version = " << hsi_ptr->version;
+        ss << ",\n\t\t" << "Timestamp = " << hsi_ptr->get_timestamp();
+
+        // Finding the bit positions for input_low and input_high
+        uint32_t bit_pos, bit_sniff;
+        uint32_t input_low = hsi_ptr->input_low;
+        ss << ",\n\t\t" << "Input Low Bitmap = " << input_low;
+        if (input_low != 0) { // Skip printing the positions if the value is 0.
+          ss << ", Input Low Bit Positions = ";
+          bit_sniff = 1;
+          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+            if (input_low & bit_sniff) {
+              bit_sniff = bit_sniff << 1;
+              ss << bit_pos << " ";
+            }
+          }
+        }
+
+        uint32_t input_high = hsi_ptr->input_high;
+        ss << ",\n\t\t" << "Input High Bitmap = " << input_high;
+        if (input_high != 0) {
+          ss << ", Input High Bit Positions = ";
+          bit_sniff = 1;
+          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+            if (input_high & bit_sniff) {
+              bit_sniff = bit_sniff << 1;
+              ss << bit_pos << " ";
+            }
+          }
+        }
+        ss << ".";  // Finishes the HSI section.
       }
       try {
         auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
