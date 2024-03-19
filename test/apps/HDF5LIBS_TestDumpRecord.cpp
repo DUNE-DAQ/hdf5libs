@@ -13,6 +13,7 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "detdataformats/DetID.hpp"
+#include "detdataformats/HSIFrame.hpp"
 #include "logging/Logging.hpp"
 #include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 #include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
@@ -112,6 +113,17 @@ main(int argc, char** argv)
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
          << " has size = " << frag_ptr->get_size();
+      try {
+        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+        ss << "\n\t\t"
+           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
+           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+      }
+      catch (std::exception const& excpt) {
+        ss << "\n\t\t"
+           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
+      }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
            << "It may contain data from the following detector components:";
@@ -128,6 +140,10 @@ main(int argc, char** argv)
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
       }
+      if (frag_ptr->get_data_size() == 0) {
+        ss << "\n\t\t" << "*** Empty fragment! Moving to next fragment. ***";
+        continue;
+      }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
         TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
         ss << "\n\t\t" << "TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
@@ -136,16 +152,45 @@ main(int argc, char** argv)
         ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
            << ", and candidate time = " << tcptr->data.time_candidate;
       }
-      try {
-        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
-        ss << "\n\t\t"
-           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
-      }
-      catch (std::exception const& excpt) {
-        ss << "\n\t\t"
-           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
+      if (frag_ptr->get_fragment_type() == FragmentType::kHardwareSignal) {
+        HSIFrame* hsi_ptr = static_cast<HSIFrame*>(frag_ptr->get_data());
+        ss << "\n\t\t" << "Detector ID = " << hsi_ptr->detector_id
+           << ", Crate = " << hsi_ptr->crate
+           << ", Slot = " << hsi_ptr->slot
+           << ", Link = " << hsi_ptr->link;
+        ss << ",\n\t\t" << "Sequence = " << hsi_ptr->sequence
+           << ", Trigger = " << hsi_ptr->trigger
+           << ", Version = " << hsi_ptr->version;
+        ss << ",\n\t\t" << "Timestamp = " << hsi_ptr->get_timestamp();
+
+        // Finding the bit positions for input_low and input_high
+        uint32_t bit_pos, bit_sniff;
+        uint32_t input_low = hsi_ptr->input_low;
+        ss << ",\n\t\t" << "Input Low Bitmap = " << input_low;
+        if (input_low != 0) { // Skip printing the positions if the value is 0.
+          ss << ", Input Low Bit Positions = ";
+          bit_sniff = 1;
+          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+            if (input_low & bit_sniff) {
+              bit_sniff = bit_sniff << 1;
+              ss << bit_pos << " ";
+            }
+          }
+        }
+
+        uint32_t input_high = hsi_ptr->input_high;
+        ss << ",\n\t\t" << "Input High Bitmap = " << input_high;
+        if (input_high != 0) {
+          ss << ", Input High Bit Positions = ";
+          bit_sniff = 1;
+          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+            if (input_high & bit_sniff) {
+              bit_sniff = bit_sniff << 1;
+              ss << bit_pos << " ";
+            }
+          }
+        }
+        ss << ".";  // Finishes the HSI section.
       }
     }
     std::cout << ss.str() << std::endl;
