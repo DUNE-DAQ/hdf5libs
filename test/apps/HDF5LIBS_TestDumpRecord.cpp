@@ -113,9 +113,16 @@ main(int argc, char** argv)
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
          << " has size = " << frag_ptr->get_size();
-      if (frag_ptr->get_data_size() == 0) {
-        ss << "\n\t\t" << "*** Empty fragment! Moving to next fragment. ***";
-        continue;
+      try {
+        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+        ss << "\n\t\t"
+           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
+           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+      }
+      catch (std::exception const& excpt) {
+        ss << "\n\t\t"
+           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
       }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
@@ -132,6 +139,10 @@ main(int argc, char** argv)
              << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
+      }
+      if (frag_ptr->get_data_size() == 0) {
+        ss << "\n\t\t" << "*** Empty fragment! Moving to next fragment. ***";
+        continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
         TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
@@ -180,17 +191,6 @@ main(int argc, char** argv)
           }
         }
         ss << ".";  // Finishes the HSI section.
-      }
-      try {
-        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
-        ss << "\n\t\t"
-           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
-      }
-      catch (std::exception const& excpt) {
-        ss << "\n\t\t"
-           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
       }
     }
     std::cout << ss.str() << std::endl;
