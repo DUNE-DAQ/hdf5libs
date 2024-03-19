@@ -113,6 +113,10 @@ main(int argc, char** argv)
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
          << " has size = " << frag_ptr->get_size();
+      if (frag_ptr->get_data_size() == 0) {
+        ss << "\n\t\t" << "*** Empty fragment! Moving to next fragment. ***";
+        continue;
+      }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
            << "It may contain data from the following detector components:";
