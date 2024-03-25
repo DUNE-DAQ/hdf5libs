@@ -151,6 +151,28 @@ main(int argc, char** argv)
            << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
         ss << "\n\t\t" << "Start time = " << tcptr->data.time_start << ", end time = " << tcptr->data.time_end
            << ", and candidate time = " << tcptr->data.time_candidate;
+        ss << "\n\t\t" << "(Size of fragment with TCData plus " << tcptr->n_inputs << " TAData structure(s) is "
+           << (sizeof(FragmentHeader) + sizeof(tcptr->n_inputs) + sizeof(TriggerCandidateData) +
+               (tcptr->n_inputs * sizeof(TriggerActivityData))) << ")";
+      }
+      if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
+        TriggerActivity* taptr = static_cast<TriggerActivity*>(frag_ptr->get_data());
+        ss << "\n\t\t" << "TA type = " << static_cast<int>(taptr->data.type) << ", TA algorithm = "
+           << static_cast<int>(taptr->data.algorithm) << ", number of TPs = " << taptr->n_inputs;
+        ss << "\n\t\t" << "Start time = " << taptr->data.time_start << ", end time = " << taptr->data.time_end
+           << ", and activity time = " << taptr->data.time_activity;
+        ss << "\n\t\t" << "(Size of fragment with TAData plus " << taptr->n_inputs << " TP data structure(s) is "
+           << (sizeof(FragmentHeader) + sizeof(taptr->n_inputs) + sizeof(TriggerActivityData) +
+               (taptr->n_inputs * sizeof(TriggerPrimitive))) << ")";
+      }
+      if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
+        TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
+        ss << "\n\t\t" << "Number of TPs in this fragment = "
+           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive));
+        ss << "\n\t\t" << "First TP type = " << static_cast<int>(tpptr->type) << ", TA algorithm = "
+           << static_cast<int>(tpptr->algorithm);
+        ss << "\n\t\t" << "First TP start time = " << tpptr->time_start << ", peak time = " << tpptr->time_peak
+           << ", and time over threshold= " << tpptr->time_over_threshold;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kHardwareSignal) {
         HSIFrame* hsi_ptr = static_cast<HSIFrame*>(frag_ptr->get_data());
