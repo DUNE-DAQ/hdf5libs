@@ -34,10 +34,10 @@ DATA_FORMAT = {
         "keys": ['Marker word', 'Version', 'Trigger number',                       # I I Q
                  'Trigger timestamp', 'No. of requested components', 'Run number', # Q Q I
                  'Error bits', 'Trigger type', 'Sequence number',                  # I Q H
-                 'Max sequence num', 'Padding',                                    # H H
+                 'Max sequence num', 'Padding',                                    # H I
                  'Source ID version', 'Source ID subsystem', 'Source ID'],         # H H I
-        "size": 62,
-        "unpack string": '<2I3Q2IQ5HI'
+        "size": 64,
+        "unpack string": '<2I3Q2IQ2HI2HI'
     },
     # daqdataformats/include/daqdataformats/FragmentHeader.hpp
     "Fragment Header":{
