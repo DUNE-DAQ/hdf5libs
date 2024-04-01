@@ -206,9 +206,11 @@ def tick_to_timestamp(ticks, clock_speed_hz):
         return "InvalidDateString"
 
 
-def unpack_header(data_array, entry_type):
+def unpack_header(data_array, entry_type, required_version=0):
     values = struct.unpack(DATA_FORMAT[entry_type]["unpack string"],
                            data_array[:DATA_FORMAT[entry_type]["size"]])
+    if required_version > 0 and len(values) >= 2 and values[1] != required_version:
+        raise ValueError(f"Invalid {entry_type} format version: expected {required_version} and found {values[1]}")
     header = dict(zip(DATA_FORMAT[entry_type]["keys"], values))
     return header
 
@@ -233,12 +235,12 @@ def print_header_dict(hdict, clock_speed_hz):
 
 
 def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
-    print_header_dict(unpack_header(data_array, "TriggerRecord Header"), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "TriggerRecord Header", 4), clock_speed_hz)
 
     if k_list_components:
         comp_keys = DATA_FORMAT["Component Request"]["keys"]
         comp_unpack_string = DATA_FORMAT["Component Request"]["unpack string"]
-        for i_values in struct.iter_unpack(comp_unpack_string, data_array[56:]):
+        for i_values in struct.iter_unpack(comp_unpack_string, data_array[64:]):
             i_comp = dict(zip(comp_keys, i_values))
             print(80*'-')
             print_header_dict(i_comp, clock_speed_hz)
@@ -246,7 +248,7 @@ def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
 
 
 def print_fragment_header(data_array, clock_speed_hz):
-    print_header_dict(unpack_header(data_array, "Fragment Header"), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "Fragment Header", 5), clock_speed_hz)
     return
 
 
@@ -255,7 +257,7 @@ def print_header(data_array, record_type, clock_speed_hz, k_list_components):
         print_trigger_record_header(data_array, clock_speed_hz,
                                     k_list_components)
     elif record_type == "TimeSlice":
-        print_header_dict(unpack_header(data_array, "TimeSlice Header"), clock_speed_hz)
+        print_header_dict(unpack_header(data_array, "TimeSlice Header", 2), clock_speed_hz)
     else:
         print(f"Error: Record Type {record_type} is not supported.")
     return
