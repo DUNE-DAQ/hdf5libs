@@ -145,31 +145,57 @@ main(int argc, char** argv)
         continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
+        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t offset = 0;
+        int number_of_TCs = 0;
+        int number_of_referenced_TAs = 0;
+        while ((offset+sizeof(TriggerCandidateData)) < payload_size) {
+          ++number_of_TCs;
+          TriggerCandidate* tmp_tcptr =
+            reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          offset += sizeof(TriggerCandidateData) + sizeof(tmp_tcptr->n_inputs);
+          offset += (tmp_tcptr->n_inputs * sizeof(TriggerActivityData));
+          number_of_referenced_TAs += tmp_tcptr->n_inputs;
+        }
         TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
+        ss << "\n\t\t" << "Number of TCs in this fragment=" << number_of_TCs << ", overall number of referenced TAs="
+           << number_of_referenced_TAs << ", size of TC data="
+           << (sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs));
+        ss << "\n\t\t" << "First TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
            << " (" << static_cast<int>(tcptr->data.type) << "), TC algorithm = "
            << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
-        ss << "\n\t\t" << "Start time=" << tcptr->data.time_start << ", end time=" << tcptr->data.time_end
+        ss << "\n\t\t" << "First TC start time=" << tcptr->data.time_start << ", end time=" << tcptr->data.time_end
            << ", and candidate time=" << tcptr->data.time_candidate;
-        ss << "\n\t\t" << "(Size of fragment with TCData plus " << tcptr->n_inputs << " TAData structure(s) is "
-           << (sizeof(FragmentHeader) + sizeof(tcptr->n_inputs) + sizeof(TriggerCandidateData) +
-               (tcptr->n_inputs * sizeof(TriggerActivityData))) << ")";
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
+        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t offset = 0;
+        int number_of_TAs = 0;
+        int number_of_referenced_TPs = 0;
+        while ((offset+sizeof(TriggerActivityData)) < payload_size) {
+          ++number_of_TAs;
+          TriggerActivity* tmp_taptr =
+            reinterpret_cast<TriggerActivity*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          offset += sizeof(TriggerActivityData) + sizeof(tmp_taptr->n_inputs);
+          offset += (tmp_taptr->n_inputs * sizeof(TriggerPrimitive));
+          number_of_referenced_TPs += tmp_taptr->n_inputs;
+        }
         TriggerActivity* taptr = static_cast<TriggerActivity*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "TA type = " << static_cast<int>(taptr->data.type) << ", TA algorithm = "
+        ss << "\n\t\t" << "Number of TAs in this fragment=" << number_of_TAs << ", overall number of referenced TPs="
+           << number_of_referenced_TPs << ", size of TA data="
+           << (sizeof(TriggerActivityData) + sizeof(taptr->n_inputs));
+        ss << "\n\t\t" << "First TA type = " << static_cast<int>(taptr->data.type) << ", TA algorithm = "
            << static_cast<int>(taptr->data.algorithm) << ", number of TPs = " << taptr->n_inputs;
-        ss << "\n\t\t" << "Start time=" << taptr->data.time_start << ", end time=" << taptr->data.time_end
+        ss << "\n\t\t" << "First TA start time=" << taptr->data.time_start << ", end time=" << taptr->data.time_end
            << ", and activity time=" << taptr->data.time_activity;
-        ss << "\n\t\t" << "(Size of fragment with TAData plus " << taptr->n_inputs << " TP data structure(s) is "
-           << (sizeof(FragmentHeader) + sizeof(taptr->n_inputs) + sizeof(TriggerActivityData) +
-               (taptr->n_inputs * sizeof(TriggerPrimitive))) << ")";
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
+        ss << "\n\t\t" << "Number of TPs in this fragment="
+           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
+           << ", size of TP data structure=" << sizeof(TriggerPrimitive)
+           << ", size of Fragment Header=" << sizeof(FragmentHeader);
         TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "Number of TPs in this fragment = "
-           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive));
-        ss << "\n\t\t" << "First TP type = " << static_cast<int>(tpptr->type) << ", TA algorithm = "
+        ss << "\n\t\t" << "First TP type = " << static_cast<int>(tpptr->type) << ", TP algorithm = "
            << static_cast<int>(tpptr->algorithm);
         ss << "\n\t\t" << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
            << ", and time over threshold=" << tpptr->time_over_threshold;
