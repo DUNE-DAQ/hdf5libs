@@ -107,8 +107,8 @@ main(int argc, char** argv)
                   << std::endl;
         std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
         std::cout << "(Expected TRH version "
-                  << trh_ptr->get_header().version << " and found version "
-                  << TriggerRecordHeaderData::s_trigger_record_header_version << ".)" << std::endl;
+                  << TriggerRecordHeaderData::s_trigger_record_header_version << " and found version "
+                  << trh_ptr->get_header().version << ".)" << std::endl;
         std::exit(1);
       }
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
