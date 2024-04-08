@@ -7,9 +7,15 @@ import struct
 import os
 import sys
 
-
+# Current allowed range of file layout versions
 FILELAYOUT_MIN_VERSION = 4
 FILELAYOUT_MAX_VERSION = 5
+
+# Current header versions
+TRIGGER_RECORD_HEADER_VERSION = 4
+FRAGMENT_HEADER_VERSION = 5
+TIME_SLICE_HEADER_VERSION = 2
+
 # detdataformats/include/detdataformats/DetID.hpp
 DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
             4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
@@ -235,7 +241,7 @@ def print_header_dict(hdict, clock_speed_hz):
 
 
 def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
-    print_header_dict(unpack_header(data_array, "TriggerRecord Header", 4), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "TriggerRecord Header", TRIGGER_RECORD_HEADER_VERSION), clock_speed_hz)
 
     if k_list_components:
         comp_keys = DATA_FORMAT["Component Request"]["keys"]
@@ -248,7 +254,7 @@ def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
 
 
 def print_fragment_header(data_array, clock_speed_hz):
-    print_header_dict(unpack_header(data_array, "Fragment Header", 5), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "Fragment Header", FRAGMENT_HEADER_VERSION), clock_speed_hz)
     return
 
 
@@ -257,7 +263,7 @@ def print_header(data_array, record_type, clock_speed_hz, k_list_components):
         print_trigger_record_header(data_array, clock_speed_hz,
                                     k_list_components)
     elif record_type == "TimeSlice":
-        print_header_dict(unpack_header(data_array, "TimeSlice Header", 2), clock_speed_hz)
+        print_header_dict(unpack_header(data_array, "TimeSlice Header", TIME_SLICE_HEADER_VERSION), clock_speed_hz)
     else:
         print(f"Error: Record Type {record_type} is not supported.")
     return
