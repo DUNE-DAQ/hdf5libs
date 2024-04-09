@@ -99,6 +99,18 @@ main(int argc, char** argv)
       ss << "\n\tTimeSliceHeader: " << *tsh_ptr;
     } else {
       auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+      if (trh_ptr->get_header().version != TriggerRecordHeaderData::s_trigger_record_header_version) {
+        std::cout << std::endl;
+        std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
+                  << "used a different version" << std::endl << "       of the TriggerRecordHeader "
+                  << "than this application (built with the current version of the software) is expecting."
+                  << std::endl;
+        std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
+        std::cout << "(Expected TRH version "
+                  << TriggerRecordHeaderData::s_trigger_record_header_version << " and found version "
+                  << trh_ptr->get_header().version << ".)" << std::endl;
+        std::exit(1);
+      }
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
     }
     TLOG() << ss.str();
