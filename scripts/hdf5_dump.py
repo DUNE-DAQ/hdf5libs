@@ -13,7 +13,7 @@ FILELAYOUT_VERSION = 4
 DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
             4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
             10: 'VD_BottomTPC', 11: 'VD_TopTPC',
-            32: 'NDLAr_TPC', 33: 'NDLAr_PDS', 'ND_GAr': 34}
+            32: 'NDLAr_TPC', 33: 'NDLAr_PDS', 34: 'ND_GAr'}
 
 # daqdataformats/include/daqdataformats/SourceID.hpp
 SUBSYSTEM = {0: 'Unknown', 1: 'DetectorReadout', 2: 'HwSignalsInterface',
@@ -118,7 +118,7 @@ class DAQDataFile:
             banner_str = " File Attributes "
             print(banner_str.center(80, '='))
             for k in self.h5file.attrs.keys():
-                print("{:<30}: {}".format(k, self.h5file.attrs[k]))
+                print("{:<35}: {}".format(k, self.h5file.attrs[k]))
         n = 0
         for i in self.records:
             if n >= k_nrecords and k_nrecords > 0:
@@ -127,15 +127,15 @@ class DAQDataFile:
                 banner_str = " Trigger Record Attributes "
                 print(banner_str.center(80, '='))
                 for k in self.h5file[i.path].attrs.keys():
-                    print("{:<30}: {}".format(k, self.h5file[i.path].attrs[k]))
+                    print("{:<35}: {}".format(k, self.h5file[i.path].attrs[k]))
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
                 banner_str = f" {self.record_type} Header "
                 print(banner_str.center(80, '='))
-                print('{:<30}:\t{}'.format("Path", i.path))
-                print('{:<30}:\t{}'.format("Size", dset.shape))
-                print('{:<30}:\t{}'.format("Data type", dset.dtype))
+                print('{:<35}:\t{}'.format("Path", i.path))
+                print('{:<35}:\t{}'.format("Size", dset.shape))
+                print('{:<35}:\t{}'.format("Data type", dset.dtype))
                 print_header(data_array, self.record_type, self.clock_speed_hz,
                              k_list_components)
             if not {"fragment", "both", "all"}.isdisjoint(k_header_type):
@@ -144,9 +144,9 @@ class DAQDataFile:
                     data_array = bytearray(dset[:])
                     banner_str = " Fragment Header "
                     print(banner_str.center(80, '-'))
-                    print('{:<30}:\t{}'.format("Path", j))
-                    print('{:<30}:\t{}'.format("Size", dset.shape))
-                    print('{:<30}:\t{}'.format("Data type", dset.dtype))
+                    print('{:<35}:\t{}'.format("Path", j))
+                    print('{:<35}:\t{}'.format("Size", dset.shape))
+                    print('{:<35}:\t{}'.format("Data type", dset.dtype))
                     print_fragment_header(data_array, self.clock_speed_hz)
             n += 1
         return
@@ -216,16 +216,16 @@ def print_header_dict(hdict, clock_speed_hz):
         if any(map(ik.__contains__, filtered_list)):
             continue
         elif "time" in ik or "begin" in ik or "end" in ik:
-            print("{:<30}: {} ({})".format(
+            print("{:<35}: {} ({})".format(
                 ik, iv, tick_to_timestamp(iv, clock_speed_hz)))
         elif 'Marker word' in ik:
-            print("{:<30}: {}".format(ik, hex(iv)))
+            print("{:<35}: {}".format(ik, hex(iv)))
         elif ik == 'Detector':
-            print("{:<30}: {}".format(ik, DETECTOR[iv]))
+            print("{:<35}: {}".format(ik, DETECTOR[iv]))
         elif ik == 'Source ID subsystem' in ik:
-            print("{:<30}: {}".format(ik, SUBSYSTEM[iv]))
+            print("{:<35}: {}".format(ik, SUBSYSTEM[iv]))
         else:
-            print("{:<30}: {}".format(ik, iv))
+            print("{:<35}: {}".format(ik, iv))
     return
 
 
