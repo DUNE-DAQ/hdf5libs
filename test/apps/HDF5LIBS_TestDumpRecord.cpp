@@ -23,6 +23,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 
 using namespace dunedaq::hdf5libs;
 using namespace dunedaq::daqdataformats;
@@ -30,17 +31,42 @@ using namespace dunedaq::detdataformats;
 using namespace dunedaq::trgdataformats;
 
 void
-print_usage()
+print_usage(const char *appname)
 {
-  TLOG() << "Usage: HDF5LIBS_TestDumpRecord <input_file_name>";
+  TLOG() << "Usage: " << appname << " [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>";
 }
 
 int
 main(int argc, char** argv)
 {
+  int number_of_trs_to_print = 0x0ffffff;
+  int number_of_trs_to_skip = 0;
+  signed char opt;
+  while ((opt = getopt(argc, argv, "hn:s:")) != -1) {
+    switch (opt) {
+    case 'h':
+      print_usage(argv[0]);
+      return 1;
+    case 'n':
+      number_of_trs_to_print = atoi(optarg);
+      break;
+    case 's':
+      number_of_trs_to_skip = atoi(optarg);
+      break;
+    default: /* '?' */
+      print_usage(argv[0]);
+      return 1;
+    }
+  }
 
+  //for (int index = optind; index < argc; index++) {
+  //  printf ("Non-option argument %s\n", argv[index]);
+  //}
+
+  argc -= (optind-1);
+  argv += (optind-1);
   if (argc != 2) {
-    print_usage();
+    print_usage(argv[0]);
     return 1;
   }
 
@@ -93,7 +119,22 @@ main(int argc, char** argv)
   TLOG() << ss.str();
   ss.str("");
 
+  if (number_of_trs_to_print < 0) {
+    if (number_of_trs_to_skip == 0) {
+      number_of_trs_to_skip = records.size();
+    }
+    number_of_trs_to_skip += number_of_trs_to_print;
+    number_of_trs_to_print *= -1;
+  }
+  int tr_count = 0;
+  int trs_printed = 0;
+
   for (auto const& record_id : records) {
+    ++tr_count;
+    if (number_of_trs_to_skip > 0 && tr_count <= number_of_trs_to_skip) {
+      continue;
+    }
+
     if (h5_raw_data_file.is_timeslice_type()) {
       auto tsh_ptr = h5_raw_data_file.get_tsh_ptr(record_id);
       ss << "\n\tTimeSliceHeader: " << *tsh_ptr;
@@ -125,16 +166,18 @@ main(int argc, char** argv)
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
          << " has size = " << frag_ptr->get_size() << " -----";
-      try {
-        auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-        ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
-        ss << "\n\t\t"
-           << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-           << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
-      }
-      catch (std::exception const& excpt) {
-        ss << "\n\t\t"
-           << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
+      if (h5_raw_data_file.is_trigger_record_type()) {
+        try {
+          auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
+          ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+          ss << "\n\t\t"
+             << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
+             << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+        }
+        catch (std::exception const& excpt) {
+          ss << "\n\t\t"
+             << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
+        }
       }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
@@ -255,6 +298,11 @@ main(int argc, char** argv)
     }
     std::cout << ss.str() << std::endl;
     ss.str("");
+
+    ++trs_printed;
+    if (number_of_trs_to_print > 0 && trs_printed >= number_of_trs_to_print) {
+      break;
+    }
   }
 
   return 0;
