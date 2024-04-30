@@ -33,7 +33,8 @@ using namespace dunedaq::trgdataformats;
 void
 print_usage(const char *appname)
 {
-  TLOG() << "Usage: " << appname << " [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>";
+  std::cout << "Usage: " << appname << " [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>" << std::endl;
+  std::cout << "Where a negative number of TRs to skip counts backward from the end of the file." << std::endl;
 }
 
 int
@@ -58,10 +59,6 @@ main(int argc, char** argv)
       return 1;
     }
   }
-
-  //for (int index = optind; index < argc; index++) {
-  //  printf ("Non-option argument %s\n", argv[index]);
-  //}
 
   argc -= (optind-1);
   argv += (optind-1);
@@ -119,12 +116,8 @@ main(int argc, char** argv)
   TLOG() << ss.str();
   ss.str("");
 
-  if (number_of_trs_to_print < 0) {
-    if (number_of_trs_to_skip == 0) {
-      number_of_trs_to_skip = records.size();
-    }
-    number_of_trs_to_skip += number_of_trs_to_print;
-    number_of_trs_to_print *= -1;
+  if (number_of_trs_to_skip < 0) {
+    number_of_trs_to_skip += records.size();
   }
   int tr_count = 0;
   int trs_printed = 0;
