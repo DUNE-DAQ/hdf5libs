@@ -128,6 +128,10 @@ main(int argc, char** argv)
       continue;
     }
 
+    if (trs_printed >= number_of_trs_to_print) {
+      break;
+    }
+
     if (h5_raw_data_file.is_timeslice_type()) {
       auto tsh_ptr = h5_raw_data_file.get_tsh_ptr(record_id);
       ss << "\n\tTimeSliceHeader: " << *tsh_ptr;
@@ -293,9 +297,6 @@ main(int argc, char** argv)
     ss.str("");
 
     ++trs_printed;
-    if (number_of_trs_to_print > 0 && trs_printed >= number_of_trs_to_print) {
-      break;
-    }
   }
 
   return 0;
