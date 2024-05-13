@@ -206,31 +206,6 @@ private:
    */
   std::map<std::string, daqdataformats::SourceID::Subsystem> m_detector_group_name_to_type_map;
 
-  // quick powers of ten lookup
-  constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
-    = {
-        1,                    // 1e0
-        10,                   // 1e1
-        100,                  // 1e2
-        1000,                 // 1e3
-        10000,                // 1e4
-        100000,               // 1e5
-        1000000,              // 1e6
-        10000000,             // 1e7
-        100000000,            // 1e8
-        1000000000,           // 1e9
-        10000000000,          // 1e10
-        100000000000,         // 1e11
-        1000000000000,        // 1e12
-        10000000000000,       // 1e13
-        100000000000000,      // 1e14
-        1000000000000000,     // 1e15
-        10000000000000000,    // 1e16
-        100000000000000000,   // 1e17
-        1000000000000000000,  // 1e18
-        10000000000000000000u // 1e19
-      };
-
   /**
    * @brief Fill path parameters maps from FileLayoutParams
    */

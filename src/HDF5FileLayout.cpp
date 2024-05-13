@@ -65,21 +65,10 @@ HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build
   std::ostringstream record_number_string;
 
   int width = m_conf_params.digits_for_record_number;
-
-  if (record_number >= m_powers_ten[m_conf_params.digits_for_record_number]) {
-    //ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
-    width = 0; // tells it to revert to normal width
-  }
-
   record_number_string << m_conf_params.record_name_prefix << std::setw(width) << std::setfill('0') << record_number;
 
   if (m_conf_params.digits_for_sequence_number > 0) {
-
     width = m_conf_params.digits_for_sequence_number;
-    if (seq_num >= m_powers_ten[m_conf_params.digits_for_sequence_number]) {
-      //ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
-      width = 0; // tells it to revert to normal width
-    }
     record_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
   }
 
