@@ -11,7 +11,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include "logging/Logging.hpp"
 
@@ -56,7 +55,7 @@ main(int argc, char** argv)
 
   nlohmann::json flp_json;
   auto flp = h5_raw_data_file.get_file_layout().get_file_layout_params();
-  hdf5filelayout::to_json(flp_json, flp);
+  flp_json = flp.to_json();
   ss << "\nFile Layout Parameters:\n" << flp_json;
 
   TLOG() << ss.str();

@@ -14,7 +14,7 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUT_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUT_HPP_
 
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
+#include "hdf5libs/HDF5FileLayoutParameters.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
@@ -71,7 +71,7 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriter. Version always most recent.
    */
-  explicit HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version = 4); // NOLINT(build/unsigned)
+  explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 4); // NOLINT(build/unsigned)
 
   uint32_t get_version() const noexcept // NOLINT(build/unsigned)
   {
@@ -86,14 +86,14 @@ public:
 
   std::string get_record_header_dataset_name() const noexcept { return m_conf_params.record_header_dataset_name; }
 
-  std::map<daqdataformats::SourceID::Subsystem, hdf5filelayout::PathParams> get_path_params_map() const
+  std::map<daqdataformats::SourceID::Subsystem, HDF5PathParameters> get_path_params_map() const
   {
     return m_path_params_map;
   }
 
-  hdf5filelayout::PathParams get_path_params(daqdataformats::SourceID::Subsystem type) const;
+  HDF5PathParameters get_path_params(daqdataformats::SourceID::Subsystem type) const;
 
-  hdf5filelayout::FileLayoutParams get_file_layout_params() const { return m_conf_params; }
+  HDF5FileLayoutParameters get_file_layout_params() const { return m_conf_params; }
 
   /**
    * @brief get string for record number
@@ -189,7 +189,7 @@ private:
   /**
    * @brief FileLayout configuration parameters
    */
-  hdf5filelayout::FileLayoutParams m_conf_params;
+  HDF5FileLayoutParameters m_conf_params;
 
   /**
    * @brief version number
@@ -199,7 +199,7 @@ private:
   /**
    * @brief map translation for SourceID::Subsystem to dataset path parameters
    */
-  std::map<daqdataformats::SourceID::Subsystem, hdf5filelayout::PathParams> m_path_params_map;
+  std::map<daqdataformats::SourceID::Subsystem, HDF5PathParameters> m_path_params_map;
 
   /**
    * @brief map translation for the detector group name to SourceID::Subsystem
@@ -234,12 +234,12 @@ private:
   /**
    * @brief Fill path parameters maps from FileLayoutParams
    */
-  void fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp);
+  void fill_path_params_maps(HDF5FileLayoutParameters const& flp);
 
   /**
    * @brief Version0 FileLayout parameters, for backward compatibility
    */
-  hdf5filelayout::FileLayoutParams get_v0_file_layout_params();
+  HDF5FileLayoutParameters get_v0_file_layout_params();
 
   /**
    * @brief Check configuration for any errors.

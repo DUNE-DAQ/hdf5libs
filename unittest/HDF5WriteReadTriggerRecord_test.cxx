@@ -8,10 +8,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
-#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
-#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -70,10 +66,10 @@ delete_files_matching_pattern(const std::string& path, const std::string& patter
   return file_list;
 }
 
-hdf5filelayout::FileLayoutParams
+HDF5FileLayoutParameters
 create_file_layout_params()
 {
-  dunedaq::hdf5libs::hdf5filelayout::PathParams params_tpc;
+  dunedaq::hdf5libs::HDF5PathParameters params_tpc;
   params_tpc.detector_group_type = "Detector_Readout";
   params_tpc.detector_group_name = "TPC";
   params_tpc.element_name_prefix = "Link";
@@ -87,12 +83,12 @@ create_file_layout_params()
 
   // note, for unit test json equality checks, 'PDS' needs to come before
   //'TPC', as on reading back the filelayout it looks like it's alphabetical.
-  dunedaq::hdf5libs::hdf5filelayout::PathParamList param_list;
+  std::vector<dunedaq::hdf5libs::HDF5PathParameters> param_list;
   // param_list.push_back(params_pds);
   param_list.push_back(params_tpc);
 
-  dunedaq::hdf5libs::hdf5filelayout::FileLayoutParams layout_params;
-  layout_params.path_param_list = param_list;
+  dunedaq::hdf5libs::HDF5FileLayoutParameters layout_params;
+  layout_params.path_params_list = param_list;
   layout_params.record_name_prefix = "TriggerRecord";
   layout_params.digits_for_record_number = 6;
   layout_params.digits_for_sequence_number = 4;
@@ -101,90 +97,46 @@ create_file_layout_params()
   return layout_params;
 }
 
-hdf5rawdatafile::SrcIDGeoIDMap
-create_srcid_geoid_map(){
-  using nlohmann::json;
+uint64_t
+encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
+{
+  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
+         (static_cast<uint64_t>(crate_id) << 16) | det_id;
+}
 
-  hdf5rawdatafile::SrcIDGeoIDMap map;
-  json srcid_geoid_map = json::parse(R"(
-    [
-    {
-      "source_id": 0,
-      "geo_id": {
-        "det_id": 3,
-        "crate_id": 1,
-        "slot_id": 0,
-        "stream_id": 0
-      }
-    },
-    {
-      "source_id": 1,
-      "geo_id": {
-        "det_id": 3,
-        "crate_id": 1,
-        "slot_id": 0,
-        "stream_id": 1
-      }
-    },
-    {
-      "source_id": 3,
-      "geo_id": {
-        "det_id": 3,
-        "crate_id": 1,
-        "slot_id": 1,
-        "stream_id": 0
-      }
-    },
-    {
-      "source_id": 4,
-      "geo_id": {
-        "det_id": 3,
-        "crate_id": 1,
-        "slot_id": 1,
-        "stream_id": 1
-      }
-    },
-    {
-      "source_id": 4,
-      "geo_id": {
-        "det_id": 2,
-        "crate_id": 1,
-        "slot_id": 0,
-        "stream_id": 0
-      }
-    },
-    {
-      "source_id": 5,
-      "geo_id": {
-        "det_id": 2,
-        "crate_id": 1,
-        "slot_id": 0,
-        "stream_id": 1
-      }
-    },
-    {
-      "source_id": 6,
-      "geo_id": {
-        "det_id": 2,
-        "crate_id": 1,
-        "slot_id": 1,
-        "stream_id": 0
-      }
-    },
-    {
-      "source_id": 7,
-      "geo_id": {
-        "det_id": 2,
-        "crate_id": 1,
-        "slot_id": 1,
-        "stream_id": 1
-      }
-    }
-  ]
-  )");
+HDF5SourceIDHandler::source_id_geo_id_map_t
+create_srcid_geoid_map()
+{
+  HDF5SourceIDHandler::source_id_geo_id_map_t map;
 
-  return srcid_geoid_map.get<hdf5rawdatafile::SrcIDGeoIDMap>();
-  
+  dunedaq::daqdataformats::SourceID sid;
+  sid.subsystem = dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout;
+
+  sid.id = 0;
+  map[sid].push_back(encode_geoid(3, 1, 0, 0));
+
+  sid.id = 1;
+  map[sid].push_back(encode_geoid(3, 1, 0, 1));
+
+  sid.id = 3;
+  map[sid].push_back(encode_geoid(3, 1, 1, 0));
+
+  sid.id = 4;
+  map[sid].push_back(encode_geoid(3, 1, 1, 1));
+
+  sid.id = 4;
+  map[sid].push_back(encode_geoid(2, 1, 0, 0));
+
+  sid.id = 5;
+  map[sid].push_back(encode_geoid(2, 1, 0, 1));
+
+  sid.id = 6;
+  map[sid].push_back(encode_geoid(2, 1, 1, 0));
+
+  sid.id = 7;
+  map[sid].push_back(encode_geoid(2, 1, 1, 1));
+
+  return map;
 }
 
 dunedaq::daqdataformats::TriggerRecord
@@ -330,8 +282,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   delete_files_matching_pattern(file_path, hdf5_filename);
 
   // convert file_params to json, allows for easy comp later
-  hdf5filelayout::data_t flp_json_in;
-  hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
+  auto flp_in=create_file_layout_params();
 
   // create src-geo id map
   auto srcid_geoid_map = create_srcid_geoid_map();
@@ -339,8 +290,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
                                                                   run_number,
                                                                   file_index,
-                                                                  application_name,
-                                                                  flp_json_in,
+                                                                  application_name, flp_in,
                                                                   srcid_geoid_map));
                                                                   
   // write several events, each with several fragments
@@ -367,9 +317,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 
   // extract and check file layout parameters
   auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-  hdf5filelayout::data_t flp_json_read;
-  hdf5filelayout::to_json(flp_json_read, file_layout_parameters_read);
-  BOOST_REQUIRE_EQUAL(flp_json_in, flp_json_read);
+  BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json());
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
