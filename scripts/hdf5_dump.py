@@ -172,8 +172,16 @@ class DAQDataFile:
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
-                (s, ) = struct.unpack('<H', data_array[42:44])
+                (s, ) = struct.unpack('<H', data_array[48:50])
                 nf = len(i.fragments)
+                empty_frag_count = 0
+                for frag in i.fragments:
+                    frag_dset = self.h5file[frag]
+                    frag_data = bytearray(frag_dset[:])
+                    (frag_size, ) = struct.unpack('<Q', data_array[8:16])
+                    if frag_size == 72:
+                        empty_frag_count += 1
+                print(f"Empty frag count in record {n} is {empty_frag_count}")
                 report.append((h, s, k, nf, nf - k))
                 n += 1
             print("{:-^80}".format("Column Definitions"))
