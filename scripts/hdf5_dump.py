@@ -171,6 +171,9 @@ class DAQDataFile:
                     break
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
+                (trh_version, ) = struct.unpack('<I', data_array[4:8])
+                if trh_version != TRIGGER_RECORD_HEADER_VERSION:
+                    raise ValueError(f"Invalid TriggerRecord Header format version: expected {TRIGGER_RECORD_HEADER_VERSION} and found {trh_version}")
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
                 (s, ) = struct.unpack('<H', data_array[48:50])
                 nf = len(i.fragments)
@@ -178,6 +181,9 @@ class DAQDataFile:
                 for frag in i.fragments:
                     frag_dset = self.h5file[frag]
                     frag_data = bytearray(frag_dset[:])
+                    (frag_version, ) = struct.unpack('<I', frag_data[4:8])
+                    if frag_version != FRAGMENT_HEADER_VERSION:
+                        raise ValueError(f"Invalid Fragment Header format version: expected {FRAGMENT_HEADER_VERSION} and found {frag_version}")
                     (frag_size, ) = struct.unpack('<Q', frag_data[8:16])
                     if frag_size <= 72:
                         empty_frag_count += 1
