@@ -11,8 +11,8 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUTPARAMETERS_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUTPARAMETERS_HPP_
 
-#include "appdal/HDF5FileLayoutParams.hpp"
-#include "appdal/HDF5PathParams.hpp"
+#include "appmodel/HDF5FileLayoutParams.hpp"
+#include "appmodel/HDF5PathParams.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -30,7 +30,7 @@ struct HDF5PathParameters
   int32_t digits_for_element_number = 5;
 
   HDF5PathParameters() = default;
-  HDF5PathParameters(appdal::HDF5PathParams const* from_conf)
+  HDF5PathParameters(appmodel::HDF5PathParams const* from_conf)
   {
     detector_group_type = from_conf->get_detector_group_type();
     detector_group_name = from_conf->get_detector_group_name();
@@ -69,7 +69,7 @@ struct HDF5FileLayoutParameters
   std::vector<HDF5PathParameters> path_params_list;
 
   HDF5FileLayoutParameters() = default;
-  HDF5FileLayoutParameters(appdal::HDF5FileLayoutParams const* from_conf) {
+  HDF5FileLayoutParameters(appmodel::HDF5FileLayoutParams const* from_conf) {
     record_name_prefix = from_conf->get_record_name_prefix();
     digits_for_record_number = from_conf->get_digits_for_record_number();
     digits_for_sequence_number = from_conf->get_digits_for_sequence_number();
