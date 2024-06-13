@@ -171,22 +171,36 @@ class DAQDataFile:
                     break
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
+                (trh_version, ) = struct.unpack('<I', data_array[4:8])
+                if trh_version != TRIGGER_RECORD_HEADER_VERSION:
+                    raise ValueError(f"Invalid TriggerRecord Header format version: expected {TRIGGER_RECORD_HEADER_VERSION} and found {trh_version}")
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
-                (s, ) = struct.unpack('<H', data_array[42:44])
+                (s, ) = struct.unpack('<H', data_array[48:50])
                 nf = len(i.fragments)
-                report.append((h, s, k, nf, nf - k))
+                empty_frag_count = 0
+                for frag in i.fragments:
+                    frag_dset = self.h5file[frag]
+                    frag_data = bytearray(frag_dset[:])
+                    (frag_version, ) = struct.unpack('<I', frag_data[4:8])
+                    if frag_version != FRAGMENT_HEADER_VERSION:
+                        raise ValueError(f"Invalid Fragment Header format version: expected {FRAGMENT_HEADER_VERSION} and found {frag_version}")
+                    (frag_size, ) = struct.unpack('<Q', frag_data[8:16])
+                    if frag_size <= 72:
+                        empty_frag_count += 1
+                report.append((h, s, k, nf, nf - k, empty_frag_count))
                 n += 1
             print("{:-^80}".format("Column Definitions"))
-            print("i:           Trigger record number;")
-            print("s:           Sequence number;")
-            print("N_frag_exp:  expected no. of fragments stored in header;")
-            print("N_frag_act:  no. of fragments written in trigger record;")
-            print("N_diff:      N_frag_act - N_frag_exp")
+            print("i:            Trigger record number;")
+            print("s:            Sequence number;")
+            print("N_frag_exp:   expected no. of fragments stored in header;")
+            print("N_frag_act:   no. of fragments written in trigger record;")
+            print("N_diff:       N_frag_act - N_frag_exp")
+            print("N_frag_empty: no. of empty fragments (size <= 72)")
             print("{:-^80}".format("Column Definitions"))
-            print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(
-                "i", "s", "N_frag_exp", "N_frag_act", "N_diff"))
+            print("{:^10}{:^10}{:^15}{:^15}{:^10}{:^12}".format(
+                "i", "s", "N_frag_exp", "N_frag_act", "N_diff", "N_frag_empty"))
             for i in range(len(report)):
-                print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(*report[i]))
+                print("{:^10}{:^10}{:^15}{:^15}{:^10}{:^12}".format(*report[i]))
         return
 
     class Record:
