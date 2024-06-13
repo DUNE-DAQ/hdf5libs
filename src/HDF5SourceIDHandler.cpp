@@ -7,10 +7,11 @@
 
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 
-#include "confmodel/ReadoutGroup.hpp"
-#include "confmodel/ReadoutInterface.hpp"
-#include "confmodel/DROStreamConf.hpp"
+#include "confmodel/Application.hpp"
+#include "confmodel/DetectorStream.hpp"
+#include "confmodel/DetectorToDaqConnection.hpp"
 #include "confmodel/GeoId.hpp"
+#include "appmodel/ReadoutApplication.hpp"
 
 #include "logging/Logging.hpp"
 #include <nlohmann/json.hpp>
@@ -26,16 +27,43 @@ encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
 }
 
 HDF5SourceIDHandler::source_id_geo_id_map_t
-HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::ReadoutMap* rmap)
+HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session)
 {
   HDF5SourceIDHandler::source_id_geo_id_map_t output_map;
 
-  for (auto& rog : rmap->get_groups()) {
-    auto group_rset = rog->cast<confmodel::ReadoutGroup>();
-    for (auto& roi : group_rset->get_contains()) {
-      auto iface_rset = roi->cast<confmodel::ReadoutInterface>();
-      for (auto& dros : iface_rset->get_contains()) {
-        auto stream = dros->cast<confmodel::DROStreamConf>();
+  for (auto& app : session->get_all_applications()) {
+    auto ro_app = app->cast<appmodel::ReadoutApplication>();
+    if (!ro_app)
+      continue;
+
+    for (auto d2d_conn_res : ro_app->get_contains()) {
+
+      // Are we sure?
+      if (d2d_conn_res->disabled(*session)) {
+        TLOG_DEBUG(7) << "Ignoring disabled DetectorToDaqConnection " << d2d_conn_res->UID();
+        continue;
+      }
+
+      TLOG() << "Processing DetectorToDaqConnection " << d2d_conn_res->UID();
+      // get the readout groups and the interfaces and streams therein; 1 reaout group corresponds to 1 data reader
+      // module
+      auto d2d_conn = d2d_conn_res->cast<confmodel::DetectorToDaqConnection>();
+
+      if (!d2d_conn) {
+        continue;
+      }
+
+      // Loop over senders
+      for (auto dros : d2d_conn->get_streams()) {
+
+        // Are we sure?
+        if (dros->disabled(*session)) {
+          TLOG_DEBUG(7) << "Ignoring disabled DetectorStream " << dros->UID();
+          continue;
+        }
+        auto stream = dros->cast<confmodel::DetectorStream>();
+        if (!stream)
+          continue;
         auto geoid = stream->get_geo_id();
         auto geoid_int =
           encode_geoid(geoid->get_detector_id(), geoid->get_crate_id(), geoid->get_slot_id(), geoid->get_stream_id());
