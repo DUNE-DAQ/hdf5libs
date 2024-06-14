@@ -69,7 +69,7 @@ class HDF5FileLayout
 {
 public:
   /**
-   * @brief Constructor from json conf, used in DataWriter. Version always most recent.
+   * @brief Constructor from json conf, used in DataWriterModule. Version always most recent.
    */
   explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 4); // NOLINT(build/unsigned)
 
