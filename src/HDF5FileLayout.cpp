@@ -14,7 +14,8 @@
 namespace dunedaq {
 namespace hdf5libs {
 
-HDF5FileLayout::HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version) // NOLINT(build/unsigned)
+HDF5FileLayout::HDF5FileLayout(HDF5FileLayoutParameters conf,
+                               uint32_t version) // NOLINT(build/unsigned)
   : m_conf_params(conf)
   , m_version(version)
 {
@@ -48,7 +49,7 @@ HDF5FileLayout::check_config()
   }
 }
 
-hdf5filelayout::PathParams
+HDF5PathParameters
 HDF5FileLayout::get_path_params(daqdataformats::SourceID::Subsystem type) const
 {
   try {
@@ -67,17 +68,20 @@ HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build
   int width = m_conf_params.digits_for_record_number;
 
   if (record_number >= m_powers_ten[m_conf_params.digits_for_record_number]) {
-    ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
+    ers::warning(
+      FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
     width = 0; // tells it to revert to normal width
   }
 
-  record_number_string << m_conf_params.record_name_prefix << std::setw(width) << std::setfill('0') << record_number;
+  record_number_string << m_conf_params.record_name_prefix << std::setw(width) << std::setfill('0')
+                       << record_number;
 
   if (m_conf_params.digits_for_sequence_number > 0) {
 
     width = m_conf_params.digits_for_sequence_number;
     if (seq_num >= m_powers_ten[m_conf_params.digits_for_sequence_number]) {
-      ers::warning(FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
+      ers::warning(
+        FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
       width = 0; // tells it to revert to normal width
     }
     record_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
@@ -115,7 +119,8 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TriggerRecordHeader& trh
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
   // then the SourceID plus record header name
-  path_elements.push_back(trh.get_header().element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
+  path_elements.push_back(trh.get_header().element_id.to_string() + "_" +
+                          m_conf_params.record_header_dataset_name);
 
   return path_elements;
 }
@@ -158,7 +163,9 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
   // then the SourceID plus FragmentType
-  path_elements.push_back(fh.element_id.to_string() + "_" + daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
+  path_elements.push_back(
+    fh.element_id.to_string() + "_" +
+    daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
 
   return path_elements;
 }
@@ -279,9 +286,9 @@ HDF5FileLayout::get_source_id_from_path_elements(std::vector<std::string> const&
 }
 
 void
-HDF5FileLayout::fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp)
+HDF5FileLayout::fill_path_params_maps(HDF5FileLayoutParameters const& flp)
 {
-  for (auto const& path_param : flp.path_param_list) {
+  for (auto const& path_param : flp.path_params_list) {
     auto sys_type = daqdataformats::SourceID::string_to_subsystem(path_param.detector_group_type);
 
     if (sys_type == daqdataformats::SourceID::Subsystem::kUnknown)
@@ -295,46 +302,46 @@ HDF5FileLayout::fill_path_params_maps(hdf5filelayout::FileLayoutParams const& fl
 /**
  * @brief Version0 FileLayout parameters, for backward compatibility
  */
-hdf5filelayout::FileLayoutParams
+HDF5FileLayoutParameters
 HDF5FileLayout::get_v0_file_layout_params()
 {
-  hdf5filelayout::FileLayoutParams flp;
+  HDF5FileLayoutParameters flp;
   flp.record_name_prefix = "TriggerRecord";
   flp.digits_for_record_number = 6;
   flp.digits_for_sequence_number = 0;
   flp.record_header_dataset_name = "TriggerRecordHeader";
 
-  hdf5filelayout::PathParams pp;
+  HDF5PathParameters pp;
 
   pp.detector_group_type = "TPC";
   pp.detector_group_name = "TPC";
   pp.element_name_prefix = "Link";
   pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
+  flp.path_params_list.push_back(pp);
 
   pp.detector_group_type = "PDS";
   pp.detector_group_name = "PDS";
   pp.element_name_prefix = "Element";
   pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
+  flp.path_params_list.push_back(pp);
 
   pp.detector_group_type = "NDLArTPC";
   pp.detector_group_name = "NDLArTPC";
   pp.element_name_prefix = "Element";
   pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
+  flp.path_params_list.push_back(pp);
 
   pp.detector_group_type = "NDLArPDS";
   pp.detector_group_name = "NDLArPDS";
   pp.element_name_prefix = "Element";
   pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
+  flp.path_params_list.push_back(pp);
 
   pp.detector_group_type = "DataSelection";
   pp.detector_group_name = "Trigger";
   pp.element_name_prefix = "Element";
   pp.digits_for_element_number = 2;
-  flp.path_param_list.push_back(pp);
+  flp.path_params_list.push_back(pp);
 
   return flp;
 }

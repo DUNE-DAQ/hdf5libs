@@ -14,8 +14,6 @@
 #include "daqdataformats/Fragment.hpp"
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
-#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
-#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 #include "trgdataformats/TriggerObjectOverlay.hpp"
 
 #include <fstream>

@@ -10,8 +10,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
-#include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
@@ -57,7 +55,7 @@ main(int argc, char** argv)
 
   // get file_layout config
   try {
-    fl_conf = j_in["file_layout"].get<hdf5filelayout::FileLayoutParams>();
+    fl_conf = j_in["file_layout"];
     TLOG() << "Read 'file_layout' configuration:\n";
     TLOG() << fl_conf;
   } catch (...) {
@@ -82,10 +80,11 @@ main(int argc, char** argv)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // Read src-geo id map
-  std::ifstream f(hw_map_file_name);
-  nlohmann::json data = nlohmann::json::parse(f);
+  //std::ifstream f(hw_map_file_name);
+  //nlohmann::json data = nlohmann::json::parse(f);
 
-  auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
+  //auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
+  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map;
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,

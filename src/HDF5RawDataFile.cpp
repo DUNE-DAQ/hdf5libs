@@ -6,7 +6,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include "logging/Logging.hpp"
 
@@ -32,8 +31,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  daqdataformats::run_number_t run_number,
                                  size_t file_index,
                                  std::string application_name,
-                                 const hdf5filelayout::FileLayoutParams& fl_params,
-                                 hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map,
+                                 HDF5FileLayoutParameters fl_params,
+                                 HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -73,7 +72,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   // write the SourceID-related attributes
-  HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
+  //HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
+  m_file_level_source_id_geo_id_map = srcid_geoid_map;
   HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 
   // write the record type
@@ -238,8 +238,7 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
 void
 HDF5RawDataFile::write_file_layout()
 {
-  hdf5filelayout::data_t fl_json;
-  hdf5filelayout::to_json(fl_json, m_file_layout_ptr->get_file_layout_params());
+  auto fl_json = m_file_layout_ptr->get_file_layout_params().to_json();
   write_attribute("filelayout_params", fl_json.dump());
   write_attribute("filelayout_version", m_file_layout_ptr->get_version());
 }
@@ -334,14 +333,14 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
 void
 HDF5RawDataFile::read_file_layout()
 {
-  hdf5filelayout::FileLayoutParams fl_params;
+  HDF5FileLayoutParameters fl_params;
   uint32_t version = 0; // NOLINT(build/unsigned)
 
   std::string fl_str;
   try {
     fl_str = get_attribute<std::string>("filelayout_params");
-    hdf5filelayout::data_t fl_json = nlohmann::json::parse(fl_str);
-    hdf5filelayout::from_json(fl_json, fl_params);
+    nlohmann::json fl_json = nlohmann::json::parse(fl_str);
+    fl_params = HDF5FileLayoutParameters(fl_json);
 
     version = get_attribute<uint32_t>("filelayout_version"); // NOLINT(build/unsigned)
 
@@ -814,10 +813,10 @@ HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_pat
 }
 #endif
 
-hdf5rawdatafile::SrcIDGeoIDMap
+HDF5SourceIDHandler::source_id_geo_id_map_t
 HDF5RawDataFile::get_srcid_geoid_map() const {
 
-  return HDF5SourceIDHandler::rebuild_srcidgeoidmap(m_file_level_source_id_geo_id_map);
+  return m_file_level_source_id_geo_id_map;
 }
 
 std::set<uint64_t> // NOLINT(build/unsigned)

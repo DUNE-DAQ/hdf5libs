@@ -14,8 +14,6 @@
 // DUNE-DAQ
 #include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
-#include "hdf5libs/hdf5rawdatafile/Structs.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
@@ -127,8 +125,8 @@ public:
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
                   std::string application_name,
-                  const hdf5filelayout::FileLayoutParams& fl_params,
-                  hdf5rawdatafile::SrcIDGeoIDMap srcid_geoid_map,
+                  HDF5FileLayoutParameters fl_params,
+                  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                   std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 
@@ -234,7 +232,7 @@ public:
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
-  hdf5rawdatafile::SrcIDGeoIDMap get_srcid_geoid_map() const;
+  HDF5SourceIDHandler::source_id_geo_id_map_t get_srcid_geoid_map() const;
 
   //get a list of all the geo ids anywhere in the file
   std::set<uint64_t> get_all_geo_ids() const; // NOLINT(build/unsigned)
