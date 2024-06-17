@@ -272,9 +272,9 @@ main(int argc, char** argv)
           bit_sniff = 1;
           for (bit_pos = 0; bit_pos < 32; bit_pos++) {
             if (input_low & bit_sniff) {
-              bit_sniff = bit_sniff << 1;
               ss << bit_pos << " ";
             }
+            bit_sniff = bit_sniff << 1;
           }
         }
 
@@ -285,9 +285,9 @@ main(int argc, char** argv)
           bit_sniff = 1;
           for (bit_pos = 0; bit_pos < 32; bit_pos++) {
             if (input_high & bit_sniff) {
-              bit_sniff = bit_sniff << 1;
               ss << bit_pos << " ";
             }
+            bit_sniff = bit_sniff << 1;
           }
         }
         ss << ".";  // Finishes the HSI section.
