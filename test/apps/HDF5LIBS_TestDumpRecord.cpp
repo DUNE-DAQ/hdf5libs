@@ -19,6 +19,7 @@
 #include "hdf5libs/hdf5rawdatafile/Nljs.hpp"
 #include "trgdataformats/TriggerObjectOverlay.hpp"
 
+#include <bitset>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -266,28 +267,40 @@ main(int argc, char** argv)
         // Finding the bit positions for input_low and input_high
         uint32_t bit_pos, bit_sniff;
         uint32_t input_low = hsi_ptr->input_low;
+        std::bitset<32> low_bits{input_low};
+        size_t num_bits = low_bits.count();
         ss << ",\n\t\t" << "Input Low Bitmap = " << input_low;
         if (input_low != 0) { // Skip printing the positions if the value is 0.
           ss << ", Input Low Bit Positions = ";
           bit_sniff = 1;
-          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+          for (bit_pos = 0; bit_pos < 32, num_bits > 0; bit_pos++) {
             if (input_low & bit_sniff) {
-              bit_sniff = bit_sniff << 1;
-              ss << bit_pos << " ";
+              if (num_bits == 1)
+                ss << bit_pos;
+              else
+                ss << bit_pos << ", ";
+              num_bits--;
             }
+            bit_sniff = bit_sniff << 1;
           }
         }
 
         uint32_t input_high = hsi_ptr->input_high;
+        std::bitset<32> high_bits{input_high};
+        num_bits = high_bits.count();
         ss << ",\n\t\t" << "Input High Bitmap = " << input_high;
         if (input_high != 0) {
           ss << ", Input High Bit Positions = ";
           bit_sniff = 1;
-          for (bit_pos = 0; bit_pos < 32; bit_pos++) {
+          for (bit_pos = 0; bit_pos < 32, num_bits > 0; bit_pos++) {
             if (input_high & bit_sniff) {
-              bit_sniff = bit_sniff << 1;
-              ss << bit_pos << " ";
+              if (num_bits == 1)
+                ss << bit_pos;
+              else
+                ss << bit_pos << ", ";
+              num_bits--;
             }
+            bit_sniff = bit_sniff << 1;
           }
         }
         ss << ".";  // Finishes the HSI section.
