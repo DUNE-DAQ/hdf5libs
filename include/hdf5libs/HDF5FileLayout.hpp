@@ -128,6 +128,11 @@ public:
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const;
 
   /**
+   * @brief get the path for the TimeSliceHeader as a single string (e.g. /a/b/c)
+   */
+  std::string get_path_string(const daqdataformats::TimeSliceHeader& tsh) const;
+
+  /**
    * @brief extract Fragment GeoID given path elements
    */
   daqdataformats::SourceID get_source_id_from_path_elements(std::vector<std::string> const& path_elements) const;
