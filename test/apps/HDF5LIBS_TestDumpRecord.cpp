@@ -190,6 +190,7 @@ main(int argc, char** argv)
           uint16_t link_id  = (geo_id >> 48) & 0xffff;
           ss << "\n\t\t\t"
              << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
+             << " (" << det_id << ")"
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
       }
