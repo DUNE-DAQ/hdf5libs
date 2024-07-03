@@ -34,17 +34,13 @@ HDF5SourceIDHandler::rebuild_srcidgeoidmap(const source_id_geo_id_map_t& the_map
   for( const auto& [sid, geoids] : the_map ) {
       // There could be more than one, but we don't want to think about that
       uint64_t geoid = *geoids.begin();
-      m.emplace_back(hdf5rawdatafile::SrcIDGeoIDEntry{
-        sid.id, 
-        hdf5rawdatafile::GeoID{
-          .det_id = (geoid >> 0) & 0xff,
-          .crate_id = (geoid >> 16) & 0xff,
-          .slot_id = (geoid >> 32) & 0xff,
-          .stream_id = (geoid >> 48) & 0xff,
-        }
-      }
-    );
-  } 
+      hdf5rawdatafile::GeoID gid;
+      gid.det_id = (int)((geoid >> 0) & 0xff);
+      gid.crate_id = (int)((geoid >> 16) & 0xff);
+      gid.slot_id = (int)((geoid >> 32) & 0xff);
+      gid.stream_id = (int)((geoid >> 48) & 0xff);
+      m.emplace_back(hdf5rawdatafile::SrcIDGeoIDEntry{sid.id,gid});
+  }
 
   return m;
 }
