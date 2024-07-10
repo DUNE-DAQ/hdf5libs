@@ -190,6 +190,7 @@ main(int argc, char** argv)
           uint16_t link_id  = (geo_id >> 48) & 0xffff;
           ss << "\n\t\t\t"
              << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
+             << " (" << det_id << ")"
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
       }
@@ -273,7 +274,7 @@ main(int argc, char** argv)
         if (input_low != 0) { // Skip printing the positions if the value is 0.
           ss << ", Input Low Bit Positions = ";
           bit_sniff = 1;
-          for (bit_pos = 0; bit_pos < 32, num_bits > 0; bit_pos++) {
+          for (bit_pos = 0; bit_pos < 32 && num_bits > 0; bit_pos++) {
             if (input_low & bit_sniff) {
               if (num_bits == 1)
                 ss << bit_pos;
@@ -292,7 +293,7 @@ main(int argc, char** argv)
         if (input_high != 0) {
           ss << ", Input High Bit Positions = ";
           bit_sniff = 1;
-          for (bit_pos = 0; bit_pos < 32, num_bits > 0; bit_pos++) {
+          for (bit_pos = 0; bit_pos < 32 && num_bits > 0; bit_pos++) {
             if (input_high & bit_sniff) {
               if (num_bits == 1)
                 ss << bit_pos;

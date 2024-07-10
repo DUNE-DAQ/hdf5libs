@@ -153,6 +153,19 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
 }
 
 /**
+ * @brief get the path for the TimeSliceHeader as a single string
+ */
+std::string
+HDF5FileLayout::get_path_string(const daqdataformats::TimeSliceHeader& tsh) const
+{
+  std::ostringstream path_string;
+  path_string << "/" << get_timeslice_number_string(tsh.timeslice_number)
+              << "/" << m_conf_params.raw_data_group_name
+              << "/" << tsh.element_id.to_string() << "_" << m_conf_params.record_header_dataset_name;
+  return path_string.str();
+}
+
+/**
  * @brief get the full path for a record header dataset based on trig/seq number
  */
 std::string
