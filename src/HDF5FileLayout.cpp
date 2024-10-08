@@ -66,24 +66,11 @@ HDF5FileLayout::get_record_number_string(uint64_t record_number, // NOLINT(build
   std::ostringstream record_number_string;
 
   int width = m_conf_params.digits_for_record_number;
-
-  if (record_number >= m_powers_ten[m_conf_params.digits_for_record_number]) {
-    ers::warning(
-      FileLayoutNotEnoughDigitsForPath(ERS_HERE, record_number, m_conf_params.digits_for_record_number));
-    width = 0; // tells it to revert to normal width
-  }
-
-  record_number_string << m_conf_params.record_name_prefix << std::setw(width) << std::setfill('0')
-                       << record_number;
+  record_number_string << m_conf_params.record_name_prefix << std::setw(width) << std::setfill('0') << record_number;
 
   if (m_conf_params.digits_for_sequence_number > 0) {
 
     width = m_conf_params.digits_for_sequence_number;
-    if (seq_num >= m_powers_ten[m_conf_params.digits_for_sequence_number]) {
-      ers::warning(
-        FileLayoutNotEnoughDigitsForPath(ERS_HERE, seq_num, m_conf_params.digits_for_sequence_number));
-      width = 0; // tells it to revert to normal width
-    }
     record_number_string << "." << std::setw(width) << std::setfill('0') << seq_num;
   }
 
@@ -168,6 +155,19 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
     daqdataformats::fragment_type_to_string(static_cast<daqdataformats::FragmentType>(fh.fragment_type)));
 
   return path_elements;
+}
+
+/**
+ * @brief get the path for the TimeSliceHeader as a single string
+ */
+std::string
+HDF5FileLayout::get_path_string(const daqdataformats::TimeSliceHeader& tsh) const
+{
+  std::ostringstream path_string;
+  path_string << "/" << get_timeslice_number_string(tsh.timeslice_number)
+              << "/" << m_conf_params.raw_data_group_name
+              << "/" << tsh.element_id.to_string() << "_" << m_conf_params.record_header_dataset_name;
+  return path_string.str();
 }
 
 /**

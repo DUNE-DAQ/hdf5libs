@@ -71,7 +71,7 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriterModule. Version always most recent.
    */
-  explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 4); // NOLINT(build/unsigned)
+  explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 5); // NOLINT(build/unsigned)
 
   uint32_t get_version() const noexcept // NOLINT(build/unsigned)
   {
@@ -126,6 +126,11 @@ public:
    * @brief get the correct path for the Fragment
    */
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const;
+
+  /**
+   * @brief get the path for the TimeSliceHeader as a single string (e.g. /a/b/c)
+   */
+  std::string get_path_string(const daqdataformats::TimeSliceHeader& tsh) const;
 
   /**
    * @brief extract Fragment GeoID given path elements
@@ -205,31 +210,6 @@ private:
    * @brief map translation for the detector group name to SourceID::Subsystem
    */
   std::map<std::string, daqdataformats::SourceID::Subsystem> m_detector_group_name_to_type_map;
-
-  // quick powers of ten lookup
-  constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
-    = {
-        1,                    // 1e0
-        10,                   // 1e1
-        100,                  // 1e2
-        1000,                 // 1e3
-        10000,                // 1e4
-        100000,               // 1e5
-        1000000,              // 1e6
-        10000000,             // 1e7
-        100000000,            // 1e8
-        1000000000,           // 1e9
-        10000000000,          // 1e10
-        100000000000,         // 1e11
-        1000000000000,        // 1e12
-        10000000000000,       // 1e13
-        100000000000000,      // 1e14
-        1000000000000000,     // 1e15
-        10000000000000000,    // 1e16
-        100000000000000000,   // 1e17
-        1000000000000000000,  // 1e18
-        10000000000000000000u // 1e19
-      };
 
   /**
    * @brief Fill path parameters maps from FileLayoutParams
