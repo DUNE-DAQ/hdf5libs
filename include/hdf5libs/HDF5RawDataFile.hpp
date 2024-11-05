@@ -333,6 +333,11 @@ public:
     return get_source_ids_for_fragment_type(std::make_pair(rec_num, seq_num), frag_type_name);
   }
 
+  // get SourceIDs for given fragment type and subdetector in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragtype_and_detid(const record_id_t& rid,
+                                                                           const std::string& frag_type_name,
+                                                                           const std::string& subdet_name);
+
   // get SourceIDs for given subdetector in a record
   std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,
                                                                     const detdataformats::DetID::Subdetector subdet);
