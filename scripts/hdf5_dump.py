@@ -85,7 +85,7 @@ class DAQDataFile:
         if 'filelayout_version' in self.h5file.attrs.keys() and \
                 observed_filelayout_version >= FILELAYOUT_MIN_VERSION and \
                 observed_filelayout_version <= FILELAYOUT_MAX_VERSION:
-            print(f"INFO: input file matches the supported file layout versions: {FILELAYOUT_MIN_VERSION} <= {observed_filelayout_version} <= {FILELAYOUT_MAX_VERSION}")
+            print(f"INFO: input file \"{self.name}\" matches the supported file layout versions: {FILELAYOUT_MIN_VERSION} <= {observed_filelayout_version} <= {FILELAYOUT_MAX_VERSION}")
         else:
             sys.exit(f"ERROR: this script expects a file layout version {FILELAYOUT_VERSION} but this wasn't confirmed in the HDF5 file \"{self.name}\"")
         if 'record_type' in self.h5file.attrs.keys():
