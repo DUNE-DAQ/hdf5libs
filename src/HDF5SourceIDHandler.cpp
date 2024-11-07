@@ -27,11 +27,11 @@ encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
 }
 
 HDF5SourceIDHandler::source_id_geo_id_map_t
-HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session)
+HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::System* system)
 {
   HDF5SourceIDHandler::source_id_geo_id_map_t output_map;
 
-  for (auto& app : session->get_all_applications()) {
+  for (auto& app : system->get_all_applications()) {
     auto ro_app = app->cast<appmodel::ReadoutApplication>();
     if (!ro_app)
       continue;
@@ -39,7 +39,7 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session
     for (auto d2d_conn_res : ro_app->get_contains()) {
 
       // Are we sure?
-      if (d2d_conn_res->disabled(*session)) {
+      if (d2d_conn_res->disabled(*system)) {
         TLOG_DEBUG(7) << "Ignoring disabled DetectorToDaqConnection " << d2d_conn_res->UID();
         continue;
       }
@@ -57,7 +57,7 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session
       for (auto dros : d2d_conn->get_streams()) {
 
         // Are we sure?
-        if (dros->disabled(*session)) {
+        if (dros->disabled(*system)) {
           TLOG_DEBUG(7) << "Ignoring disabled DetectorStream " << dros->UID();
           continue;
         }
