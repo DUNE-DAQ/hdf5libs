@@ -157,6 +157,10 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const uint64_t,const daqdataformats::sequence_number_t> //NOLINT(build/unsigned)
          (&HDF5RawDataFile::get_source_ids),
          "Get all source IDs in a record/sequence number")
+    .def("get_source_ids_for_fragment_type",
+         py::overload_cast<const HDF5RawDataFile::record_id_t&,const std::string&>
+         (&HDF5RawDataFile::get_source_ids_for_fragment_type),
+         "Get all source IDs in a record id with a given fragment type")
     .def("get_source_ids_for_fragtype_and_detid",
          py::overload_cast<const HDF5RawDataFile::record_id_t&,const std::string&,const std::string&>
          (&HDF5RawDataFile::get_source_ids_for_fragtype_and_detid),
