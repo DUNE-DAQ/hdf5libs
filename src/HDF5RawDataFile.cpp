@@ -290,6 +290,10 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   HighFive::DataSetCreateProps data_set_create_props;
   HighFive::DataSetAccessProps data_set_access_props;
 
+  std::vector<hsize_t> chunk_size = {raw_data_size_bytes, 1}; 
+  data_set_create_props.add(HighFive::Chunking(chunk_size));
+  data_set_create_props.add(HighFive::Deflate(9));
+
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
