@@ -292,7 +292,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   std::vector<hsize_t> chunk_size = {raw_data_size_bytes, 1}; 
   data_set_create_props.add(HighFive::Chunking(chunk_size));
-  data_set_create_props.add(HighFive::Deflate(9));
+  data_set_create_props.add(HighFive::Deflate(1));
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
   if (data_set.isValid()) {
