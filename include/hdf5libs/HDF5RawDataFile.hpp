@@ -180,8 +180,6 @@ public:
   template<typename T>
   T get_attribute(const std::string& name);
   template<typename T>
-  T get_attribute(const std::string& name, const T& default_value);
-  template<typename T>
   T get_attribute(const HighFive::Group& grp, const std::string& name);
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
@@ -521,19 +519,6 @@ HDF5RawDataFile::get_attribute(const std::string& name)
 {
   if (!m_file_ptr->hasAttribute(name)) {
     throw InvalidHDF5Attribute(ERS_HERE, name);
-  }
-  auto attr = m_file_ptr->getAttribute(name);
-  T value;
-  attr.read(value);
-  return value;
-}
-
-template<typename T>
-T
-HDF5RawDataFile::get_attribute(const std::string& name, const T& default_value)
-{
-  if (!m_file_ptr->hasAttribute(name)) {
-    return default_value;
   }
   auto attr = m_file_ptr->getAttribute(name);
   T value;
