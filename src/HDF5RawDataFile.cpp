@@ -6,7 +6,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include "logging/Logging.hpp"
 
@@ -32,8 +31,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  daqdataformats::run_number_t run_number,
                                  size_t file_index,
                                  std::string application_name,
-                                 const hdf5filelayout::FileLayoutParams& fl_params,
-                                 std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
+                                 HDF5FileLayoutParameters fl_params,
+                                 HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -73,13 +72,15 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   // write the SourceID-related attributes
-  HDF5SourceIDHandler::populate_source_id_geo_id_map(hw_map_service, m_file_level_source_id_geo_id_map);
+  //HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
+  m_file_level_source_id_geo_id_map = srcid_geoid_map;
   HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 
   // write the record type
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
 }
+
 
 HDF5RawDataFile::~HDF5RawDataFile()
 {
@@ -150,6 +151,9 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 void
 HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
 {
+  std::string tsh_path = m_file_layout_ptr->get_path_string(ts.get_header());
+  if (m_file_ptr->exist(tsh_path)) {throw TimeSliceAlreadyExists(ERS_HERE, tsh_path);}
+
   // the source_id_path map that we will build up as we write the TR header
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
@@ -237,8 +241,7 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
 void
 HDF5RawDataFile::write_file_layout()
 {
-  hdf5filelayout::data_t fl_json;
-  hdf5filelayout::to_json(fl_json, m_file_layout_ptr->get_file_layout_params());
+  auto fl_json = m_file_layout_ptr->get_file_layout_params().to_json();
   write_attribute("filelayout_params", fl_json.dump());
   write_attribute("filelayout_version", m_file_layout_ptr->get_version());
 }
@@ -333,14 +336,14 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
 void
 HDF5RawDataFile::read_file_layout()
 {
-  hdf5filelayout::FileLayoutParams fl_params;
+  HDF5FileLayoutParameters fl_params;
   uint32_t version = 0; // NOLINT(build/unsigned)
 
   std::string fl_str;
   try {
     fl_str = get_attribute<std::string>("filelayout_params");
-    hdf5filelayout::data_t fl_json = nlohmann::json::parse(fl_str);
-    hdf5filelayout::from_json(fl_json, fl_params);
+    nlohmann::json fl_json = nlohmann::json::parse(fl_str);
+    fl_params = HDF5FileLayoutParameters(fl_json);
 
     version = get_attribute<uint32_t>("filelayout_version"); // NOLINT(build/unsigned)
 
@@ -512,11 +515,11 @@ HDF5RawDataFile::get_all_record_ids()
 
     loc = rec_num_string.find(".");
     if (loc == std::string::npos) {
-      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), 0));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoll(rec_num_string), 0));
     } else {
       auto seq_num_string = rec_num_string.substr(loc + 1);
       rec_num_string.resize(loc); // remove anything from '.' onwards
-      m_all_record_ids_in_file.insert(std::make_pair(std::stoi(rec_num_string), std::stoi(seq_num_string)));
+      m_all_record_ids_in_file.insert(std::make_pair(std::stoll(rec_num_string), std::stoi(seq_num_string)));
     }
 
   } // end loop over childNames
@@ -813,8 +816,14 @@ HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_pat
 }
 #endif
 
+HDF5SourceIDHandler::source_id_geo_id_map_t
+HDF5RawDataFile::get_srcid_geoid_map() const {
+
+  return m_file_level_source_id_geo_id_map;
+}
+
 std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_all_geo_ids()
+HDF5RawDataFile::get_all_geo_ids() const
 {
   std::set<uint64_t> set_of_geo_ids;
   // 13-Sep-2022, KAB
@@ -861,8 +870,10 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
   std::set<uint64_t> set_of_geo_ids;
   for (auto const& map_entry : m_source_id_geo_id_cache[rid]) {
     for (auto const& geo_id : map_entry.second) {
-      auto geo_info = detchannelmaps::HardwareMapService::parse_geo_id(geo_id);
-      if (geo_info.det_id == static_cast<uint16_t>(subdet)) {
+      // FIXME: replace with a proper coder/decoder
+
+      uint16_t det_id = 0xffff & geo_id;
+      if (det_id == static_cast<uint16_t>(subdet)) {
         set_of_geo_ids.insert(geo_id);
       }
     }

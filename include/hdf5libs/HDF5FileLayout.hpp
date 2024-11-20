@@ -14,7 +14,7 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUT_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUT_HPP_
 
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
+#include "hdf5libs/HDF5FileLayoutParameters.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
@@ -69,9 +69,9 @@ class HDF5FileLayout
 {
 public:
   /**
-   * @brief Constructor from json conf, used in DataWriter. Version always most recent.
+   * @brief Constructor from json conf, used in DataWriterModule. Version always most recent.
    */
-  explicit HDF5FileLayout(hdf5filelayout::FileLayoutParams conf, uint32_t version = 4); // NOLINT(build/unsigned)
+  explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 5); // NOLINT(build/unsigned)
 
   uint32_t get_version() const noexcept // NOLINT(build/unsigned)
   {
@@ -86,14 +86,14 @@ public:
 
   std::string get_record_header_dataset_name() const noexcept { return m_conf_params.record_header_dataset_name; }
 
-  std::map<daqdataformats::SourceID::Subsystem, hdf5filelayout::PathParams> get_path_params_map() const
+  std::map<daqdataformats::SourceID::Subsystem, HDF5PathParameters> get_path_params_map() const
   {
     return m_path_params_map;
   }
 
-  hdf5filelayout::PathParams get_path_params(daqdataformats::SourceID::Subsystem type) const;
+  HDF5PathParameters get_path_params(daqdataformats::SourceID::Subsystem type) const;
 
-  hdf5filelayout::FileLayoutParams get_file_layout_params() const { return m_conf_params; }
+  HDF5FileLayoutParameters get_file_layout_params() const { return m_conf_params; }
 
   /**
    * @brief get string for record number
@@ -126,6 +126,11 @@ public:
    * @brief get the correct path for the Fragment
    */
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const;
+
+  /**
+   * @brief get the path for the TimeSliceHeader as a single string (e.g. /a/b/c)
+   */
+  std::string get_path_string(const daqdataformats::TimeSliceHeader& tsh) const;
 
   /**
    * @brief extract Fragment GeoID given path elements
@@ -189,7 +194,7 @@ private:
   /**
    * @brief FileLayout configuration parameters
    */
-  hdf5filelayout::FileLayoutParams m_conf_params;
+  HDF5FileLayoutParameters m_conf_params;
 
   /**
    * @brief version number
@@ -199,47 +204,22 @@ private:
   /**
    * @brief map translation for SourceID::Subsystem to dataset path parameters
    */
-  std::map<daqdataformats::SourceID::Subsystem, hdf5filelayout::PathParams> m_path_params_map;
+  std::map<daqdataformats::SourceID::Subsystem, HDF5PathParameters> m_path_params_map;
 
   /**
    * @brief map translation for the detector group name to SourceID::Subsystem
    */
   std::map<std::string, daqdataformats::SourceID::Subsystem> m_detector_group_name_to_type_map;
 
-  // quick powers of ten lookup
-  constexpr static uint64_t m_powers_ten[] // NOLINT(build/unsigned)
-    = {
-        1,                    // 1e0
-        10,                   // 1e1
-        100,                  // 1e2
-        1000,                 // 1e3
-        10000,                // 1e4
-        100000,               // 1e5
-        1000000,              // 1e6
-        10000000,             // 1e7
-        100000000,            // 1e8
-        1000000000,           // 1e9
-        10000000000,          // 1e10
-        100000000000,         // 1e11
-        1000000000000,        // 1e12
-        10000000000000,       // 1e13
-        100000000000000,      // 1e14
-        1000000000000000,     // 1e15
-        10000000000000000,    // 1e16
-        100000000000000000,   // 1e17
-        1000000000000000000,  // 1e18
-        10000000000000000000u // 1e19
-      };
-
   /**
    * @brief Fill path parameters maps from FileLayoutParams
    */
-  void fill_path_params_maps(hdf5filelayout::FileLayoutParams const& flp);
+  void fill_path_params_maps(HDF5FileLayoutParameters const& flp);
 
   /**
    * @brief Version0 FileLayout parameters, for backward compatibility
    */
-  hdf5filelayout::FileLayoutParams get_v0_file_layout_params();
+  HDF5FileLayoutParameters get_v0_file_layout_params();
 
   /**
    * @brief Check configuration for any errors.

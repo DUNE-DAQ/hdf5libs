@@ -10,10 +10,11 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
 
 #include "detdataformats/DetID.hpp"
 #include "logging/Logging.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -29,7 +30,7 @@ using namespace dunedaq::detdataformats;
 void
 print_usage()
 {
-  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <hardware_map_file> <output_file_name>";
+  TLOG() << "Usage: HDF5LIBS_TestWriter <configuration_file> <detector_readout_map_file> <output_file_name>";
 }
 
 int
@@ -54,7 +55,7 @@ main(int argc, char** argv)
 
   // get file_layout config
   try {
-    fl_conf = j_in["file_layout"].get<hdf5filelayout::FileLayoutParams>();
+    fl_conf = j_in["file_layout"];
     TLOG() << "Read 'file_layout' configuration:\n";
     TLOG() << fl_conf;
   } catch (...) {
@@ -78,9 +79,12 @@ main(int argc, char** argv)
          << "\nSubsystem: " << SourceID::subsystem_to_string(stype_to_use)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
-  // create the HardwareMapService
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(hw_map_file_name));
+  // Read src-geo id map
+  //std::ifstream f(hw_map_file_name);
+  //nlohmann::json data = nlohmann::json::parse(f);
+
+  //auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
+  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map;
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
@@ -88,7 +92,7 @@ main(int argc, char** argv)
                                                      file_index, // file_index,
                                                      app_name,   // app_name
                                                      fl_conf,    // file_layout_confs
-                                                     hw_map_service,
+                                                     srcid_geoid_map,
                                                      ".writing", // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 

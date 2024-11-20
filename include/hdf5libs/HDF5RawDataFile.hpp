@@ -14,12 +14,10 @@
 // DUNE-DAQ
 #include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
-#include "detchannelmaps/HardwareMapService.hpp"
 
 // External Packages
 #include <highfive/H5DataSet.hpp>
@@ -101,6 +99,8 @@ ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Attribute, "Attribute " << name << " not 
 
 ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " already exists.", ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
+
 namespace hdf5libs {
 
 /**
@@ -127,8 +127,8 @@ public:
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
                   std::string application_name,
-                  const hdf5filelayout::FileLayoutParams& fl_params,
-                  std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_service,
+                  HDF5FileLayoutParameters fl_params,
+                  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                   std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 
@@ -146,7 +146,7 @@ public:
   bool is_trigger_record_type() const noexcept { return m_record_type.compare("TriggerRecord") == 0; }
   bool is_timeslice_type() const noexcept { return m_record_type.compare("TimeSlice") == 0; }
 
-  HDF5FileLayout get_file_layout() const { return *(m_file_layout_ptr.get()); }
+  const HDF5FileLayout& get_file_layout() const { return *(m_file_layout_ptr.get()); }
 
   uint32_t get_version() const // NOLINT(build/unsigned)
   {
@@ -174,6 +174,7 @@ public:
   template<typename T>
   void write_attribute(HighFive::DataSet& dset, const std::string& name, T value);
 
+  std::vector<std::string> get_attribute_names();
   template<typename T>
   T get_attribute(const std::string& name);
   template<typename T>
@@ -233,8 +234,10 @@ public:
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
+  HDF5SourceIDHandler::source_id_geo_id_map_t get_srcid_geoid_map() const;
+
   //get a list of all the geo ids anywhere in the file
-  std::set<uint64_t> get_all_geo_ids(); // NOLINT(build/unsigned)
+  std::set<uint64_t> get_all_geo_ids() const; // NOLINT(build/unsigned)
 
   //get GeoIDs in a record
   std::set<uint64_t> get_geo_ids(const record_id_t& rid); // NOLINT(build/unsigned)
@@ -502,6 +505,12 @@ HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& nam
   else
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
+
+std::vector<std::string> HDF5RawDataFile::get_attribute_names()
+{
+  return m_file_ptr->listAttributeNames();
+}
+
 template<typename T>
 T
 HDF5RawDataFile::get_attribute(const std::string& name)

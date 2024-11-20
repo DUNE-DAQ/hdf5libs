@@ -10,8 +10,24 @@ import struct
 import os
 import sys
 
+# Current allowed range of file layout versions
+FILELAYOUT_MIN_VERSION = 4
+FILELAYOUT_MAX_VERSION = 5
 
-FILELAYOUT_VERSION = 4
+# Current header versions
+TRIGGER_RECORD_HEADER_VERSION = 4
+FRAGMENT_HEADER_VERSION = 5
+TIME_SLICE_HEADER_VERSION = 2
+
+# detdataformats/include/detdataformats/DetID.hpp
+DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
+            4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
+            10: 'VD_BottomTPC', 11: 'VD_TopTPC',
+            32: 'NDLAr_TPC', 33: 'NDLAr_PDS', 'ND_GAr': 34}
+
+# daqdataformats/include/daqdataformats/SourceID.hpp
+SUBSYSTEM = {0: 'Unknown', 1: 'DetectorReadout', 2: 'HwSignalsInterface',
+             3: 'Trigger', 4: 'TRBuilder'}
 
 DATA_FORMAT = {
     # daqdataformats/include/daqdataformats/TimeSliceHeader.hpp
@@ -26,11 +42,11 @@ DATA_FORMAT = {
     "TriggerRecord Header": {
         "keys": ['Marker word', 'Version', 'Trigger number',                       # I I Q
                  'Trigger timestamp', 'No. of requested components', 'Run number', # Q Q I
-                 'Error bits', 'Trigger type', 'Sequence number',                  # I H H
-                 'Max sequence num', 'Padding',                                    # H H
+                 'Error bits', 'Trigger type', 'Sequence number',                  # I Q H
+                 'Max sequence num', 'Padding',                                    # H I
                  'Source ID version', 'Source ID subsystem', 'Source ID'],         # H H I
-        "size": 56,
-        "unpack string": '<2I3Q2I6HI'
+        "size": 64,
+        "unpack string": '<2I3Q2IQ2HI2HI'
     },
     # daqdataformats/include/daqdataformats/FragmentHeader.hpp
     "Fragment Header":{
@@ -68,9 +84,11 @@ class DAQDataFile:
         self.record_type = 'TriggerRecord'
         self.clock_speed_hz = 50000000.0
         self.records = []
+        observed_filelayout_version = self.h5file.attrs['filelayout_version']
         if 'filelayout_version' in self.h5file.attrs.keys() and \
-                self.h5file.attrs['filelayout_version'] == FILELAYOUT_VERSION:
-            print(f"INFO: input file matches the supported file layout version: {FILELAYOUT_VERSION}")
+                observed_filelayout_version >= FILELAYOUT_MIN_VERSION and \
+                observed_filelayout_version <= FILELAYOUT_MAX_VERSION:
+            print(f"INFO: input file \"{self.name}\" matches the supported file layout versions: {FILELAYOUT_MIN_VERSION} <= {observed_filelayout_version} <= {FILELAYOUT_MAX_VERSION}")
         else:
             sys.exit(f"ERROR: this script expects a file layout version {FILELAYOUT_VERSION} but this wasn't confirmed in the HDF5 file \"{self.name}\"")
         if 'record_type' in self.h5file.attrs.keys():
@@ -156,22 +174,36 @@ class DAQDataFile:
                     break
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
+                (trh_version, ) = struct.unpack('<I', data_array[4:8])
+                if trh_version != TRIGGER_RECORD_HEADER_VERSION:
+                    raise ValueError(f"Invalid TriggerRecord Header format version: expected {TRIGGER_RECORD_HEADER_VERSION} and found {trh_version}")
                 (h, j, k) = struct.unpack('<3Q', data_array[8:32])
-                (s, ) = struct.unpack('<H', data_array[42:44])
+                (s, ) = struct.unpack('<H', data_array[48:50])
                 nf = len(i.fragments)
-                report.append((h, s, k, nf, nf - k))
+                empty_frag_count = 0
+                for frag in i.fragments:
+                    frag_dset = self.h5file[frag]
+                    frag_data = bytearray(frag_dset[:])
+                    (frag_version, ) = struct.unpack('<I', frag_data[4:8])
+                    if frag_version != FRAGMENT_HEADER_VERSION:
+                        raise ValueError(f"Invalid Fragment Header format version: expected {FRAGMENT_HEADER_VERSION} and found {frag_version}")
+                    (frag_size, ) = struct.unpack('<Q', frag_data[8:16])
+                    if frag_size <= 72:
+                        empty_frag_count += 1
+                report.append((h, s, k, nf, nf - k, empty_frag_count))
                 n += 1
             print("{:-^80}".format("Column Definitions"))
-            print("i:           Trigger record number;")
-            print("s:           Sequence number;")
-            print("N_frag_exp:  expected no. of fragments stored in header;")
-            print("N_frag_act:  no. of fragments written in trigger record;")
-            print("N_diff:      N_frag_act - N_frag_exp")
+            print("i:            Trigger record number;")
+            print("s:            Sequence number;")
+            print("N_frag_exp:   expected no. of fragments stored in header;")
+            print("N_frag_act:   no. of fragments written in trigger record;")
+            print("N_diff:       N_frag_act - N_frag_exp")
+            print("N_frag_empty: no. of empty fragments (size <= 72)")
             print("{:-^80}".format("Column Definitions"))
-            print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(
-                "i", "s", "N_frag_exp", "N_frag_act", "N_diff"))
+            print("{:^10}{:^10}{:^15}{:^15}{:^10}{:^12}".format(
+                "i", "s", "N_frag_exp", "N_frag_act", "N_diff", "N_frag_empty"))
             for i in range(len(report)):
-                print("{:^10}{:^10}{:^15}{:^15}{:^10}".format(*report[i]))
+                print("{:^10}{:^10}{:^15}{:^15}{:^10}{:^12}".format(*report[i]))
         return
 
     class Record:
@@ -197,9 +229,11 @@ def tick_to_timestamp(ticks, clock_speed_hz):
         return "InvalidDateString"
 
 
-def unpack_header(data_array, entry_type):
+def unpack_header(data_array, entry_type, required_version=0):
     values = struct.unpack(DATA_FORMAT[entry_type]["unpack string"],
                            data_array[:DATA_FORMAT[entry_type]["size"]])
+    if required_version > 0 and len(values) >= 2 and values[1] != required_version:
+        raise ValueError(f"Invalid {entry_type} format version: expected {required_version} and found {values[1]}")
     header = dict(zip(DATA_FORMAT[entry_type]["keys"], values))
     return header
 
@@ -228,12 +262,12 @@ def print_header_dict(hdict, clock_speed_hz):
 
 
 def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
-    print_header_dict(unpack_header(data_array, "TriggerRecord Header"), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "TriggerRecord Header", TRIGGER_RECORD_HEADER_VERSION), clock_speed_hz)
 
     if k_list_components:
         comp_keys = DATA_FORMAT["Component Request"]["keys"]
         comp_unpack_string = DATA_FORMAT["Component Request"]["unpack string"]
-        for i_values in struct.iter_unpack(comp_unpack_string, data_array[56:]):
+        for i_values in struct.iter_unpack(comp_unpack_string, data_array[64:]):
             i_comp = dict(zip(comp_keys, i_values))
             print(80*'-')
             print_header_dict(i_comp, clock_speed_hz)
@@ -241,7 +275,7 @@ def print_trigger_record_header(data_array, clock_speed_hz, k_list_components):
 
 
 def print_fragment_header(data_array, clock_speed_hz):
-    print_header_dict(unpack_header(data_array, "Fragment Header"), clock_speed_hz)
+    print_header_dict(unpack_header(data_array, "Fragment Header", FRAGMENT_HEADER_VERSION), clock_speed_hz)
     return
 
 
@@ -250,7 +284,7 @@ def print_header(data_array, record_type, clock_speed_hz, k_list_components):
         print_trigger_record_header(data_array, clock_speed_hz,
                                     k_list_components)
     elif record_type == "TimeSlice":
-        print_header_dict(unpack_header(data_array, "TimeSlice Header"), clock_speed_hz)
+        print_header_dict(unpack_header(data_array, "TimeSlice Header", TIME_SLICE_HEADER_VERSION), clock_speed_hz)
     else:
         print(f"Error: Record Type {record_type} is not supported.")
     return
@@ -291,8 +325,8 @@ def parse_args():
 
     parser.add_argument('-s', '--speed-of-clock', type=float,
                         help='''specify clock speed in Hz, default is
-                        50000000.0 (50MHz)''',
-                        default=50000000.0)
+                        62500000.0 (62.5MHz)''',
+                        default=62500000.0)
 
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 2.0')

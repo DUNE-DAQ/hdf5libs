@@ -8,8 +8,6 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/hdf5filelayout/Nljs.hpp"
-#include "hdf5libs/hdf5filelayout/Structs.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -68,10 +66,10 @@ delete_files_matching_pattern(const std::string& path, const std::string& patter
   return file_list;
 }
 
-hdf5filelayout::FileLayoutParams
+HDF5FileLayoutParameters
 create_file_layout_params()
 {
-  dunedaq::hdf5libs::hdf5filelayout::PathParams params_tpc;
+  dunedaq::hdf5libs::HDF5PathParameters params_tpc;
   params_tpc.detector_group_type = "Detector_Readout";
   params_tpc.detector_group_name = "TPC";
   params_tpc.element_name_prefix = "Link";
@@ -85,12 +83,12 @@ create_file_layout_params()
 
   // note, for unit test json equality checks, 'PDS' needs to come before
   //'TPC', as on reading back the filelayout it looks like it's alphabetical.
-  dunedaq::hdf5libs::hdf5filelayout::PathParamList param_list;
+  std::vector<dunedaq::hdf5libs::HDF5PathParameters> param_list;
   // param_list.push_back(params_pds);
   param_list.push_back(params_tpc);
 
-  dunedaq::hdf5libs::hdf5filelayout::FileLayoutParams layout_params;
-  layout_params.path_param_list = param_list;
+  dunedaq::hdf5libs::HDF5FileLayoutParameters layout_params;
+  layout_params.path_params_list = param_list;
   layout_params.record_name_prefix = "TriggerRecord";
   layout_params.digits_for_record_number = 6;
   layout_params.digits_for_sequence_number = 4;
@@ -99,25 +97,50 @@ create_file_layout_params()
   return layout_params;
 }
 
-void
-create_hardware_map_file(const std::string& filename)
+uint64_t
+encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
 {
-  std::ofstream tmpfile;
-  tmpfile.open(filename);
-  tmpfile << "# DRO_SourceID DetLink DetSlot DetCrate DetID DRO_Host DRO_Card DRO_SLR DRO_Link\n";
-  tmpfile << "0 0 0 1 3 np04-srv-011 0 0 0\n";
-  tmpfile << "1 1 0 1 3 np04-srv-011 0 0 1\n";
-  tmpfile << "2 0 1 1 3 np04-srv-011 0 0 2\n";
-  tmpfile << "3 1 1 1 3 np04-srv-011 0 0 3\n";
-  tmpfile << "4 0 0 1 2 np04-srv-017 0 0 0\n";
-  tmpfile << "5 1 0 1 2 np04-srv-017 0 0 1\n";
-  tmpfile << "6 0 1 1 2 np04-srv-017 0 0 2\n";
-  tmpfile << "7 1 1 1 2 np04-srv-017 0 0 3\n";
-  tmpfile.close();
+  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
+         (static_cast<uint64_t>(crate_id) << 16) | det_id;
+}
+
+HDF5SourceIDHandler::source_id_geo_id_map_t
+create_srcid_geoid_map()
+{
+  HDF5SourceIDHandler::source_id_geo_id_map_t map;
+
+  dunedaq::daqdataformats::SourceID sid;
+  sid.subsystem = dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout;
+
+  sid.id = 0;
+  map[sid].push_back(encode_geoid(3, 1, 0, 0));
+
+  sid.id = 1;
+  map[sid].push_back(encode_geoid(3, 1, 0, 1));
+
+  sid.id = 3;
+  map[sid].push_back(encode_geoid(3, 1, 1, 0));
+
+  sid.id = 4;
+  map[sid].push_back(encode_geoid(3, 1, 1, 1));
+
+  sid.id = 4;
+  map[sid].push_back(encode_geoid(2, 1, 0, 0));
+
+  sid.id = 5;
+  map[sid].push_back(encode_geoid(2, 1, 0, 1));
+
+  sid.id = 6;
+  map[sid].push_back(encode_geoid(2, 1, 1, 0));
+
+  sid.id = 7;
+  map[sid].push_back(encode_geoid(2, 1, 1, 1));
+
+  return map;
 }
 
 dunedaq::daqdataformats::TriggerRecord
-create_trigger_record(int trig_num)
+create_trigger_record(uint64_t trig_num)
 {
   // setup our dummy_data
   std::vector<char> dummy_vector(fragment_size);
@@ -253,27 +276,23 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 {
   std::string file_path(std::filesystem::temp_directory_path());
   std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  std::string hw_map_file = "hw_map_" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".txt";
-
   const int trigger_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
 
   // convert file_params to json, allows for easy comp later
-  hdf5filelayout::data_t flp_json_in;
-  hdf5filelayout::to_json(flp_json_in, create_file_layout_params());
+  auto flp_in=create_file_layout_params();
 
-  // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
-
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_json_in, hw_map_service));
-
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name, flp_in,
+                                                                  srcid_geoid_map));
+                                                                  
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
     h5file_ptr->write(create_trigger_record(trigger_number));
@@ -298,40 +317,30 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 
   // extract and check file layout parameters
   auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-  hdf5filelayout::data_t flp_json_read;
-  hdf5filelayout::to_json(flp_json_read, file_layout_parameters_read);
-  BOOST_REQUIRE_EQUAL(flp_json_in, flp_json_read);
+  BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json());
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 {
   std::string file_path(std::filesystem::temp_directory_path());
   std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  std::string hw_map_file = "hw_map_" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".txt";
-
   const int trigger_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
 
-  // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
-
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
                                                                   run_number,
                                                                   file_index,
                                                                   application_name,
                                                                   create_file_layout_params(),
-                                                                  hw_map_service));
-
+                                                                  srcid_geoid_map));
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
     h5file_ptr->write(create_trigger_record(trigger_number));
@@ -341,13 +350,13 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record);
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
@@ -373,7 +382,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type,  element
@@ -403,32 +412,29 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 {
   std::string file_path(std::filesystem::temp_directory_path());
   std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  std::string hw_map_file = "hw_map_" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".txt";
-
   const int trigger_count = 5;
 
   // delete any pre-existing files so that we start with a clean slate
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
-
-  // create the hardware map service
-  create_hardware_map_file(file_path + "/" + hw_map_file);
-  std::shared_ptr<dunedaq::detchannelmaps::HardwareMapService> hw_map_service(
-    new dunedaq::detchannelmaps::HardwareMapService(file_path + "/" + hw_map_file));
 
   auto fl_pars = create_file_layout_params();
   fl_pars.digits_for_sequence_number = 4;
 
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, hw_map_service));
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  fl_pars,
+                                                                  srcid_geoid_map));
 
   // write several events, each with several fragments
   for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
@@ -439,13 +445,13 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   // open file for reading now
   h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-  auto trigger_records = h5file_ptr->get_all_trigger_record_numbers();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_records.size());
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
 
-  auto first_trigger_record = *(trigger_records.begin());
-  auto last_trigger_record = *(std::next(trigger_records.begin(), trigger_records.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record);
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
 
   auto all_datasets = h5file_ptr->get_dataset_paths();
   BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
@@ -471,7 +477,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   // test access by name
   frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record);
+  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
   BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
 
   // test access by trigger number, type, element
@@ -501,7 +507,53 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
-  delete_files_matching_pattern(file_path, hw_map_file);
+}
+
+BOOST_AUTO_TEST_CASE(LargeTriggerRecordNumbers)
+{
+  std::string file_path(std::filesystem::temp_directory_path());
+  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
+  const uint64_t trigger_count = 10;
+
+  // delete any pre-existing files so that we start with a clean slate
+  delete_files_matching_pattern(file_path, hdf5_filename);
+
+  auto fl_pars = create_file_layout_params();
+  fl_pars.digits_for_sequence_number = 4;
+
+  // create src-geo id map
+  auto srcid_geoid_map = create_srcid_geoid_map();
+  // create the file
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                  run_number,
+                                                                  file_index,
+                                                                  application_name,
+                                                                  fl_pars,
+                                                                  srcid_geoid_map));
+
+  // write several events, each with several fragments
+  uint64_t trigger_number = 1;
+  for (uint64_t idx = 0; idx < trigger_count; ++idx) {
+    trigger_number = 1 + (idx * 2000000000);
+    h5file_ptr->write(create_trigger_record(trigger_number));
+  }
+
+  h5file_ptr.reset(); // explicit destruction
+
+  // open file for reading now
+  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+  auto first_trigger_record_id = *(trigger_record_ids.begin());
+  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
+  BOOST_REQUIRE(trigger_number > 0xffffffff);
+
+  // clean up the files that were created
+  delete_files_matching_pattern(file_path, hdf5_filename);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

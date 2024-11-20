@@ -14,8 +14,8 @@
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
-#include "detchannelmaps/HardwareMapService.hpp"
 #include "detdataformats/DetID.hpp"
+#include "confmodel/Session.hpp"
 
 //#include "hdf5libs/hdf5filelayout/Structs.hpp"
 //#include "daqdataformats/TimeSliceHeader.hpp"
@@ -51,12 +51,7 @@ public:
   typedef std::map<daqdataformats::FragmentType, std::set<daqdataformats::SourceID>> fragment_type_source_id_map_t;
   typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
-  /**
-   * Populates the specified source_id_geo_id map with information contained in the
-   * specified Hardware Map.
-   */
-  static void populate_source_id_geo_id_map(std::shared_ptr<detchannelmaps::HardwareMapService> hw_map_svc,
-                                            source_id_geo_id_map_t& the_map);
+  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session* session);
 
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.
