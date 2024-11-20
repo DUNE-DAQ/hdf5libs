@@ -166,9 +166,12 @@ main(int argc, char** argv)
         try {
           auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
           ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+          int64_t before_diff = cr.window_begin;
+          before_diff -= trh_ptr->get_trigger_timestamp();
+          int64_t after_diff = cr.window_end;
+          after_diff -= trh_ptr->get_trigger_timestamp();
           ss << "\n\t\t"
-             << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-             << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
+             << "Readout window before = " << before_diff << ", after = " << after_diff;
         }
         catch (std::exception const& excpt) {
           ss << "\n\t\t"
