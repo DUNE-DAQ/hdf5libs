@@ -129,6 +129,7 @@ public:
                   std::string application_name,
                   HDF5FileLayoutParameters fl_params,
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
+                  uint8_t compression_level = 0,
                   std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 
@@ -437,7 +438,8 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   const std::string m_bare_file_name;
-  const unsigned m_open_flags;
+  unsigned m_open_flags;
+  uint8_t m_compression_level;
 
   // Total size of data being written
   size_t m_recorded_size;
@@ -452,7 +454,7 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t);
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, uint8_t compression_level); 
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
@@ -521,6 +523,9 @@ HDF5RawDataFile::get_attribute(const std::string& name)
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
+  TLOG() << "Name: " << name;
+  TLOG() << "Value: " << value;
+  TLOG() << "Data type: " << attr.getDataType().string();
   return value;
 }
 
