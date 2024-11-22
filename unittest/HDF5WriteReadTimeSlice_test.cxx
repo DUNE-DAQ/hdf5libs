@@ -30,6 +30,7 @@ using namespace dunedaq::hdf5libs;
 constexpr int run_number = 53;
 constexpr int file_index = 0;
 const std::string application_name = "HDF5WriteReadTimeSlice_test";
+constexpr unsigned compression_level = 0;
 constexpr size_t fragment_size = 100;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
@@ -231,7 +232,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_in, srcid_geoid_map));
+    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_in, srcid_geoid_map, compression_level));
 
   // write several events, each with several fragments
   for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
@@ -282,7 +283,8 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
                                                                   file_index,
                                                                   application_name,
                                                                   create_file_layout_params(),
-                                                                  srcid_geoid_map));
+                                                                  srcid_geoid_map,
+                                                                  compression_level));
 
   // write several events, each with several fragments
   for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
@@ -373,7 +375,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, srcid_geoid_map));
+    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, srcid_geoid_map, compression_level));
 
   // write several events, each with several fragments
   for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
