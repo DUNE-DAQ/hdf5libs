@@ -85,16 +85,23 @@ main(int argc, char** argv)
   TLOG() << ss.str();
   ss.str("");
 
+  std::vector<std::string> attr_names = h5_raw_data_file.get_attribute_names();
+  for (const std::string& attr : attr_names) {
+    TLOG() << attr;
+  }
+
   // get some file attributes
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto creation_timestamp = h5_raw_data_file.get_attribute<std::string>("creation_timestamp");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
+  auto compression_level = h5_raw_data_file.get_attribute<uint8_t>("compression_level");
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
   ss << "\n\tCreation timestamp: " << creation_timestamp;
   ss << "\n\tWriter app name: " << app_name;
+  ss << "\n\tCompression level: " << compression_level;
 
   TLOG() << ss.str();
   ss.str("");

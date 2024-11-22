@@ -93,6 +93,7 @@ main(int argc, char** argv)
                                                      app_name,   // app_name
                                                      fl_conf,    // file_layout_confs
                                                      srcid_geoid_map,
+                                                     0,          // TODO: compression_level
                                                      ".writing", // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 
