@@ -104,6 +104,15 @@ HDF5RawDataFile::~HDF5RawDataFile()
 }
 
 /**
+ * @brief Fetch the list of all file-level Attribute names.
+ */
+std::vector<std::string>
+HDF5RawDataFile::HDF5RawDataFile::get_attribute_names()
+{
+  return m_file_ptr->listAttributeNames();
+}
+
+/**
  * @brief Write a TriggerRecord to the file.
  */
 void
