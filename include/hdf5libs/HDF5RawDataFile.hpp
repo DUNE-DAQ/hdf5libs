@@ -506,11 +506,6 @@ HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& nam
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
 
-std::vector<std::string> HDF5RawDataFile::get_attribute_names()
-{
-  return m_file_ptr->listAttributeNames();
-}
-
 template<typename T>
 T
 HDF5RawDataFile::get_attribute(const std::string& name)
