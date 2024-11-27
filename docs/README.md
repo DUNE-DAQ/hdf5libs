@@ -88,6 +88,9 @@ The constructor for creating a new HDF5RawDataFile for writing looks like this:
                   size_t file_index,
                   std::string application_name,
                   const hdf5filelayout::FileLayoutParams& fl_params,
+                  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
+                  uint8_t compression_level = 0,
+                  std::string inprogress_filename_suffix = ".writing",
                   unsigned open_flags = HighFive::File::Create);
 ```
 Upon opening the file -- at object construction -- the following attributes are written:
@@ -95,6 +98,7 @@ Upon opening the file -- at object construction -- the following attributes are 
 - "file_index" (`size_t`)
 - "creation_timestamp" (`std::string`, string translation of the number of milliseconds since epoch)
 - "application_name" (`std::string)
+- "compression_level" (`uint8_t`, zlib compression level, 0--9)
 
 alongside the file layout paramters as described [above](#hdf5filelayout).
 
