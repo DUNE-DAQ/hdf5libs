@@ -85,7 +85,7 @@ ERS_DECLARE_ISSUE(hdf5libs,
 ERS_DECLARE_ISSUE(hdf5libs,
                   RecordIDNotFound,
                   "Record ID with record number=" << rec_num << " and sequence number=" << seq_num << " not found.",
-                  ((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
+                  ((uint64_t)rec_num)((uint8_t)seq_num)) // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Group, "Group " << name << " is invalid.", ((std::string)name))
 
@@ -438,8 +438,8 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   const std::string m_bare_file_name;
-  unsigned m_open_flags;
   uint8_t m_compression_level;
+  unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
@@ -523,9 +523,6 @@ HDF5RawDataFile::get_attribute(const std::string& name)
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
-  TLOG() << "Name: " << name;
-  TLOG() << "Value: " << value;
-  TLOG() << "Data type: " << attr.getDataType().string();
   return value;
 }
 
