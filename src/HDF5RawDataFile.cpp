@@ -46,9 +46,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
     throw IncompatibleOpenFlags(ERS_HERE, file_name, m_open_flags);
   }
 
-  TLOG() << "Bare file name: " << m_bare_file_name;
   auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
-  TLOG() << "File name to open: " << filename_to_open;
 
   // do the file open
   try {
@@ -85,7 +83,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_attribute("record_type", m_record_type);
 
   // write the compression level
-  TLOG() << "m_compression_level is " << m_compression_level;
   write_attribute("compression_level", m_compression_level);
 }
 
@@ -205,7 +202,6 @@ HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
                        HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  TLOG() << "Writing trigger record header with compression level " << m_compression_level;
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(trh),
              static_cast<const char*>(trh.get_storage_location()),
@@ -222,7 +218,6 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
 HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  TLOG() << "Writing time slice header with compression level " << m_compression_level;
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(tsh), (const char*)(&tsh), sizeof(daqdataformats::TimeSliceHeader), m_compression_level);
   m_recorded_size += std::get<0>(write_results);
@@ -236,7 +231,6 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
 void
 HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  TLOG() << "Writing fragment with compression level " << m_compression_level;
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
              static_cast<const char*>(frag.get_storage_location()),
@@ -307,7 +301,6 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   std::vector<hsize_t> chunk_size = {raw_data_size_bytes, 1}; 
   data_set_create_props.add(HighFive::Chunking(chunk_size));
   data_set_create_props.add(HighFive::Deflate(compression_level));
-  //data_set_create_props.add(HighFive::Deflate(1));
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
   if (data_set.isValid()) {
@@ -324,7 +317,6 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
  */
 HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
   : m_open_flags(HighFive::File::ReadOnly)
-  , m_compression_level(0)
 {
   // do the file open
   try {
@@ -333,21 +325,10 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
     throw FileOpenFailed(ERS_HERE, file_name, excpt.what());
   }
 
-  if (m_file_ptr->hasAttribute("compression_level")) {
-    TLOG() << "File has attribute compression_level";
+  if (m_file_ptr->hasAttribute("compression_level"))
     m_compression_level = get_attribute<uint8_t>("compression_level");
-    TLOG() << "m_compression_level: " << m_compression_level;
-    TLOG() << "m_compression_level typeid: " << typeid(m_compression_level).name();
-    TLOG() << "m_compression_level size: " << sizeof(m_compression_level);
-    TLOG() << "m_compression_level value: " << static_cast<int>(m_compression_level);
-  }
   else
     m_compression_level = 0;
-
-  if (m_file_ptr->hasAttribute("recorded_size"))
-    m_recorded_size = get_attribute<size_t>("recorded_size");
-  else
-    m_recorded_size = 0;
 
   read_file_layout();
 
@@ -441,7 +422,6 @@ HDF5RawDataFile::add_record_level_info_to_caches_if_needed(record_id_t rid)
   // performance, and trust the "else" part of this routine to fill in *all*
   // of the appropriate caches
   if (m_source_id_path_cache.count(rid) != 0) {
-    TLOG() << "Quick return";
     return;
   }
 
@@ -497,7 +477,6 @@ HDF5RawDataFile::add_record_level_info_to_caches_if_needed(record_id_t rid)
   m_subsystem_source_id_cache[rid] = subsystem_source_id_map;
   m_fragment_type_source_id_cache[rid] = fragment_type_source_id_map;
   m_subdetector_source_id_cache[rid] = subdetector_source_id_map;
-  TLOG() << "Done with cache function";
 }
 
 /**
@@ -999,9 +978,10 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
   if (!data_set.isValid())
     throw InvalidHDF5Dataset(ERS_HERE, dataset_path, get_file_name());
 
-  size_t data_size = data_set.getStorageSize();
+  size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
 
   auto membuffer = std::make_unique<char[]>(data_size);
+
   data_set.read(membuffer.get());
   return membuffer;
 }
@@ -1101,7 +1081,6 @@ HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
   auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.release(), true);
-  TLOG() << "trh_ptr: " << trh_ptr;
   return trh_ptr;
 }
 
