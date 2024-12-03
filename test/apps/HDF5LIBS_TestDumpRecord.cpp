@@ -218,6 +218,17 @@ main(int argc, char** argv)
            << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
         ss << "\n\t\t" << "First TC start time=" << tcptr->data.time_start << ", end time=" << tcptr->data.time_end
            << ", and candidate time=" << tcptr->data.time_candidate;
+        if (number_of_TCs >= 2) {
+          offset = sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs);
+          offset += (tcptr->n_inputs * sizeof(TriggerActivityData));
+          TriggerCandidate* tmp_tcptr =
+            reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          ss << "\n\t\t" << "Second TC type = " << get_trigger_candidate_type_names()[tmp_tcptr->data.type]
+             << " (" << static_cast<int>(tmp_tcptr->data.type) << "), TC algorithm = "
+             << static_cast<int>(tmp_tcptr->data.algorithm) << ", number of TAs = " << tmp_tcptr->n_inputs;
+          ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start << ", end time=" << tmp_tcptr->data.time_end
+             << ", and candidate time=" << tmp_tcptr->data.time_candidate;
+        }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
         size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
@@ -240,6 +251,16 @@ main(int argc, char** argv)
            << static_cast<int>(taptr->data.algorithm) << ", number of TPs = " << taptr->n_inputs;
         ss << "\n\t\t" << "First TA start time=" << taptr->data.time_start << ", end time=" << taptr->data.time_end
            << ", and activity time=" << taptr->data.time_activity;
+        if (number_of_TAs >= 2) {
+          offset = sizeof(TriggerActivityData) + sizeof(taptr->n_inputs);
+          offset += (taptr->n_inputs * sizeof(TriggerPrimitive));
+          TriggerActivity* tmp_taptr =
+            reinterpret_cast<TriggerActivity*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          ss << "\n\t\t" << "Second TA type = " << static_cast<int>(tmp_taptr->data.type) << ", TA algorithm = "
+             << static_cast<int>(tmp_taptr->data.algorithm) << ", number of TPs = " << tmp_taptr->n_inputs;
+          ss << "\n\t\t" << "Second TA start time=" << tmp_taptr->data.time_start << ", end time=" << tmp_taptr->data.time_end
+             << ", and activity time=" << tmp_taptr->data.time_activity;
+        }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
         ss << "\n\t\t" << "Number of TPs in this fragment="
