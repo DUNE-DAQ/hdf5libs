@@ -101,6 +101,12 @@ ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " alrea
 
 ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
+                  "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs, InvalidSubdetectorString,
+                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.", ((std::string)name))
+
 namespace hdf5libs {
 
 /**
@@ -318,6 +324,8 @@ public:
                                                                       const std::string& frag_type_name)
   {
     daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+    if (frag_type == daqdataformats::FragmentType::kUnknown)
+      throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
     return get_source_ids_for_fragment_type(rid, frag_type);
   }
   std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const uint64_t rec_num, // NOLINT(build/unsigned)
@@ -334,9 +342,9 @@ public:
   }
 
   // get SourceIDs for given fragment type and subdetector in a record
-  std::set<daqdataformats::SourceID> get_source_ids_for_fragtype_and_detid(const record_id_t& rid,
-                                                                           const std::string& frag_type_name,
-                                                                           const std::string& subdet_name);
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                                                 const std::string& frag_type_name,
+                                                                                 const std::string& subdet_name);
 
   // get SourceIDs for given subdetector in a record
   std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,

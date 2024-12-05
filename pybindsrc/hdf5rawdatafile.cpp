@@ -161,9 +161,9 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const HDF5RawDataFile::record_id_t&,const std::string&>
          (&HDF5RawDataFile::get_source_ids_for_fragment_type),
          "Get all source IDs in a record id with a given fragment type")
-    .def("get_source_ids_for_fragtype_and_detid",
+    .def("get_source_ids_for_fragtype_and_subdetector",
          py::overload_cast<const HDF5RawDataFile::record_id_t&,const std::string&,const std::string&>
-         (&HDF5RawDataFile::get_source_ids_for_fragtype_and_detid),
+         (&HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector),
          "Get all source IDs in a record id matching the specified fragment and subdetector types")
 #if 0
     .def("get_source_ids",

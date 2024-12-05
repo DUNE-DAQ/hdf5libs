@@ -954,12 +954,16 @@ HDF5RawDataFile::get_source_ids_for_fragment_type(const record_id_t& rid, const 
 }
 
 std::set<daqdataformats::SourceID>
-HDF5RawDataFile::get_source_ids_for_fragtype_and_detid(const record_id_t& rid,
-                                                       const std::string& frag_type_name,
-                                                       const std::string& subdet_name)
+HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                             const std::string& frag_type_name,
+                                                             const std::string& subdet_name)
 {
   daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+  if (frag_type == daqdataformats::FragmentType::kUnknown)
+    throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
   detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
+  if (subdet == detdataformats::DetID::Subdetector::kUnknown)
+    throw InvalidSubdetectorString(ERS_HERE, subdet_name);
 
   auto rec_id = get_all_record_ids().find(rid);
   if (rec_id == get_all_record_ids().end())
