@@ -165,27 +165,32 @@ main(int argc, char** argv)
       char* nds = 0;
       time_t blah = strtol(creation_timestamp.c_str(), &nds, 10) / 1000;
       tm* gmtm = gmtime(&blah);
-      std::cout << "The \"creation_timestamp\" Attribute in the file is currently set to " << creation_timestamp
-		<< "," << std::endl << "    which corresponds to (UTC) " << asctime(gmtm);
+      std::cout << "The \"creation_timestamp\" Attribute in the file is currently set to " << creation_timestamp << ","
+                << std::endl
+                << "    which corresponds to (UTC) " << asctime(gmtm);
     }
 
     if (!ct_attr_exists) {
       std::cout << "The \"closing_timestamp\" Attribute is *not* currently set in the file, and it will be "
-                << std::endl << "    set to " << last_modified_time << " if/when the file is recovered." << std::endl;
+                << std::endl
+                << "    set to " << last_modified_time << " if/when the file is recovered." << std::endl;
     } else {
       char* nds = 0;
       time_t blah = strtol(closing_timestamp.c_str(), &nds, 10) / 1000;
       tm* gmtm = gmtime(&blah);
-      std::cout << "The \"closing_timestamp\" Attribute in the file is currently set to " << closing_timestamp
-                << "," << std::endl << "    which corresponds to (UTC) " << asctime(gmtm);
+      std::cout << "The \"closing_timestamp\" Attribute in the file is currently set to " << closing_timestamp << ","
+                << std::endl
+                << "    which corresponds to (UTC) " << asctime(gmtm)  // no std::endl needed with asctime()
+                << "    (The recalculated closing time is " << last_modified_time << ".)" << std::endl;
     }
 
     if (!rs_attr_exists) {
       std::cout << "The \"recorded_size\" Attribute is *not* currently set in the file, and it will be " << std::endl
-		<< "    set to " << calculated_recorded_size << " if/when the file is recovered." << std::endl;
+                << "    set to " << calculated_recorded_size << " if/when the file is recovered." << std::endl;
     } else {
       std::cout << "The \"recorded_size\" Attribute in the file is currently set to " << recorded_size << "."
-                << std::endl;
+                << std::endl
+                << "    (The recalculated recorded size is " << calculated_recorded_size << ".)" << std::endl;
     }
 
     if (std::count(attr_names.begin(), attr_names.end(), "file_recovery_timestamp") == 0) {
@@ -194,8 +199,9 @@ main(int argc, char** argv)
       size_t fr_timestamp = h5file_ptr->get_attribute<size_t>("file_recovery_timestamp");
       time_t blah = fr_timestamp / 1000;
       tm* gmtm = gmtime(&blah);
-      std::cout << "The \"file_recovery_timestamp\" Attribute in the file is currently set to " << fr_timestamp
-                << "," << std::endl << "    which corresponds to (UTC) " << asctime(gmtm);
+      std::cout << "The \"file_recovery_timestamp\" Attribute in the file is currently set to " << fr_timestamp << ","
+                << std::endl
+                << "    which corresponds to (UTC) " << asctime(gmtm);
     }
 
     if (ifile_name.rfind(HDF5RawDataFile::s_inprogress_suffix) != std::string::npos) {
