@@ -8,7 +8,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "hdf5libs/HDF5FileUtils.hpp"
+#include "HDF5TestUtils.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -37,48 +37,6 @@ constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
-
-uint64_t
-encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
-{
-  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
-         (static_cast<uint64_t>(crate_id) << 16) | det_id;
-}
-
-HDF5SourceIDHandler::source_id_geo_id_map_t
-create_srcid_geoid_map()
-{
-  HDF5SourceIDHandler::source_id_geo_id_map_t map;
-
-  dunedaq::daqdataformats::SourceID sid;
-  sid.subsystem = dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout;
-
-  sid.id = 0;
-  map[sid].push_back(encode_geoid(3, 1, 0, 0));
-
-  sid.id = 1;
-  map[sid].push_back(encode_geoid(3, 1, 0, 1));
-
-  sid.id = 3;
-  map[sid].push_back(encode_geoid(3, 1, 1, 0));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(3, 1, 1, 1));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(2, 1, 0, 0));
-
-  sid.id = 5;
-  map[sid].push_back(encode_geoid(2, 1, 0, 1));
-
-  sid.id = 6;
-  map[sid].push_back(encode_geoid(2, 1, 1, 0));
-
-  sid.id = 7;
-  map[sid].push_back(encode_geoid(2, 1, 1, 1));
-
-  return map;
-}
 
 dunedaq::daqdataformats::TimeSlice
 create_timeslice(int ts_num)
