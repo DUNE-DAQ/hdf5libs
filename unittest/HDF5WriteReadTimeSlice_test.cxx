@@ -38,37 +38,6 @@ constexpr size_t element_count_pds = 4;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
 
-HDF5FileLayoutParameters
-create_file_layout_params()
-{
-  dunedaq::hdf5libs::HDF5PathParameters params_tpc;
-  params_tpc.detector_group_type = "Detector_Readout";
-  params_tpc.detector_group_name = "TPC";
-  params_tpc.element_name_prefix = "Link";
-  params_tpc.digits_for_element_number = 5;
-
-  // dunedaq::hdf5libs::hdf5filelayout::PathParams params_pds;
-  // params_pds.detector_group_type = "PDS";
-  // params_pds.detector_group_name = "PDS";
-  // params_pds.element_name_prefix = "Element";
-  // params_pds.digits_for_element_number = 5;
-
-  // note, for unit test json equality checks, 'PDS' needs to come before
-  //'TPC', as on reading back the filelayout it looks like it's alphabetical.
-  std::vector<dunedaq::hdf5libs::HDF5PathParameters> param_list;
-  // param_list.push_back(params_pds);
-  param_list.push_back(params_tpc);
-
-  dunedaq::hdf5libs::HDF5FileLayoutParameters layout_params;
-  layout_params.path_params_list = param_list;
-  layout_params.record_name_prefix = "TimeSlice";
-  layout_params.digits_for_record_number = 6;
-  layout_params.digits_for_sequence_number = 0;
-  layout_params.record_header_dataset_name = "TimeSliceHeader";
-
-  return layout_params;
-}
-
 uint64_t
 encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
 {
@@ -199,13 +168,13 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   delete_files_matching_pattern(file_path, hdf5_filename);
 
   // convert file_params to json, allows for easy comp later
-  auto flp_in = create_file_layout_params();
+  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
 
   // create src-geo id map
   auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
   std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_in, srcid_geoid_map, compression_level));
+    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, srcid_geoid_map, compression_level));
 
   // write several events, each with several fragments
   for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
@@ -233,7 +202,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
 
   // extract and check file layout parameters
   auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-  BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json());
+  BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
   // clean up the files that were created
   delete_files_matching_pattern(file_path, hdf5_filename);
@@ -248,6 +217,10 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   // delete any pre-existing files so that we start with a clean slate
   delete_files_matching_pattern(file_path, hdf5_filename);
 
+  // convert file_params to json, allows for easy comp later
+  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
+  fl_pars.digits_for_sequence_number = 4;
+
   // create src-geo id map
   auto srcid_geoid_map = create_srcid_geoid_map();
   // create the file
@@ -255,7 +228,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
                                                                   run_number,
                                                                   file_index,
                                                                   application_name,
-                                                                  create_file_layout_params(),
+                                                                  fl_pars,
                                                                   srcid_geoid_map,
                                                                   compression_level));
 
@@ -341,7 +314,8 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   // delete any pre-existing files so that we start with a clean slate
   delete_files_matching_pattern(file_path, hdf5_filename);
 
-  auto fl_pars = create_file_layout_params();
+  // convert file_params to json, allows for easy comp later
+  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
   fl_pars.digits_for_sequence_number = 4;
 
   // create src-geo id map
