@@ -8,6 +8,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/HDF5FileUtils.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -36,34 +37,6 @@ constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
-
-std::vector<std::string>
-get_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      file_list.push_back(entry.path());
-    }
-  }
-  return file_list;
-}
-
-std::vector<std::string>
-delete_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      if (std::filesystem::remove(entry.path())) {
-        file_list.push_back(entry.path());
-      }
-    }
-  }
-  return file_list;
-}
 
 HDF5FileLayoutParameters
 create_file_layout_params()
