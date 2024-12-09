@@ -38,6 +38,37 @@ constexpr size_t element_count_pds = 4;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
 
+HDF5FileLayoutParameters
+create_file_layout_params()
+{
+  dunedaq::hdf5libs::HDF5PathParameters params_tpc;
+  params_tpc.detector_group_type = "Detector_Readout";
+  params_tpc.detector_group_name = "TPC";
+  params_tpc.element_name_prefix = "Link";
+  params_tpc.digits_for_element_number = 5;
+
+  // dunedaq::hdf5libs::hdf5filelayout::PathParams params_pds;
+  // params_pds.detector_group_type = "PDS";
+  // params_pds.detector_group_name = "PDS";
+  // params_pds.element_name_prefix = "Element";
+  // params_pds.digits_for_element_number = 5;
+
+  // note, for unit test json equality checks, 'PDS' needs to come before
+  //'TPC', as on reading back the filelayout it looks like it's alphabetical.
+  std::vector<dunedaq::hdf5libs::HDF5PathParameters> param_list;
+  // param_list.push_back(params_pds);
+  param_list.push_back(params_tpc);
+
+  dunedaq::hdf5libs::HDF5FileLayoutParameters layout_params;
+  layout_params.path_params_list = param_list;
+  layout_params.record_name_prefix = "TimeSlice";
+  layout_params.digits_for_record_number = 6;
+  layout_params.digits_for_sequence_number = 0;
+  layout_params.record_header_dataset_name = "TimeSliceHeader";
+
+  return layout_params;
+}
+
 dunedaq::daqdataformats::TimeSlice
 create_timeslice(int ts_num)
 {
