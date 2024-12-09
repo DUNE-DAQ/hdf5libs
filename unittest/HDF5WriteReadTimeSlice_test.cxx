@@ -8,7 +8,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
-#include "HDF5TestUtils.hpp"
+#include "hdf5libs/test/HDF5TestUtils.hpp"
 
 #include "detdataformats/DetID.hpp"
 
