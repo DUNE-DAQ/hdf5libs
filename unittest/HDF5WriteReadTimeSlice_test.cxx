@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   delete_files_matching_pattern(file_path, hdf5_filename);
 
   // convert file_params to json, allows for easy comp later
-  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
+  auto fl_pars = create_file_layout_params();
 
   // create src-geo id map
   auto srcid_geoid_map = create_srcid_geoid_map();
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(ReadFileDatasets)
   delete_files_matching_pattern(file_path, hdf5_filename);
 
   // convert file_params to json, allows for easy comp later
-  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
+  auto fl_pars = create_file_layout_params();
   fl_pars.digits_for_sequence_number = 4;
 
   // create src-geo id map
@@ -304,7 +304,7 @@ BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
   delete_files_matching_pattern(file_path, hdf5_filename);
 
   // convert file_params to json, allows for easy comp later
-  auto fl_pars = create_file_layout_params<dunedaq::daqdataformats::TimeSlice>();
+  auto fl_pars = create_file_layout_params();
   fl_pars.digits_for_sequence_number = 4;
 
   // create src-geo id map
