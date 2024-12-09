@@ -31,7 +31,6 @@ using namespace dunedaq::hdf5libs;
 constexpr int run_number = 53;
 constexpr int file_index = 0;
 const std::string application_name = "HDF5WriteReadTriggerRecord_test";
-constexpr unsigned compression_level = 0;
 constexpr size_t fragment_size = 100;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
@@ -39,6 +38,8 @@ constexpr size_t element_count_ta = 4;
 constexpr size_t element_count_tc = 1;
 
 const size_t components_per_record = element_count_tpc + element_count_pds + element_count_ta + element_count_tc;
+
+unsigned compression_level = 0;
 
 HDF5FileLayoutParameters
 create_file_layout_params()
@@ -244,10 +245,12 @@ BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
   auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
   auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
   auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
+  auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
   BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
   BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
   BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
   BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
+  BOOST_REQUIRE_EQUAL("TriggerRecord", record_type_attr);
 
   // extract and check file layout parameters
   auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();

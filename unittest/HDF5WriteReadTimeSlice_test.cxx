@@ -31,12 +31,13 @@ using namespace dunedaq::hdf5libs;
 constexpr int run_number = 53;
 constexpr int file_index = 0;
 const std::string application_name = "HDF5WriteReadTimeSlice_test";
-constexpr unsigned compression_level = 0;
 constexpr size_t fragment_size = 100;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
+
+unsigned compression_level = 0;
 
 HDF5FileLayoutParameters
 create_file_layout_params()
