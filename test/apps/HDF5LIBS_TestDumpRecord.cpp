@@ -22,6 +22,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <time.h>
 #include <unistd.h>
 
 using namespace dunedaq::hdf5libs;
@@ -32,8 +33,27 @@ using namespace dunedaq::trgdataformats;
 void
 print_usage(const char *appname)
 {
-  std::cout << "Usage: " << appname << " [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>" << std::endl;
+  std::cout << "Usage: " << appname << " [-t] [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>" << std::endl;
   std::cout << "Where a negative number of TRs to skip counts backward from the end of the file." << std::endl;
+  std::cout << "And the \'-t\' option causes human-readable times to be printed for selected timestamp values." << std::endl;
+}
+
+std::string
+get_calendar_time_string(timestamp_t timestamp)
+{
+  time_t epoch_sec = timestamp / 62500000;
+  tm* gmtm = gmtime(&epoch_sec);
+  std::string time_string = asctime(gmtm);
+  time_string.pop_back();  // removing trailing newline
+  size_t fractional_part = double(timestamp % 62500000) * 10000.0 / 625.0;
+  if (fractional_part != 0 && time_string.length() > 6) {
+    std::string year_string = time_string.substr(time_string.length()-4);
+    time_string = time_string.substr(0, time_string.length()-5);
+    std::ostringstream oss;
+    oss << time_string << "." << std::setw(9) << std::setfill('0') << fractional_part << " " << year_string;
+    time_string = oss.str();
+  }
+  return time_string;
 }
 
 int
@@ -41,8 +61,9 @@ main(int argc, char** argv)
 {
   int number_of_trs_to_print = 0x0ffffff;
   int number_of_trs_to_skip = 0;
+  bool print_calendar_time = false;
   signed char opt;
-  while ((opt = getopt(argc, argv, "hn:s:")) != -1) {
+  while ((opt = getopt(argc, argv, "hn:s:t")) != -1) {
     switch (opt) {
     case 'h':
       print_usage(argv[0]);
@@ -52,6 +73,9 @@ main(int argc, char** argv)
       break;
     case 's':
       number_of_trs_to_skip = atoi(optarg);
+      break;
+    case 't':
+      print_calendar_time = true;
       break;
     default: /* '?' */
       print_usage(argv[0]);
@@ -175,6 +199,16 @@ main(int argc, char** argv)
              << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
         }
       }
+      if (h5_raw_data_file.is_timeslice_type()) {
+        ss << "\n\t\tFragment window begin time = " << frag_ptr->get_window_begin()
+           << ", window end time = " << frag_ptr->get_window_end();
+        if (print_calendar_time) {
+          std::string window_begin_string = get_calendar_time_string(frag_ptr->get_window_begin());
+          std::string window_end_string = get_calendar_time_string(frag_ptr->get_window_end());
+          ss << "\n\t\t\t" << "Fragment window times corresponds to UTC " << window_begin_string
+             <<  " and " << window_end_string;
+        }
+      }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
         ss << "\n\t\t"
            << "It may contain data from the following detector components:";
@@ -251,6 +285,10 @@ main(int argc, char** argv)
            << static_cast<int>(tpptr->algorithm);
         ss << "\n\t\t" << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
            << ", and time over threshold=" << tpptr->time_over_threshold;
+        if (print_calendar_time) {
+          std::string time_string = get_calendar_time_string(tpptr->time_start);
+          ss << "\n\t\t\t" << "First TP start time corresponds to UTC " << time_string;
+        }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kHardwareSignal) {
         HSIFrame* hsi_ptr = static_cast<HSIFrame*>(frag_ptr->get_data());
