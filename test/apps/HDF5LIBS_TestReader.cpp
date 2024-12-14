@@ -64,12 +64,17 @@ main(int argc, char** argv)
   // get some file attributes
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
-  auto creation_timestamp = h5_raw_data_file.get_attribute<std::string>("creation_timestamp");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
-  ss << "\n\tCreation timestamp: " << creation_timestamp;
+  if (h5_raw_data_file.get_file_layout().get_version() >= 6) {
+    auto creation_timestamp = h5_raw_data_file.get_attribute<size_t>("creation_timestamp");
+    ss << "\n\tCreation timestamp: " << creation_timestamp;
+  } else {
+    auto creation_timestamp = h5_raw_data_file.get_attribute<std::string>("creation_timestamp");
+    ss << "\n\tCreation timestamp: " << creation_timestamp;
+  }
   ss << "\n\tWriter app name: " << app_name;
 
   TLOG() << ss.str();
