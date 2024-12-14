@@ -9,7 +9,7 @@ import sys
 
 # Current allowed range of file layout versions
 FILELAYOUT_MIN_VERSION = 4
-FILELAYOUT_MAX_VERSION = 5
+FILELAYOUT_MAX_VERSION = 6
 
 # Current header versions
 TRIGGER_RECORD_HEADER_VERSION = 4
