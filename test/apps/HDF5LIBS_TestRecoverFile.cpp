@@ -106,9 +106,15 @@ main(int argc, char** argv)
   bool ct_attr_exists = (std::count(attr_names.begin(), attr_names.end(), "closing_timestamp") >= 1);
   bool rs_attr_exists = (std::count(attr_names.begin(), attr_names.end(), "recorded_size") >= 1);
 
-  std::string closing_timestamp = "";
+  size_t closing_timestamp = 0;
   if (ct_attr_exists) {
-    closing_timestamp = h5file_ptr->get_attribute<std::string>("closing_timestamp");
+    if (h5file_ptr->get_file_layout().get_version() >= 6) {
+      closing_timestamp = h5file_ptr->get_attribute<size_t>("closing_timestamp");
+    } else {
+      auto clts_string = h5file_ptr->get_attribute<std::string>("closing_timestamp");
+      char* nds = 0;
+      closing_timestamp = strtol(clts_string.c_str(), &nds, 10);
+    }
   }
   size_t recorded_size = SIZE_MAX;
   if (rs_attr_exists) {
@@ -126,10 +132,15 @@ main(int argc, char** argv)
     h5file_ptr.reset(new HDF5RawDataFile(ifile_name, true));
 
     if (!ct_attr_exists) {
-      std::string file_closing_timestamp = std::to_string(last_modified_time);
-      std::cout << "Setting the \"closing_timestamp\" Attribute value to " << file_closing_timestamp << "."
-                << std::endl;
-      h5file_ptr->write_attribute("closing_timestamp", file_closing_timestamp);
+      if (h5file_ptr->get_file_layout().get_version() >= 6) {
+        std::cout << "Setting the \"closing_timestamp\" Attribute value to " << last_modified_time << "." << std::endl;
+        h5file_ptr->write_attribute("closing_timestamp", last_modified_time);
+      } else {
+        std::string file_closing_timestamp = std::to_string(last_modified_time);
+        std::cout << "Setting the \"closing_timestamp\" Attribute value to " << file_closing_timestamp << "."
+                  << std::endl;
+        h5file_ptr->write_attribute("closing_timestamp", file_closing_timestamp);
+      }
     } else {
       std::cout << "The \"closing_timestamp\" Attribute in the file is currently set to " << closing_timestamp
                 << ", and it will not be over-written." << std::endl;
@@ -161,10 +172,16 @@ main(int argc, char** argv)
     if (std::count(attr_names.begin(), attr_names.end(), "creation_timestamp") == 0) {
       std::cout << "The \"creation_timestamp\" Attribute is *not* currently set in the file." << std::endl;
     } else {
-      std::string creation_timestamp = h5file_ptr->get_attribute<std::string>("creation_timestamp");
-      char* nds = 0;
-      time_t blah = strtol(creation_timestamp.c_str(), &nds, 10) / 1000;
-      tm* gmtm = gmtime(&blah);
+      size_t creation_timestamp = 0;
+      if (h5file_ptr->get_file_layout().get_version() >= 6) {
+        creation_timestamp = h5file_ptr->get_attribute<size_t>("creation_timestamp");
+      } else {
+        auto crts_string = h5file_ptr->get_attribute<std::string>("creation_timestamp");
+        char* nds = 0;
+        creation_timestamp = strtol(crts_string.c_str(), &nds, 10);
+      }
+      time_t tmp_time = creation_timestamp / 1000;
+      tm* gmtm = gmtime(&tmp_time);
       std::cout << "The \"creation_timestamp\" Attribute in the file is currently set to " << creation_timestamp << ","
                 << std::endl
                 << "    which corresponds to (UTC) " << asctime(gmtm);
@@ -175,12 +192,11 @@ main(int argc, char** argv)
                 << std::endl
                 << "    set to " << last_modified_time << " if/when the file is recovered." << std::endl;
     } else {
-      char* nds = 0;
-      time_t blah = strtol(closing_timestamp.c_str(), &nds, 10) / 1000;
-      tm* gmtm = gmtime(&blah);
+      time_t tmp_time = closing_timestamp / 1000;
+      tm* gmtm = gmtime(&tmp_time);
       std::cout << "The \"closing_timestamp\" Attribute in the file is currently set to " << closing_timestamp << ","
                 << std::endl
-                << "    which corresponds to (UTC) " << asctime(gmtm)  // no std::endl needed with asctime()
+                << "    which corresponds to (UTC) " << asctime(gmtm) // no std::endl needed with asctime()
                 << "    (The recalculated closing time is " << last_modified_time << ".)" << std::endl;
     }
 
@@ -197,8 +213,8 @@ main(int argc, char** argv)
       std::cout << "The \"file_recovery_timestamp\" Attribute is *not* currently set in the file." << std::endl;
     } else {
       size_t fr_timestamp = h5file_ptr->get_attribute<size_t>("file_recovery_timestamp");
-      time_t blah = fr_timestamp / 1000;
-      tm* gmtm = gmtime(&blah);
+      time_t tmp_time = fr_timestamp / 1000;
+      tm* gmtm = gmtime(&tmp_time);
       std::cout << "The \"file_recovery_timestamp\" Attribute in the file is currently set to " << fr_timestamp << ","
                 << std::endl
                 << "    which corresponds to (UTC) " << asctime(gmtm);
