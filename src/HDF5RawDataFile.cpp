@@ -55,9 +55,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   m_recorded_size = 0;
 
-  int64_t timestamp =
+  size_t file_creation_timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-  std::string file_creation_timestamp = std::to_string(timestamp);
 
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
 
@@ -87,9 +86,8 @@ HDF5RawDataFile::~HDF5RawDataFile()
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     write_attribute("recorded_size", m_recorded_size);
 
-    int64_t timestamp =
+    size_t file_closing_timestamp =
       std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-    std::string file_closing_timestamp = std::to_string(timestamp);
     write_attribute("closing_timestamp", file_closing_timestamp);
 
     m_file_ptr->flush();
