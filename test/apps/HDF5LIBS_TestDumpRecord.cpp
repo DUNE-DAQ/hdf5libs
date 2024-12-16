@@ -31,11 +31,13 @@ using namespace dunedaq::detdataformats;
 using namespace dunedaq::trgdataformats;
 
 void
-print_usage(const char *appname)
+print_usage(const char* appname)
 {
-  std::cout << "Usage: " << appname << " [-t] [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>" << std::endl;
+  std::cout << "Usage: " << appname
+            << " [-t] [-n <number of TRs to print>] [-s <number of TRs to skip>] <input_file_name>" << std::endl;
   std::cout << "Where a negative number of TRs to skip counts backward from the end of the file." << std::endl;
-  std::cout << "And the \'-t\' option causes human-readable times to be printed for selected timestamp values." << std::endl;
+  std::cout << "And the \'-t\' option causes human-readable times to be printed for selected timestamp values."
+            << std::endl;
 }
 
 std::string
@@ -44,11 +46,11 @@ get_calendar_time_string(timestamp_t timestamp)
   time_t epoch_sec = timestamp / 62500000;
   tm* gmtm = gmtime(&epoch_sec);
   std::string time_string = asctime(gmtm);
-  time_string.pop_back();  // removing trailing newline
+  time_string.pop_back(); // removing trailing newline
   size_t fractional_part = double(timestamp % 62500000) * 10000.0 / 625.0;
   if (fractional_part != 0 && time_string.length() > 6) {
-    std::string year_string = time_string.substr(time_string.length()-4);
-    time_string = time_string.substr(0, time_string.length()-5);
+    std::string year_string = time_string.substr(time_string.length() - 4);
+    time_string = time_string.substr(0, time_string.length() - 5);
     std::ostringstream oss;
     oss << time_string << "." << std::setw(9) << std::setfill('0') << fractional_part << " " << year_string;
     time_string = oss.str();
@@ -65,26 +67,26 @@ main(int argc, char** argv)
   signed char opt;
   while ((opt = getopt(argc, argv, "hn:s:t")) != -1) {
     switch (opt) {
-    case 'h':
-      print_usage(argv[0]);
-      return 1;
-    case 'n':
-      number_of_trs_to_print = atoi(optarg);
-      break;
-    case 's':
-      number_of_trs_to_skip = atoi(optarg);
-      break;
-    case 't':
-      print_calendar_time = true;
-      break;
-    default: /* '?' */
-      print_usage(argv[0]);
-      return 1;
+      case 'h':
+        print_usage(argv[0]);
+        return 1;
+      case 'n':
+        number_of_trs_to_print = atoi(optarg);
+        break;
+      case 's':
+        number_of_trs_to_skip = atoi(optarg);
+        break;
+      case 't':
+        print_calendar_time = true;
+        break;
+      default: /* '?' */
+        print_usage(argv[0]);
+        return 1;
     }
   }
 
-  argc -= (optind-1);
-  argv += (optind-1);
+  argc -= (optind - 1);
+  argv += (optind - 1);
   if (argc != 2) {
     print_usage(argv[0]);
     return 1;
@@ -165,13 +167,13 @@ main(int argc, char** argv)
       if (trh_ptr->get_header().version != TriggerRecordHeaderData::s_trigger_record_header_version) {
         std::cout << std::endl;
         std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-                  << "used a different version" << std::endl << "       of the TriggerRecordHeader "
+                  << "used a different version" << std::endl
+                  << "       of the TriggerRecordHeader "
                   << "than this application (built with the current version of the software) is expecting."
                   << std::endl;
         std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-        std::cout << "(Expected TRH version "
-                  << TriggerRecordHeaderData::s_trigger_record_header_version << " and found version "
-                  << trh_ptr->get_header().version << ".)" << std::endl;
+        std::cout << "(Expected TRH version " << TriggerRecordHeaderData::s_trigger_record_header_version
+                  << " and found version " << trh_ptr->get_header().version << ".)" << std::endl;
         std::exit(1);
       }
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
@@ -181,8 +183,11 @@ main(int argc, char** argv)
     bool first_frag = true;
     std::set<SourceID> frag_sid_list = h5_raw_data_file.get_fragment_source_ids(record_id);
     for (auto const& source_id : frag_sid_list) {
-      if (first_frag) {first_frag = false;}
-      else {ss << "\n";}
+      if (first_frag) {
+        first_frag = false;
+      } else {
+        ss << "\n";
+      }
       auto frag_ptr = h5_raw_data_file.get_frag_ptr(record_id, source_id);
       ss << "\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
          << frag_ptr->get_element_id().to_string() << " from subdetector "
@@ -192,11 +197,14 @@ main(int argc, char** argv)
         try {
           auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
           ComponentRequest cr = trh_ptr->get_component_for_source_id(frag_ptr->get_element_id());
+          int64_t begin_diff = cr.window_begin;
+          begin_diff -= trh_ptr->get_trigger_timestamp();
+          int64_t end_diff = cr.window_end;
+          end_diff -= trh_ptr->get_trigger_timestamp();
           ss << "\n\t\t"
-             << "Readout window before = " << (trh_ptr->get_trigger_timestamp()-cr.window_begin)
-             << ", after = " << (cr.window_end-trh_ptr->get_trigger_timestamp());
-        }
-        catch (std::exception const& excpt) {
+             << "Readout window begin = " << begin_diff << ", end = " << end_diff
+             << " (relative to the trigger_timestamp)";
+        } catch (std::exception const& excpt) {
           ss << "\n\t\t"
              << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
         }
@@ -207,8 +215,8 @@ main(int argc, char** argv)
         if (print_calendar_time) {
           std::string window_begin_string = get_calendar_time_string(frag_ptr->get_window_begin());
           std::string window_end_string = get_calendar_time_string(frag_ptr->get_window_end());
-          ss << "\n\t\t\t" << "Fragment window times corresponds to UTC " << window_begin_string
-             <<  " and " << window_end_string;
+          ss << "\n\t\t\t"
+             << "Fragment window times corresponds to UTC " << window_begin_string << " and " << window_end_string;
         }
       }
       if (frag_ptr->get_element_id().subsystem == SourceID::Subsystem::kDetectorReadout) {
@@ -218,18 +226,19 @@ main(int argc, char** argv)
         for (auto const& geo_id : geo_id_list) {
           // FIXME
           // GeoInfo = HardwareMapService::parse_geo_id(geo_id);
-          uint16_t det_id   =  geo_id & 0xffff;
-          uint16_t crate_id = (geo_id >> 16)& 0xffff;
-          uint16_t slot_id  = (geo_id >> 32) & 0xffff;
-          uint16_t link_id  = (geo_id >> 48) & 0xffff;
+          uint16_t det_id = geo_id & 0xffff;
+          uint16_t crate_id = (geo_id >> 16) & 0xffff;
+          uint16_t slot_id = (geo_id >> 32) & 0xffff;
+          uint16_t link_id = (geo_id >> 48) & 0xffff;
           ss << "\n\t\t\t"
-             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id))
-             << " (" << det_id << ")"
+             << "subdetector " << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(det_id)) << " ("
+             << det_id << ")"
              << ", crate " << crate_id << ", slot " << slot_id << ", link " << link_id;
         }
       }
       if (frag_ptr->get_data_size() == 0) {
-        ss << "\n\t\t" << "*** Empty fragment! Moving to next fragment. ***";
+        ss << "\n\t\t"
+           << "*** Empty fragment! Moving to next fragment. ***";
         continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
@@ -237,22 +246,25 @@ main(int argc, char** argv)
         size_t offset = 0;
         int number_of_TCs = 0;
         int number_of_referenced_TAs = 0;
-        while ((offset+sizeof(TriggerCandidateData)) < payload_size) {
+        while ((offset + sizeof(TriggerCandidateData)) < payload_size) {
           ++number_of_TCs;
           TriggerCandidate* tmp_tcptr =
-            reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+            reinterpret_cast<TriggerCandidate*>(offset + reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
           offset += sizeof(TriggerCandidateData) + sizeof(tmp_tcptr->n_inputs);
           offset += (tmp_tcptr->n_inputs * sizeof(TriggerActivityData));
           number_of_referenced_TAs += tmp_tcptr->n_inputs;
         }
         TriggerCandidate* tcptr = static_cast<TriggerCandidate*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "Number of TCs in this fragment=" << number_of_TCs << ", overall number of referenced TAs="
-           << number_of_referenced_TAs << ", size of TC data="
-           << (sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs));
-        ss << "\n\t\t" << "First TC type = " << get_trigger_candidate_type_names()[tcptr->data.type]
-           << " (" << static_cast<int>(tcptr->data.type) << "), TC algorithm = "
-           << static_cast<int>(tcptr->data.algorithm) << ", number of TAs = " << tcptr->n_inputs;
-        ss << "\n\t\t" << "First TC start time=" << tcptr->data.time_start << ", end time=" << tcptr->data.time_end
+        ss << "\n\t\t"
+           << "Number of TCs in this fragment=" << number_of_TCs
+           << ", overall number of referenced TAs=" << number_of_referenced_TAs
+           << ", size of TC data=" << (sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs));
+        ss << "\n\t\t"
+           << "First TC type = " << get_trigger_candidate_type_names()[tcptr->data.type] << " ("
+           << static_cast<int>(tcptr->data.type) << "), TC algorithm = " << static_cast<int>(tcptr->data.algorithm)
+           << ", number of TAs = " << tcptr->n_inputs;
+        ss << "\n\t\t"
+           << "First TC start time=" << tcptr->data.time_start << ", end time=" << tcptr->data.time_end
            << ", and candidate time=" << tcptr->data.time_candidate;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
@@ -260,55 +272,63 @@ main(int argc, char** argv)
         size_t offset = 0;
         int number_of_TAs = 0;
         int number_of_referenced_TPs = 0;
-        while ((offset+sizeof(TriggerActivityData)) < payload_size) {
+        while ((offset + sizeof(TriggerActivityData)) < payload_size) {
           ++number_of_TAs;
           TriggerActivity* tmp_taptr =
-            reinterpret_cast<TriggerActivity*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+            reinterpret_cast<TriggerActivity*>(offset + reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
           offset += sizeof(TriggerActivityData) + sizeof(tmp_taptr->n_inputs);
           offset += (tmp_taptr->n_inputs * sizeof(TriggerPrimitive));
           number_of_referenced_TPs += tmp_taptr->n_inputs;
         }
         TriggerActivity* taptr = static_cast<TriggerActivity*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "Number of TAs in this fragment=" << number_of_TAs << ", overall number of referenced TPs="
-           << number_of_referenced_TPs << ", size of TA data="
-           << (sizeof(TriggerActivityData) + sizeof(taptr->n_inputs));
-        ss << "\n\t\t" << "First TA type = " << static_cast<int>(taptr->data.type) << ", TA algorithm = "
-           << static_cast<int>(taptr->data.algorithm) << ", number of TPs = " << taptr->n_inputs;
-        ss << "\n\t\t" << "First TA start time=" << taptr->data.time_start << ", end time=" << taptr->data.time_end
+        ss << "\n\t\t"
+           << "Number of TAs in this fragment=" << number_of_TAs
+           << ", overall number of referenced TPs=" << number_of_referenced_TPs
+           << ", size of TA data=" << (sizeof(TriggerActivityData) + sizeof(taptr->n_inputs));
+        ss << "\n\t\t"
+           << "First TA type = " << static_cast<int>(taptr->data.type)
+           << ", TA algorithm = " << static_cast<int>(taptr->data.algorithm) << ", number of TPs = " << taptr->n_inputs;
+        ss << "\n\t\t"
+           << "First TA start time=" << taptr->data.time_start << ", end time=" << taptr->data.time_end
            << ", and activity time=" << taptr->data.time_activity;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
-        ss << "\n\t\t" << "Number of TPs in this fragment="
+        ss << "\n\t\t"
+           << "Number of TPs in this fragment="
            << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "First TP type = " << static_cast<int>(tpptr->type) << ", TP algorithm = "
-           << static_cast<int>(tpptr->algorithm);
-        ss << "\n\t\t" << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
+        ss << "\n\t\t"
+           << "First TP type = " << static_cast<int>(tpptr->type)
+           << ", TP algorithm = " << static_cast<int>(tpptr->algorithm);
+        ss << "\n\t\t"
+           << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
            << ", and time over threshold=" << tpptr->time_over_threshold;
         if (print_calendar_time) {
           std::string time_string = get_calendar_time_string(tpptr->time_start);
-          ss << "\n\t\t\t" << "First TP start time corresponds to UTC " << time_string;
+          ss << "\n\t\t\t"
+             << "First TP start time corresponds to UTC " << time_string;
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kHardwareSignal) {
         HSIFrame* hsi_ptr = static_cast<HSIFrame*>(frag_ptr->get_data());
-        ss << "\n\t\t" << "Detector ID = " << hsi_ptr->detector_id
-           << ", Crate = " << hsi_ptr->crate
-           << ", Slot = " << hsi_ptr->slot
+        ss << "\n\t\t"
+           << "Detector ID = " << hsi_ptr->detector_id << ", Crate = " << hsi_ptr->crate << ", Slot = " << hsi_ptr->slot
            << ", Link = " << hsi_ptr->link;
-        ss << ",\n\t\t" << "Sequence = " << hsi_ptr->sequence
-           << ", Trigger = " << hsi_ptr->trigger
+        ss << ",\n\t\t"
+           << "Sequence = " << hsi_ptr->sequence << ", Trigger = " << hsi_ptr->trigger
            << ", Version = " << hsi_ptr->version;
-        ss << ",\n\t\t" << "Timestamp = " << hsi_ptr->get_timestamp();
+        ss << ",\n\t\t"
+           << "Timestamp = " << hsi_ptr->get_timestamp();
 
         // Finding the bit positions for input_low and input_high
         uint32_t bit_pos, bit_sniff;
         uint32_t input_low = hsi_ptr->input_low;
-        std::bitset<32> low_bits{input_low};
+        std::bitset<32> low_bits{ input_low };
         size_t num_bits = low_bits.count();
-        ss << ",\n\t\t" << "Input Low Bitmap = " << input_low;
+        ss << ",\n\t\t"
+           << "Input Low Bitmap = " << input_low;
         if (input_low != 0) { // Skip printing the positions if the value is 0.
           ss << ", Input Low Bit Positions = ";
           bit_sniff = 1;
@@ -325,9 +345,10 @@ main(int argc, char** argv)
         }
 
         uint32_t input_high = hsi_ptr->input_high;
-        std::bitset<32> high_bits{input_high};
+        std::bitset<32> high_bits{ input_high };
         num_bits = high_bits.count();
-        ss << ",\n\t\t" << "Input High Bitmap = " << input_high;
+        ss << ",\n\t\t"
+           << "Input High Bitmap = " << input_high;
         if (input_high != 0) {
           ss << ", Input High Bit Positions = ";
           bit_sniff = 1;
@@ -342,7 +363,7 @@ main(int argc, char** argv)
             bit_sniff = bit_sniff << 1;
           }
         }
-        ss << ".";  // Finishes the HSI section.
+        ss << "."; // Finishes the HSI section.
       }
     }
     std::cout << ss.str() << std::endl;
