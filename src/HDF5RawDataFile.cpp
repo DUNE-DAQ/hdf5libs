@@ -84,16 +84,22 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 HDF5RawDataFile::~HDF5RawDataFile()
 {
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    write_attribute("recorded_size", m_recorded_size);
+    if (! m_file_ptr->hasAttribute("recorded_size")) {
+      write_attribute("recorded_size", m_recorded_size);
+    }
 
-    size_t file_closing_timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-    write_attribute("closing_timestamp", file_closing_timestamp);
+    if (! m_file_ptr->hasAttribute("closing_timestamp")) {
+      size_t file_closing_timestamp =
+	std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+      write_attribute("closing_timestamp", file_closing_timestamp);
+    }
 
     m_file_ptr->flush();
 
-    // rename file to the bare name
-    std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
+    // rename file to the bare name, if needed
+    if (m_file_ptr->getName() != m_bare_file_name) {
+      std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
+    }
   }
 
   // explicit destruction; not really needed, but nice to be clear...
@@ -308,11 +314,18 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 }
 
 /**
- * @brief Constructor for reading a file
+ * @brief Constructor for reading (and optionally writing) a file
  */
-HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
+HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writing)
   : m_open_flags(HighFive::File::ReadOnly)
 {
+  if (allow_writing) {m_open_flags = HighFive::File::ReadWrite;}
+  m_bare_file_name = file_name;
+  size_t pos = m_bare_file_name.rfind(s_inprogress_suffix);
+  if (pos != std::string::npos) {
+    m_bare_file_name.erase(pos);
+  }
+
   // do the file open
   try {
     m_file_ptr = std::make_unique<HighFive::File>(file_name, m_open_flags);

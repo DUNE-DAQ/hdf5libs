@@ -75,10 +75,7 @@ main(int argc, char** argv)
   std::ostringstream ss;
 
   ss << "\nFile name: " << h5_raw_data_file.get_file_name();
-  ss << "\n\tRecorded size from class: " << h5_raw_data_file.get_recorded_size();
-
-  auto recorded_size = h5_raw_data_file.get_attribute<size_t>("recorded_size");
-  ss << "\n\tRecorded size from attribute: " << recorded_size;
+  ss << "\n\tRecorded size: " << h5_raw_data_file.get_recorded_size();
 
   auto record_type = h5_raw_data_file.get_record_type();
   ss << "\nRecord type = " << record_type;
