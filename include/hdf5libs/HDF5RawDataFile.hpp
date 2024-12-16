@@ -122,6 +122,8 @@ public:
   typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
   typedef std::set<record_id_t, std::less<>> record_id_set;
 
+  inline static const std::string s_inprogress_suffix = ".writing";
+
   // constructor for writing
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
@@ -129,11 +131,11 @@ public:
                   std::string application_name,
                   HDF5FileLayoutParameters fl_params,
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
-                  std::string inprogress_filename_suffix = ".writing",
+                  std::string inprogress_filename_suffix = s_inprogress_suffix,
                   unsigned open_flags = HighFive::File::Create);
 
-  // constructor for reading
-  explicit HDF5RawDataFile(const std::string& file_name);
+  // constructor for reading and optional writing
+  explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
   ~HDF5RawDataFile();
 
@@ -436,8 +438,8 @@ private:
 
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
-  const std::string m_bare_file_name;
-  const unsigned m_open_flags;
+  std::string m_bare_file_name;
+  unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
