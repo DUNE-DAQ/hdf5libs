@@ -33,5 +33,6 @@ daq_add_python_bindings(*.cpp LINK_LIBRARIES ${PROJECT_NAME} daqdataformats::daq
 daq_add_application(HDF5LIBS_TestReader HDF5LIBS_TestReader.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 daq_add_application(HDF5LIBS_TestDumpRecord HDF5LIBS_TestDumpRecord.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
+daq_add_application(HDF5LIBS_TestRecoverFile HDF5LIBS_TestRecoverFile.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
