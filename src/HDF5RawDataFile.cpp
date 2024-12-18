@@ -965,6 +965,35 @@ HDF5RawDataFile::get_source_ids_for_fragment_type(const record_id_t& rid, const 
 }
 
 std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                             const std::string& frag_type_name,
+                                                             const std::string& subdet_name)
+{
+  daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+  if (frag_type == daqdataformats::FragmentType::kUnknown)
+    throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
+  detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
+  if (subdet == detdataformats::DetID::Subdetector::kUnknown)
+    throw InvalidSubdetectorString(ERS_HERE, subdet_name);
+
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  std::set<daqdataformats::SourceID> fragtype_match_sids = m_fragment_type_source_id_cache[rid][frag_type];
+  std::set<daqdataformats::SourceID> detid_match_sids = m_subdetector_source_id_cache[rid][subdet];
+  std::set<daqdataformats::SourceID> combined_set_sids;
+  for (auto ftsid : fragtype_match_sids) {
+    if (detid_match_sids.contains(ftsid)) {
+      combined_set_sids.insert(ftsid);
+    }
+  }
+  return combined_set_sids;
+}
+
+std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
   auto rec_id = get_all_record_ids().find(rid);
@@ -979,7 +1008,6 @@ HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const de
 std::unique_ptr<char[]>
 HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 {
-
   HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
 
