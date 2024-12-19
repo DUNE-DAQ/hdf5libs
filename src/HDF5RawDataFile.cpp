@@ -58,9 +58,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   m_recorded_size = 0;
   m_total_dataset_size = 0;
 
-  int64_t timestamp =
+  size_t file_creation_timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-  std::string file_creation_timestamp = std::to_string(timestamp);
 
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
 
@@ -93,23 +92,40 @@ HDF5RawDataFile::~HDF5RawDataFile()
   TLOG() << "Final m_recorded_size: " << m_recorded_size;
   TLOG() << "Final m_total_dataset_size: " << m_total_dataset_size;
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    write_attribute("recorded_size", m_recorded_size);
-    write_attribute("total_dataset_size", m_total_dataset_size);
+    if (! m_file_ptr->hasAttribute("recorded_size")) {
+      write_attribute("recorded_size", m_recorded_size);
+    }
 
-    int64_t timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-    std::string file_closing_timestamp = std::to_string(timestamp);
-    write_attribute("closing_timestamp", file_closing_timestamp);
+    if (! m_file_ptr->hasAttribute("total_dataset_size")) {
+      write_attribute("total_dataset_size", m_total_dataset_size);
+    }
+
+    if (! m_file_ptr->hasAttribute("closing_timestamp")) {
+      size_t file_closing_timestamp =
+	std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+      write_attribute("closing_timestamp", file_closing_timestamp);
+    }
 
     m_file_ptr->flush();
 
-    // rename file to the bare name
-    std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
+    // rename file to the bare name, if needed
+    if (m_file_ptr->getName() != m_bare_file_name) {
+      std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
+    }
   }
 
   // explicit destruction; not really needed, but nice to be clear...
   m_file_ptr.reset();
   m_file_layout_ptr.reset();
+}
+
+/**
+ * @brief Fetch the list of all file-level Attribute names.
+ */
+std::vector<std::string>
+HDF5RawDataFile::HDF5RawDataFile::get_attribute_names()
+{
+  return m_file_ptr->listAttributeNames();
 }
 
 /**
@@ -326,11 +342,18 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 }
 
 /**
- * @brief Constructor for reading a file
+ * @brief Constructor for reading (and optionally writing) a file
  */
-HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name)
+HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writing)
   : m_open_flags(HighFive::File::ReadOnly)
 {
+  if (allow_writing) {m_open_flags = HighFive::File::ReadWrite;}
+  m_bare_file_name = file_name;
+  size_t pos = m_bare_file_name.rfind(s_inprogress_suffix);
+  if (pos != std::string::npos) {
+    m_bare_file_name.erase(pos);
+  }
+
   // do the file open
   try {
     m_file_ptr = std::make_unique<HighFive::File>(file_name, m_open_flags);
@@ -970,6 +993,35 @@ HDF5RawDataFile::get_source_ids_for_fragment_type(const record_id_t& rid, const 
 }
 
 std::set<daqdataformats::SourceID>
+HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                             const std::string& frag_type_name,
+                                                             const std::string& subdet_name)
+{
+  daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+  if (frag_type == daqdataformats::FragmentType::kUnknown)
+    throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
+  detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
+  if (subdet == detdataformats::DetID::Subdetector::kUnknown)
+    throw InvalidSubdetectorString(ERS_HERE, subdet_name);
+
+  auto rec_id = get_all_record_ids().find(rid);
+  if (rec_id == get_all_record_ids().end())
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+
+  add_record_level_info_to_caches_if_needed(rid);
+
+  std::set<daqdataformats::SourceID> fragtype_match_sids = m_fragment_type_source_id_cache[rid][frag_type];
+  std::set<daqdataformats::SourceID> detid_match_sids = m_subdetector_source_id_cache[rid][subdet];
+  std::set<daqdataformats::SourceID> combined_set_sids;
+  for (auto ftsid : fragtype_match_sids) {
+    if (detid_match_sids.contains(ftsid)) {
+      combined_set_sids.insert(ftsid);
+    }
+  }
+  return combined_set_sids;
+}
+
+std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
   auto rec_id = get_all_record_ids().find(rid);
@@ -984,7 +1036,6 @@ HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const de
 std::unique_ptr<char[]>
 HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 {
-
   HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
 

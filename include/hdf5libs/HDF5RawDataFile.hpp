@@ -101,6 +101,12 @@ ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " alrea
 
 ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
+                  "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs, InvalidSubdetectorString,
+                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.", ((std::string)name))
+
 namespace hdf5libs {
 
 /**
@@ -122,6 +128,8 @@ public:
   typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
   typedef std::set<record_id_t, std::less<>> record_id_set;
 
+  inline static const std::string s_inprogress_suffix = ".writing";
+
   // constructor for writing
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
@@ -130,11 +138,11 @@ public:
                   HDF5FileLayoutParameters fl_params,
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                   uint8_t compression_level = 0,
-                  std::string inprogress_filename_suffix = ".writing",
+                  std::string inprogress_filename_suffix = s_inprogress_suffix,
                   unsigned open_flags = HighFive::File::Create);
 
-  // constructor for reading
-  explicit HDF5RawDataFile(const std::string& file_name);
+  // constructor for reading and optional writing
+  explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
   ~HDF5RawDataFile();
 
@@ -321,6 +329,8 @@ public:
                                                                       const std::string& frag_type_name)
   {
     daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+    if (frag_type == daqdataformats::FragmentType::kUnknown)
+      throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
     return get_source_ids_for_fragment_type(rid, frag_type);
   }
   std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const uint64_t rec_num, // NOLINT(build/unsigned)
@@ -335,6 +345,11 @@ public:
   {
     return get_source_ids_for_fragment_type(std::make_pair(rec_num, seq_num), frag_type_name);
   }
+
+  // get SourceIDs for given fragment type and subdetector in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                                                 const std::string& frag_type_name,
+                                                                                 const std::string& subdet_name);
 
   // get SourceIDs for given subdetector in a record
   std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,
@@ -439,8 +454,8 @@ private:
 
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
-  const std::string m_bare_file_name;
   uint8_t m_compression_level;
+  std::string m_bare_file_name;
   unsigned m_open_flags;
 
   // Total size of data being written
@@ -509,11 +524,6 @@ HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& nam
     dset.createAttribute<T>(name, value);
   else
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
-}
-
-std::vector<std::string> HDF5RawDataFile::get_attribute_names()
-{
-  return m_file_ptr->listAttributeNames();
 }
 
 template<typename T>
