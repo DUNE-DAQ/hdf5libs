@@ -56,6 +56,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   }
 
   m_recorded_size = 0;
+  m_total_dataset_size = 0;
 
   int64_t timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -89,8 +90,11 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
 HDF5RawDataFile::~HDF5RawDataFile()
 {
+  TLOG() << "Final m_recorded_size: " << m_recorded_size;
+  TLOG() << "Final m_total_dataset_size: " << m_total_dataset_size;
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     write_attribute("recorded_size", m_recorded_size);
+    write_attribute("total_dataset_size", m_total_dataset_size);
 
     int64_t timestamp =
       std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -219,7 +223,10 @@ HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
   std::tuple<size_t, std::string, HighFive::Group> write_results =
-    do_write(m_file_layout_ptr->get_path_elements(tsh), (const char*)(&tsh), sizeof(daqdataformats::TimeSliceHeader), m_compression_level);
+    do_write(m_file_layout_ptr->get_path_elements(tsh), 
+            (const char*)(&tsh), 
+            sizeof(daqdataformats::TimeSliceHeader), 
+            m_compression_level);
   m_recorded_size += std::get<0>(write_results);
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
   return std::get<2>(write_results);
@@ -303,8 +310,14 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   data_set_create_props.add(HighFive::Deflate(compression_level));
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
+
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
+    size_t this_dataset_size = data_set.getStorageSize();
+    m_total_dataset_size += this_dataset_size;
+
+    TLOG() << "Size of this dataset: " << this_dataset_size << " bytes";
+    TLOG() << "Running sum of dataset sizes: " << m_total_dataset_size << " bytes";
     m_file_ptr->flush();
     return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
   } else {

@@ -79,6 +79,9 @@ main(int argc, char** argv)
   auto recorded_size = h5_raw_data_file.get_attribute<size_t>("recorded_size");
   ss << "\n\tRecorded size from attribute: " << recorded_size;
 
+  auto dataset_size = h5_raw_data_file.get_attribute<size_t>("total_dataset_size");
+  ss << "\n\tTotal dataset from attribute: " << dataset_size;
+
   auto record_type = h5_raw_data_file.get_record_type();
   ss << "\nRecord type = " << record_type;
 
