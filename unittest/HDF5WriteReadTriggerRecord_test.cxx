@@ -205,8 +205,10 @@ create_trigger_record(uint64_t trig_num)
 
 struct FileWriteFixture 
 {
-  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0) 
-    : timeslice_count(num_slices), 
+  FileWriteFixture(int num_triggers = 5, 
+                   unsigned comp_lvl = 0, 
+                   uint64_t trigger_record_number_offset = 0) 
+    : trigger_count(num_triggers), 
       compression_level(comp_lvl),
       file_path(std::filesystem::temp_directory_path()),
       hdf5_filename(
@@ -232,15 +234,22 @@ struct FileWriteFixture
                                                                     srcid_geoid_map,
                                                                     compression_level));
 
-    BOOST_TEST_MESSAGE("Compression level in constructor: " << compression_level);
-
     // write several events, each with several fragments
-    for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
-      h5file_ptr->write(create_timeslice(timeslice_number));
+    if (trigger_record_number_offset == 0) {
+      for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
+        h5file_ptr->write(create_trigger_record(trigger_number));
+    } else {
+      trigger_number = 1;
+      for (uint64_t idx = 0; idx < trigger_count; ++idx) {
+        trigger_number = 1 + (idx * 2000000000);
+        BOOST_TEST_MESSAGE("Trigger count: " << trigger_count);
+        BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
+        h5file_ptr->write(create_trigger_record(trigger_number));
+      }
+    }
 
     // get recorded size for checking
     recorded_size_at_write = h5file_ptr->get_recorded_size();
-    BOOST_TEST_MESSAGE("Recorded size at write: " << recorded_size_at_write);
 
     h5file_ptr.reset(); // explicit destruction
 
@@ -252,11 +261,6 @@ struct FileWriteFixture
 
   void read_file_attributes()
   {
-      // get recorded size for checking
-    size_t recorded_size_at_write = h5file_ptr->get_recorded_size();
-
-    h5file_ptr.reset(); // explicit destruction
-
     // open file for reading now
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
@@ -267,6 +271,7 @@ struct FileWriteFixture
     auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
     auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
     auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
+    auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
     auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
     BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
     BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
@@ -277,7 +282,7 @@ struct FileWriteFixture
 
     // extract and check file layout parameters
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-    BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json())
+    BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
   }
 
   void read_file_datasets()
@@ -412,99 +417,81 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
   }
 
-  int trigger_count;
+  void read_write_large_trigger_numbers() 
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+    BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+    auto first_trigger_record_id = *(trigger_record_ids.begin());
+    auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+    BOOST_TEST_MESSAGE("Trigger count: " << trigger_count);
+    BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
+    BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
+    BOOST_REQUIRE(trigger_number > 0xffffffff);
+  }
+
+  uint64_t trigger_count;
+  uint64_t trigger_number;
   unsigned compression_level;
   std::string file_path;
   std::string hdf5_filename;
   HDF5FileLayoutParameters fl_pars;
   size_t recorded_size_at_write;
   std::unique_ptr<HDF5RawDataFile> h5file_ptr;
-}
+};
 
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTriggerRecord_test)
 
 BOOST_AUTO_TEST_CASE(ReadFileAttributes)
 {
-  FileWriteFixture fixture(5, 0);
+  FileWriteFixture fixture(5, 0, 0);
   fixture.read_file_attributes();
 }
 
 BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes)
 {
-  FileWriteFixture fixture(5, 1);
+  FileWriteFixture fixture(5, 1, 0);
   fixture.read_file_attributes();
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 {
-  FileWriteFixture fixture(5, 0);
+  FileWriteFixture fixture(5, 0, 0);
   fixture.read_file_datasets();
 }
 
 BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets)
 {
-  FileWriteFixture fixture(5, 1);
+  FileWriteFixture fixture(5, 1, 0);
   fixture.read_file_datasets();
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 {
-  FileWriteFixture fixture(5, 0);
+  FileWriteFixture fixture(5, 0, 0);
   fixture.read_file_max_sequence();
 }
 
 BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence)
 {
-  FileWriteFixture fixture(5, 1);
+  FileWriteFixture fixture(5, 1, 0);
   fixture.read_file_max_sequence();
 }
 
 BOOST_AUTO_TEST_CASE(LargeTriggerRecordNumbers)
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const uint64_t trigger_count = 10;
+  FileWriteFixture fixture(5, 0, 2000000000);
+  fixture.read_write_large_trigger_numbers();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  auto fl_pars = create_file_layout_params();
-  fl_pars.digits_for_sequence_number = 4;
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  fl_pars,
-                                                                  srcid_geoid_map,
-                                                                  compression_level));
-
-  // write several events, each with several fragments
-  uint64_t trigger_number = 1;
-  for (uint64_t idx = 0; idx < trigger_count; ++idx) {
-    trigger_number = 1 + (idx * 2000000000);
-    h5file_ptr->write(create_trigger_record(trigger_number));
-  }
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
-
-  auto first_trigger_record_id = *(trigger_record_ids.begin());
-  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
-  BOOST_REQUIRE(trigger_number > 0xffffffff);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(CompressedLargeTriggerRecordNumbers)
+{
+  FileWriteFixture fixture(5, 1, 2000000000);
+  fixture.read_write_large_trigger_numbers();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
