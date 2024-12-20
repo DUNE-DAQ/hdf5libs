@@ -203,6 +203,62 @@ create_trigger_record(uint64_t trig_num)
   return tr;
 }
 
+struct FileWriteFixture 
+{
+  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0) 
+    : timeslice_count(num_slices), 
+      compression_level(comp_lvl),
+      file_path(std::filesystem::temp_directory_path()),
+      hdf5_filename(
+        "demo" + std::to_string(getpid()) + "_" 
+        + std::string(getenv("USER")) + "_comp" 
+        + std::to_string(compression_level) + ".hdf5"),
+      fl_pars(create_file_layout_params()),
+      recorded_size_at_write(0)
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+
+    // convert file_params to json, allows for easy comp later
+    auto fl_pars = create_file_layout_params();
+
+    // create src-geo id map
+    auto srcid_geoid_map = create_srcid_geoid_map();
+    // create the file
+    std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                    run_number,
+                                                                    file_index,
+                                                                    application_name,
+                                                                    fl_pars,
+                                                                    srcid_geoid_map,
+                                                                    compression_level));
+
+    BOOST_TEST_MESSAGE("Compression level in constructor: " << compression_level);
+
+    // write several events, each with several fragments
+    for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
+      h5file_ptr->write(create_timeslice(timeslice_number));
+
+    // get recorded size for checking
+    recorded_size_at_write = h5file_ptr->get_recorded_size();
+    BOOST_TEST_MESSAGE("Recorded size at write: " << recorded_size_at_write);
+
+    h5file_ptr.reset(); // explicit destruction
+
+  }
+  ~FileWriteFixture() 
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+  }
+
+  int trigger_count;
+  unsigned compression_level;
+  std::string file_path;
+  std::string hdf5_filename;
+  HDF5FileLayoutParameters fl_pars;
+  size_t recorded_size_at_write;
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr;
+}
+
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTriggerRecord_test)
 
 BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
