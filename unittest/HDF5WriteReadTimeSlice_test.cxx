@@ -191,27 +191,28 @@ struct FileWriteFixture
     delete_files_matching_pattern(file_path, hdf5_filename);
   }
 
-  //void read_file_attributes(std::string file_path, std::string hdf5_filename, HDF5FileLayoutParameters fl_pars)
   void read_file_attributes()
   {
     // open file for reading now
     //std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-    BOOST_TEST_MESSAGE("Compression level in read function: " << compression_level);
+    unsigned set_compression_level = this->compression_level;
 
     // check attributes
     auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
-    BOOST_TEST_MESSAGE("recorded_size_attr: " << recorded_size_attr);
     auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
     auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
     auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
     auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
+    auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
+
     BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
     BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
     BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
     BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
     BOOST_REQUIRE_EQUAL("TimeSlice", record_type_attr);
+    BOOST_REQUIRE_EQUAL(set_compression_level, compression_level_attr);
 
     // extract and check file layout parameters
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
@@ -232,13 +233,13 @@ BOOST_FIXTURE_TEST_SUITE(HDF5WriteReadTimeSlice_test, FileWriteFixture)
 BOOST_AUTO_TEST_CASE(ReadFileAttributes) 
 {
   FileWriteFixture fixture(5, 0);
-  read_file_attributes();
+  fixture.read_file_attributes();
 }
 
 BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes) 
 {
-  FileWriteFixture fixture(10, 1);
-  read_file_attributes();
+  FileWriteFixture fixture(5, 1);
+  fixture.read_file_attributes();
 }
 
 void read_file_datasets(unsigned compression_level)
