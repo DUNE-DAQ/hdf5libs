@@ -56,7 +56,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   }
 
   m_recorded_size = 0;
-  m_total_dataset_size = 0;
+  m_total_dataset_size_on_disk = 0;
 
   size_t file_creation_timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -90,14 +90,14 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 HDF5RawDataFile::~HDF5RawDataFile()
 {
   TLOG() << "Final m_recorded_size: " << m_recorded_size;
-  TLOG() << "Final m_total_dataset_size: " << m_total_dataset_size;
+  TLOG() << "Final m_total_dataset_size: " << m_total_dataset_size_on_disk;
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("recorded_size")) {
       write_attribute("recorded_size", m_recorded_size);
     }
 
-    if (! m_file_ptr->hasAttribute("total_dataset_size")) {
-      write_attribute("total_dataset_size", m_total_dataset_size);
+    if (! m_file_ptr->hasAttribute("total_dataset_size_on_disk")) {
+      write_attribute("total_dataset_size_on_disk", m_total_dataset_size_on_disk);
     }
 
     if (! m_file_ptr->hasAttribute("closing_timestamp")) {
@@ -330,10 +330,12 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
     size_t this_dataset_size = data_set.getStorageSize();
-    m_total_dataset_size += this_dataset_size;
+    m_total_dataset_size_on_disk += this_dataset_size;
 
-    TLOG() << "Size of this dataset: " << this_dataset_size << " bytes";
-    TLOG() << "Running sum of dataset sizes: " << m_total_dataset_size << " bytes";
+    TLOG() << "Size of raw_data_ptr: " << sizeof(raw_data_ptr) << " bytes";
+    TLOG() << "raw_data_size_bytes " << raw_data_size_bytes;
+    TLOG() << "dataset.getStorageSize(): " << this_dataset_size << " bytes";
+    //TLOG() << "Running sum of dataset sizes: " << m_total_dataset_size << " bytes";
     m_file_ptr->flush();
     return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
   } else {

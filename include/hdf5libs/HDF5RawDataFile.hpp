@@ -152,7 +152,7 @@ public:
 
   std::string get_record_type() const noexcept { return m_record_type; }
 
-  size_t get_total_dataset_size() const noexcept { return m_total_dataset_size; }
+  size_t get_total_dataset_size_on_disk() const noexcept { return m_total_dataset_size_on_disk; }
 
   bool is_trigger_record_type() const noexcept { return m_record_type.compare("TriggerRecord") == 0; }
   bool is_timeslice_type() const noexcept { return m_record_type.compare("TimeSlice") == 0; }
@@ -454,14 +454,14 @@ private:
 
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
-  uint8_t m_compression_level;
   std::string m_bare_file_name;
+  uint8_t m_compression_level;
   unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
   std::string m_record_type;
-  size_t m_total_dataset_size;
+  size_t m_total_dataset_size_on_disk;
 
   // file layout writing/reading
   void write_file_layout();
