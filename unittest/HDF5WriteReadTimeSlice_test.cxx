@@ -34,6 +34,8 @@ const std::string application_name = "HDF5WriteReadTimeSlice_test";
 constexpr size_t fragment_size = 100;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
+size_t compressed_file_size;
+size_t uncompressed_file_size;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
 
@@ -173,7 +175,6 @@ struct FileWriteFixture
                                                                     srcid_geoid_map,
                                                                     compression_level));
 
-    BOOST_TEST_MESSAGE("Compression level in constructor: " << compression_level);
 
     // write several events, each with several fragments
     for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
@@ -181,11 +182,10 @@ struct FileWriteFixture
 
     // get recorded size for checking
     recorded_size_at_write = h5file_ptr->get_recorded_size();
-    BOOST_TEST_MESSAGE("Recorded size at write: " << recorded_size_at_write);
 
     h5file_ptr.reset(); // explicit destruction
-
   }
+
   ~FileWriteFixture() 
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
@@ -217,6 +217,13 @@ struct FileWriteFixture
     // extract and check file layout parameters
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
+
+    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
+    if (set_compression_level == 0) {uncompressed_file_size = file_size;}
+    else {
+      compressed_file_size = file_size;
+      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
+    }
   }
 
   void read_file_datasets()
@@ -283,6 +290,13 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
                         dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+
+    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
+    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
+    else {
+      compressed_file_size = file_size;
+      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
+    }
   }
 
   void read_file_max_sequence()
@@ -349,6 +363,13 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
                         dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+
+    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
+    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
+    else {
+      compressed_file_size = file_size;
+      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
+    }
   }
 
   int timeslice_count;
@@ -360,7 +381,7 @@ struct FileWriteFixture
   std::unique_ptr<HDF5RawDataFile> h5file_ptr;
 };
 
-BOOST_FIXTURE_TEST_SUITE(HDF5WriteReadTimeSlice_test, FileWriteFixture)
+BOOST_AUTO_TEST_SUITE(HDF5WriteReadTimeSlice_test)
 
 BOOST_AUTO_TEST_CASE(ReadFileAttributes) 
 {
