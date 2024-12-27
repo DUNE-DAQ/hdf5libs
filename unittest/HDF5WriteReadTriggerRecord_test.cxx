@@ -41,8 +41,6 @@ size_t uncompressed_file_size;
 
 const size_t components_per_record = element_count_tpc + element_count_pds + element_count_ta + element_count_tc;
 
-unsigned compression_level = 0;
-
 HDF5FileLayoutParameters
 create_file_layout_params()
 {
@@ -266,8 +264,6 @@ struct FileWriteFixture
     // open file for reading now
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-    unsigned set_compression_level = this->compression_level;
-
     // check attributes
     auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
     auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
@@ -280,7 +276,7 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
     BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
     BOOST_REQUIRE_EQUAL("TriggerRecord", record_type_attr);
-    BOOST_REQUIRE_EQUAL(set_compression_level, compression_level_attr);
+    BOOST_REQUIRE_EQUAL(this->compression_level, compression_level_attr);
 
     // extract and check file layout parameters
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
@@ -466,7 +462,7 @@ struct FileWriteFixture
 
   uint64_t trigger_count;
   uint64_t trigger_number;
-  unsigned compression_level;
+  uint8_t compression_level;
   std::string file_path;
   std::string hdf5_filename;
   HDF5FileLayoutParameters fl_pars;

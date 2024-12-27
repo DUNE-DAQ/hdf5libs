@@ -197,29 +197,27 @@ struct FileWriteFixture
     //std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
-    unsigned set_compression_level = this->compression_level;
-
     // check attributes
     auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
     auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
     auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
     auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
     auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
-    auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
+    auto compression_level_attr = h5file_ptr->get_attribute<uint8_t>("compression_level");
 
     BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
     BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
     BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
     BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
     BOOST_REQUIRE_EQUAL("TimeSlice", record_type_attr);
-    BOOST_REQUIRE_EQUAL(set_compression_level, compression_level_attr);
+    BOOST_REQUIRE_EQUAL(this->compression_level, compression_level_attr);
 
     // extract and check file layout parameters
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
     size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
-    if (set_compression_level == 0) {uncompressed_file_size = file_size;}
+    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
     else {
       compressed_file_size = file_size;
       BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
@@ -373,7 +371,7 @@ struct FileWriteFixture
   }
 
   int timeslice_count;
-  unsigned compression_level;
+  uint8_t compression_level;
   std::string file_path;
   std::string hdf5_filename;
   HDF5FileLayoutParameters fl_pars;
