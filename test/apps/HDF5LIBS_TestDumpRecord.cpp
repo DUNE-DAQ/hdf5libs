@@ -77,19 +77,11 @@ main(int argc, char** argv)
   ss << "\nFile name: " << h5_raw_data_file.get_file_name();
   ss << "\n\tRecorded size: " << h5_raw_data_file.get_recorded_size();
 
-  auto dataset_size = h5_raw_data_file.get_attribute<size_t>("total_dataset_size");
-  ss << "\n\tTotal dataset from attribute: " << dataset_size;
-
   auto record_type = h5_raw_data_file.get_record_type();
   ss << "\nRecord type = " << record_type;
 
   TLOG() << ss.str();
   ss.str("");
-
-  std::vector<std::string> attr_names = h5_raw_data_file.get_attribute_names();
-  for (const std::string& attr : attr_names) {
-    TLOG() << attr;
-  }
 
   // get some file attributes
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
