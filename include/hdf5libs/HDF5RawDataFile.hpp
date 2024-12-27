@@ -85,7 +85,7 @@ ERS_DECLARE_ISSUE(hdf5libs,
 ERS_DECLARE_ISSUE(hdf5libs,
                   RecordIDNotFound,
                   "Record ID with record number=" << rec_num << " and sequence number=" << seq_num << " not found.",
-                  ((uint64_t)rec_num)((uint8_t)seq_num)) // NOLINT(build/unsigned)
+                  ((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Group, "Group " << name << " is invalid.", ((std::string)name))
 
