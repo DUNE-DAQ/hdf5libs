@@ -33,7 +33,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
                                  std::string application_name,
                                  HDF5FileLayoutParameters fl_params,
                                  HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
-                                 uint8_t compression_level,
+                                 unsigned compression_level,
                                  std::string inprogress_filename_suffix,
                                  unsigned open_flags)
   : m_bare_file_name(file_name)
@@ -46,6 +46,9 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
     throw IncompatibleOpenFlags(ERS_HERE, file_name, m_open_flags);
   }
 
+  TLOG() << "[BLARG] m_bare_file_name: " << m_bare_file_name;
+  TLOG() << "[BLARG] file_name: " << file_name;
+
   auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
 
   // do the file open
@@ -56,6 +59,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   }
 
   m_recorded_size = 0;
+  m_logical_size = 0;
 
   size_t file_creation_timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -81,6 +85,9 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
 
+  TLOG() << "[BLARG] Run number: " << run_number;
+  TLOG() << "[BLARG] m_compression_level: " << m_compression_level;
+  TLOG() << "[BLARG] compression_level: " << compression_level;
   // write the compression level
   write_attribute("compression_level", m_compression_level);
 }
@@ -92,6 +99,12 @@ HDF5RawDataFile::~HDF5RawDataFile()
     if (! m_file_ptr->hasAttribute("recorded_size")) {
       write_attribute("recorded_size", m_recorded_size);
     }
+
+  if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
+    if (! m_file_ptr->hasAttribute("logical_size")) {
+      write_attribute("logical_size", m_logical_size);
+    }
+  }
 
     if (! m_file_ptr->hasAttribute("closing_timestamp")) {
       size_t file_closing_timestamp =
@@ -276,7 +289,7 @@ std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
                           const char* raw_data_ptr,
                           size_t raw_data_size_bytes,
-                          uint8_t compression_level)
+                          unsigned compression_level)
 {
   const std::string dataset_name = group_and_dataset_path_elements.back();
 
@@ -322,6 +335,8 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
+    TLOG() << "Data set storage size: " << data_set.getStorageSize();
+    TLOG() << "raw_data_size_bytes: " << raw_data_size_bytes;
     m_file_ptr->flush();
     return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
   } else {
@@ -350,7 +365,7 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writin
   }
 
   if (m_file_ptr->hasAttribute("compression_level"))
-    m_compression_level = get_attribute<uint8_t>("compression_level");
+    m_compression_level = get_attribute<unsigned>("compression_level");
   else
     m_compression_level = 0;
 

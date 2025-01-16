@@ -87,12 +87,9 @@ main(int argc, char** argv)
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
-  uint8_t compression_level = 0;
   bool file_has_compression_attribute = false;
-  if (! h5_raw_data_file.hasAttribute("compression_level")) {
-    auto compression_level = h5_raw_data_file.get_attribute<uint8_t>("compression_level");
-    file_has_compression_attribute = true;
-  }
+  auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
+  std::cout << "Here's cout of compression level: " << compression_level << std::endl;
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
@@ -104,9 +101,7 @@ main(int argc, char** argv)
     ss << "\n\tCreation timestamp: " << creation_timestamp;
   }
   ss << "\n\tWriter app name: " << app_name;
-  if (file_has_compression_attribute) {
-    ss << "\n\tCompression level: " << compression_level;
-  }
+  ss << "\n\tCompression level: " << compression_level;
 
   TLOG() << ss.str();
   ss.str("");
