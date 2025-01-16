@@ -46,7 +46,7 @@ main(int argc, char** argv)
   const std::string ifile_name = std::string(argv[1]);
   const std::string hw_map_file_name = std::string(argv[2]);
   const std::string ofile_name = std::string(argv[3]);
-  const uint8_t compression_level = 0;
+  const unsigned compression_level = 0;
 
   // read in configuration
   nlohmann::json j_in, fl_conf;

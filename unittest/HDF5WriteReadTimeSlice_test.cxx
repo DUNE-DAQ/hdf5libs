@@ -203,7 +203,7 @@ struct FileWriteFixture
     auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
     auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
     auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
-    auto compression_level_attr = h5file_ptr->get_attribute<uint8_t>("compression_level");
+    auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
 
     BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
     BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
@@ -371,7 +371,7 @@ struct FileWriteFixture
   }
 
   int timeslice_count;
-  uint8_t compression_level;
+  unsigned compression_level;
   std::string file_path;
   std::string hdf5_filename;
   HDF5FileLayoutParameters fl_pars;

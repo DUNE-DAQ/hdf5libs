@@ -462,7 +462,7 @@ struct FileWriteFixture
 
   uint64_t trigger_count;
   uint64_t trigger_number;
-  uint8_t compression_level;
+  unsigned compression_level;
   std::string file_path;
   std::string hdf5_filename;
   HDF5FileLayoutParameters fl_pars;
