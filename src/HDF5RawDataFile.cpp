@@ -60,7 +60,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
   m_recorded_size = 0;
-  m_logical_size = 0;
+  m_uncompressed_size = 0;
   m_total_metadata_block_size = 0;
 
   // write some file attributes
@@ -99,7 +99,7 @@ HDF5RawDataFile::~HDF5RawDataFile()
 
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("logical_size")) {
-      write_attribute("logical_size", m_logical_size);
+      write_attribute("logical_size", m_uncompressed_size);
     }
   }
 
@@ -230,7 +230,7 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
              static_cast<const char*>(trh.get_storage_location()),
              trh.get_total_size_bytes(),
              m_compression_level);
-  m_logical_size += std::get<0>(write_results);
+  m_uncompressed_size += std::get<0>(write_results);
   m_recorded_size += std::get<1>(write_results);
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<2>(write_results));
   return std::get<3>(write_results);
@@ -247,7 +247,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
             (const char*)(&tsh), 
             sizeof(daqdataformats::TimeSliceHeader), 
             m_compression_level);
-  m_logical_size += std::get<0>(write_results);
+  m_uncompressed_size += std::get<0>(write_results);
   m_recorded_size += std::get<1>(write_results);
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<2>(write_results));
   return std::get<3>(write_results);
@@ -264,7 +264,7 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
              static_cast<const char*>(frag.get_storage_location()),
              frag.get_size(),
              m_compression_level);
-  m_logical_size += std::get<0>(write_results);
+  m_uncompressed_size += std::get<0>(write_results);
   m_recorded_size += std::get<1>(write_results);
 
   daqdataformats::SourceID source_id = frag.get_element_id();
