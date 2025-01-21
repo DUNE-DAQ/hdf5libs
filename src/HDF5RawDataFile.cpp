@@ -98,8 +98,8 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    if (! m_file_ptr->hasAttribute("logical_size")) {
-      write_attribute("logical_size", m_uncompressed_size);
+    if (! m_file_ptr->hasAttribute("uncompressed_size")) {
+      write_attribute("uncompressed_size", m_uncompressed_size);
     }
   }
 
@@ -340,9 +340,9 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     TLOG() << "Dataset data type: " << data_set.getDataType().string();
     TLOG() << "Dataset element count: " << data_set.getElementCount();
     //size_t size_on_disk = data_set.getStorageSize();
-    size_t logical_size_bytes = data_set.getElementCount() * sizeof(data_set.getDataType());
+    size_t uncompressed_size_bytes = data_set.getElementCount() * sizeof(data_set.getDataType());
     TLOG() << "m_recorded_size: " << m_recorded_size;
-    TLOG() << "logical_size_bytes: " << logical_size_bytes;
+    TLOG() << "uncompressed_size_bytes: " << uncompressed_size_bytes;
     TLOG() << "Data set storage size: " << data_set.getStorageSize();
     //TLOG() << "Data set space: " << data_set.getSpace();
     TLOG() << "raw_data_size_bytes: " << raw_data_size_bytes;
@@ -351,7 +351,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     m_file_ptr->flush();
     //return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
     //return std::make_tuple(raw_data_size_bytes, data_set.getStorageSize(), data_set.getPath(), top_level_group);
-    return std::make_tuple(logical_size_bytes, raw_data_size_bytes, data_set.getPath(), top_level_group);
+    return std::make_tuple(uncompressed_size_bytes, raw_data_size_bytes, data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
