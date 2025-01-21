@@ -464,6 +464,7 @@ private:
   // Total size of data being written
   size_t m_recorded_size;
   size_t m_logical_size;
+  size_t m_total_metadata_block_size;
   std::string m_record_type;
 
   // file layout writing/reading
@@ -475,7 +476,7 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
+  std::tuple<size_t, size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
