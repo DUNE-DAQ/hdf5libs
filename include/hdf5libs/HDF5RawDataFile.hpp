@@ -150,7 +150,7 @@ public:
   std::string get_file_name() const { return m_file_ptr->getName(); }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
-  size_t get_uncompressed_size() const noexcept { return m_uncompressed_size; }
+  size_t get_total_file_size() const noexcept { return m_file_ptr->getFileSize(); }
 
   std::string get_record_type() const noexcept { return m_record_type; }
 
@@ -464,7 +464,6 @@ private:
   // Total size of data being written
   size_t m_recorded_size;
   size_t m_uncompressed_size;
-  size_t m_total_metadata_block_size;
   std::string m_record_type;
 
   // file layout writing/reading

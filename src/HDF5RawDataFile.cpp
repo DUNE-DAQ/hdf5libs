@@ -61,7 +61,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
   m_recorded_size = 0;
   m_uncompressed_size = 0;
-  m_total_metadata_block_size = 0;
 
   // write some file attributes
   write_attribute("run_number", run_number);
@@ -98,8 +97,8 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    if (! m_file_ptr->hasAttribute("uncompressed_size")) {
-      write_attribute("uncompressed_size", m_uncompressed_size);
+    if (! m_file_ptr->hasAttribute("total_file_size")) {
+      write_attribute("total_file_size", m_file_ptr->getFileSize());
     }
   }
 
@@ -347,7 +346,6 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     //TLOG() << "Data set space: " << data_set.getSpace();
     TLOG() << "raw_data_size_bytes: " << raw_data_size_bytes;
     TLOG() << "File metadata block size: " << m_file_ptr->getMetadataBlockSize();
-    m_total_metadata_block_size += m_file_ptr->getMetadataBlockSize();
     m_file_ptr->flush();
     //return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
     //return std::make_tuple(raw_data_size_bytes, data_set.getStorageSize(), data_set.getPath(), top_level_group);
@@ -390,8 +388,6 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writin
     m_record_type = m_file_layout_ptr->get_record_name_prefix();
 
   check_file_layout();
-
-  TLOG() << "Total metadata block size: " << m_total_metadata_block_size;
 
   // HDF5SourceIDHandler operations need to come *after* read_file_layout()
   // because they count on the filelayout_version, which is set in read_file_layout().
