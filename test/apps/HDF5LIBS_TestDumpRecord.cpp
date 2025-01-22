@@ -89,7 +89,6 @@ main(int argc, char** argv)
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
   bool file_has_compression_attribute = false;
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
-  std::cout << "Here's cout of compression level: " << compression_level << std::endl;
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
