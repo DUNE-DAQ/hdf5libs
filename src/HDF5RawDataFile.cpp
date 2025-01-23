@@ -81,9 +81,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   m_record_type = fl_params.record_name_prefix;
   write_attribute("record_type", m_record_type);
 
-  TLOG() << "[BLARG] Run number: " << run_number;
-  TLOG() << "[BLARG] m_compression_level: " << m_compression_level;
-  TLOG() << "[BLARG] compression_level: " << compression_level;
   // write the compression level
   write_attribute("compression_level", m_compression_level);
 }
@@ -336,16 +333,9 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
-    TLOG() << "Dataset data type: " << data_set.getDataType().string();
-    TLOG() << "Dataset element count: " << data_set.getElementCount();
     //size_t size_on_disk = data_set.getStorageSize();
     size_t uncompressed_size_bytes = data_set.getElementCount() * sizeof(data_set.getDataType());
-    TLOG() << "m_recorded_size: " << m_recorded_size;
-    TLOG() << "uncompressed_size_bytes: " << uncompressed_size_bytes;
-    TLOG() << "Data set storage size: " << data_set.getStorageSize();
     //TLOG() << "Data set space: " << data_set.getSpace();
-    TLOG() << "raw_data_size_bytes: " << raw_data_size_bytes;
-    TLOG() << "File metadata block size: " << m_file_ptr->getMetadataBlockSize();
     m_file_ptr->flush();
     //return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
     //return std::make_tuple(raw_data_size_bytes, data_set.getStorageSize(), data_set.getPath(), top_level_group);
