@@ -36,8 +36,8 @@ constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 constexpr size_t element_count_ta = 4;
 constexpr size_t element_count_tc = 1;
-size_t compressed_file_size;
-size_t uncompressed_file_size;
+size_t compressed_raw_data_size;
+size_t uncompressed_raw_data_size;
 
 const size_t components_per_record = element_count_tpc + element_count_pds + element_count_ta + element_count_tc;
 
@@ -232,17 +232,16 @@ struct FileWriteFixture
                                                                     compression_level));
 
     // write several events, each with several fragments
-    if (trigger_record_number_offset == 0) {
-      for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-        h5file_ptr->write(create_trigger_record(trigger_number));
-    } else {
-      trigger_number = 1;
-      for (uint64_t idx = 0; idx < trigger_count; ++idx) {
-        trigger_number = 1 + (idx * 2000000000);
+    for (uint64_t idx = 0; idx < trigger_count; ++idx) {
+        // Allow for the possibility of large trigger record numbers, otherwise just write trigger_count fragments
+        uint64_t trigger_number = (trigger_record_number_offset == 0)
+                                      ? idx + 1 // Sequential numbering
+                                      : 1 + (idx * 2000000000); // Large offset numbering
+
         BOOST_TEST_MESSAGE("Trigger count: " << trigger_count);
         BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
+
         h5file_ptr->write(create_trigger_record(trigger_number));
-      }
     }
 
     // get recorded size for checking
@@ -279,11 +278,10 @@ struct FileWriteFixture
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
-    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
-    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
+    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
     else {
-      compressed_file_size = file_size;
-      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
+      compressed_raw_data_size = recorded_size_at_write;
+      BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
     }
   }
 
@@ -351,13 +349,6 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
                         dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
-    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
-    else {
-      compressed_file_size = file_size;
-      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
-    }
   }
 
   void read_file_max_sequence()
@@ -424,13 +415,6 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
                         dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
-    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
-    else {
-      compressed_file_size = file_size;
-      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
-    }
   }
 
   void read_write_large_trigger_numbers() 
@@ -448,13 +432,6 @@ struct FileWriteFixture
     BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
     BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
     BOOST_REQUIRE(trigger_number > 0xffffffff);
-
-    size_t file_size = std::filesystem::file_size(file_path + "/" + hdf5_filename);
-    if (this->compression_level == 0) {uncompressed_file_size = file_size;}
-    else {
-      compressed_file_size = file_size;
-      BOOST_ASSERT(compressed_file_size < uncompressed_file_size);
-    }
   }
 
   uint64_t trigger_count;
