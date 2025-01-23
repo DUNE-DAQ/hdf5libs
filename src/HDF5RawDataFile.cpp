@@ -60,7 +60,6 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
   m_recorded_size = 0;
-  m_uncompressed_size = 0;
 
   // write some file attributes
   write_attribute("run_number", run_number);
@@ -221,15 +220,14 @@ HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
                        HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  std::tuple<size_t, size_t, std::string, HighFive::Group> write_results =
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(trh),
              static_cast<const char*>(trh.get_storage_location()),
              trh.get_total_size_bytes(),
              m_compression_level);
-  m_uncompressed_size += std::get<0>(write_results);
-  m_recorded_size += std::get<1>(write_results);
-  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<2>(write_results));
-  return std::get<3>(write_results);
+  m_recorded_size += std::get<0>(write_results);
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<1>(write_results));
+  return std::get<2>(write_results);
 }
 
 /**
@@ -238,15 +236,14 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
 HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  std::tuple<size_t, size_t, std::string, HighFive::Group> write_results =
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(tsh), 
             (const char*)(&tsh), 
             sizeof(daqdataformats::TimeSliceHeader), 
             m_compression_level);
-  m_uncompressed_size += std::get<0>(write_results);
-  m_recorded_size += std::get<1>(write_results);
-  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<2>(write_results));
-  return std::get<3>(write_results);
+  m_recorded_size += std::get<0>(write_results);
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
+  return std::get<2>(write_results);
 }
 
 /**
@@ -255,16 +252,15 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
 void
 HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  std::tuple<size_t, size_t, std::string, HighFive::Group> write_results =
+  std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
              static_cast<const char*>(frag.get_storage_location()),
              frag.get_size(),
              m_compression_level);
-  m_uncompressed_size += std::get<0>(write_results);
-  m_recorded_size += std::get<1>(write_results);
+  m_recorded_size += std::get<0>(write_results);
 
   daqdataformats::SourceID source_id = frag.get_element_id();
-  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, source_id, std::get<2>(write_results));
+  HDF5SourceIDHandler::add_source_id_path_to_map(path_map, source_id, std::get<1>(write_results));
 }
 
 /**
@@ -281,7 +277,7 @@ HDF5RawDataFile::write_file_layout()
 /**
  * @brief write bytes to a dataset in the file, at the appropriate path
  */
-std::tuple<size_t, size_t, std::string, HighFive::Group>
+std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
                           const char* raw_data_ptr,
                           size_t raw_data_size_bytes,
@@ -333,13 +329,8 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
-    //size_t size_on_disk = data_set.getStorageSize();
-    size_t uncompressed_size_bytes = data_set.getElementCount() * sizeof(data_set.getDataType());
-    //TLOG() << "Data set space: " << data_set.getSpace();
     m_file_ptr->flush();
-    //return std::make_tuple(raw_data_size_bytes, data_set.getPath(), top_level_group);
-    //return std::make_tuple(raw_data_size_bytes, data_set.getStorageSize(), data_set.getPath(), top_level_group);
-    return std::make_tuple(uncompressed_size_bytes, raw_data_size_bytes, data_set.getPath(), top_level_group);
+    return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
