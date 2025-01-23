@@ -220,9 +220,6 @@ struct FileWriteFixture
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
 
-    // convert file_params to json, allows for easy comp later
-    auto fl_pars = create_file_layout_params();
-
     // create src-geo id map
     auto srcid_geoid_map = create_srcid_geoid_map();
     // create the file
