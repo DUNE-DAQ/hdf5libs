@@ -234,12 +234,9 @@ struct FileWriteFixture
     // write several events, each with several fragments
     for (uint64_t idx = 0; idx < trigger_count; ++idx) {
         // Allow for the possibility of large trigger record numbers, otherwise just write trigger_count fragments
-        uint64_t trigger_number = (trigger_record_number_offset == 0)
-                                      ? idx + 1 // Sequential numbering
-                                      : 1 + (idx * 2000000000); // Large offset numbering
-
-        BOOST_TEST_MESSAGE("Trigger count: " << trigger_count);
-        BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
+        trigger_number = (trigger_record_number_offset == 0)
+                          ? idx + 1 // Sequential numbering
+                          : 1 + (idx * trigger_record_number_offset); // Large offset numbering
 
         h5file_ptr->write(create_trigger_record(trigger_number));
     }
@@ -428,8 +425,6 @@ struct FileWriteFixture
     auto first_trigger_record_id = *(trigger_record_ids.begin());
     auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
     BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
-    BOOST_TEST_MESSAGE("Trigger count: " << trigger_count);
-    BOOST_TEST_MESSAGE("Trigger number: " << trigger_number);
     BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
     BOOST_REQUIRE(trigger_number > 0xffffffff);
   }
