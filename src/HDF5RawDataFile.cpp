@@ -93,6 +93,12 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
+    if (! m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
+      write_attribute("uncompressed_raw_data_size", m_recorded_size);
+    }
+  }
+
+  if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("total_file_size")) {
       write_attribute("total_file_size", m_file_ptr->getFileSize());
     }
