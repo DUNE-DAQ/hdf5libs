@@ -20,7 +20,7 @@
 #include "daqdataformats/SourceID.hpp"
 #include "daqdataformats/TimeSliceHeader.hpp"
 #include "daqdataformats/TriggerRecordHeader.hpp"
-#include <logging/Logging.hpp> // NOTE: if ISSUES ARE DECLARED BEFORE include logging/Logging.hpp, TLOG_DEBUG<<issue wont work.
+#include "logging/Logging.hpp" // NOTE: if ISSUES ARE DECLARED BEFORE include logging/Logging.hpp, TLOG_DEBUG<<issue wont work.
 
 #include "nlohmann/json.hpp"
 
