@@ -60,6 +60,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   TLOG_DEBUG(TLVL_BASIC) << "Created HDF5 file (" << file_name << ") at time " << file_creation_timestamp << " .";
   m_recorded_size = 0;
+  m_uncompressed_raw_data_size = 0;
 
   // write some file attributes
   write_attribute("run_number", run_number);
@@ -89,20 +90,17 @@ HDF5RawDataFile::~HDF5RawDataFile()
 {
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("recorded_size")) {
+      TLOG() << "TEST final m_recorded_size: " << m_recorded_size;
       write_attribute("recorded_size", m_recorded_size);
     }
 
-  if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
-      write_attribute("uncompressed_raw_data_size", m_recorded_size);
+      write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
     }
-  }
 
-  if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("total_file_size")) {
       write_attribute("total_file_size", m_file_ptr->getFileSize());
     }
-  }
 
     if (! m_file_ptr->hasAttribute("closing_timestamp")) {
       size_t file_closing_timestamp =
@@ -232,6 +230,7 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
              trh.get_total_size_bytes(),
              m_compression_level);
   m_recorded_size += std::get<0>(write_results);
+  TLOG() << "TEST m_recorded_size: " << m_recorded_size;
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, trh.get_header().element_id, std::get<1>(write_results));
   return std::get<2>(write_results);
 }
@@ -248,6 +247,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
             sizeof(daqdataformats::TimeSliceHeader), 
             m_compression_level);
   m_recorded_size += std::get<0>(write_results);
+  TLOG() << "TEST m_recorded_size: " << m_recorded_size;
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
   return std::get<2>(write_results);
 }
@@ -264,6 +264,7 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
              frag.get_size(),
              m_compression_level);
   m_recorded_size += std::get<0>(write_results);
+  TLOG() << "TEST m_recorded_size: " << m_recorded_size;
 
   daqdataformats::SourceID source_id = frag.get_element_id();
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, source_id, std::get<1>(write_results));
@@ -331,11 +332,16 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     data_set_create_props.add(HighFive::Deflate(compression_level));
   }
 
+  // Track the uncompressed raw data size
+  m_uncompressed_raw_data_size += raw_data_size_bytes;
+  TLOG() << "TEST m_uncompressed_raw_data_size: " << m_uncompressed_raw_data_size;
+
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
     m_file_ptr->flush();
+    TLOG() << "TEST data_set.getStorageSize: " << data_set.getStorageSize();
     return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());

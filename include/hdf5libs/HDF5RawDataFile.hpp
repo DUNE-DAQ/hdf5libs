@@ -150,6 +150,7 @@ public:
   std::string get_file_name() const { return m_file_ptr->getName(); }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
+  size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
   size_t get_total_file_size() const noexcept { return m_file_ptr->getFileSize(); }
 
   std::string get_record_type() const noexcept { return m_record_type; }
@@ -463,7 +464,7 @@ private:
 
   // Total size of data being written
   size_t m_recorded_size;
-  size_t m_uncompressed_size;
+  size_t m_uncompressed_raw_data_size;
   std::string m_record_type;
 
   // file layout writing/reading
@@ -552,8 +553,7 @@ HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& defau
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
-  std::cout << "Debug: Attribute \"" << name << "\" found. Value: ";
-  std::cout << std::endl;
+  std::cout << "Debug: Attribute \"" << name << "\" found. Value: " << value << std::endl;
   return value;
 }
 

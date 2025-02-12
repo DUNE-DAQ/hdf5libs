@@ -96,11 +96,12 @@ main(int argc, char** argv)
 
   // open our file reading
   HDF5RawDataFile h5_raw_data_file(ifile_name);
-
   std::ostringstream ss;
 
   ss << "\nFile name: " << h5_raw_data_file.get_file_name();
   ss << "\n\tRecorded size: " << h5_raw_data_file.get_recorded_size();
+  size_t uncompressed_raw_data_size = h5_raw_data_file.get_attribute_if_exists<size_t>("uncompressed_raw_data_size", h5_raw_data_file.get_recorded_size());
+  ss << "\n\tUncompressed raw data size: " << uncompressed_raw_data_size;
 
   auto record_type = h5_raw_data_file.get_record_type();
   ss << "\nRecord type = " << record_type;
@@ -112,7 +113,6 @@ main(int argc, char** argv)
   auto run_number = h5_raw_data_file.get_attribute<unsigned int>("run_number");
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
-  bool file_has_compression_attribute = false;
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
 
   ss << "\n\tRun number: " << run_number;
