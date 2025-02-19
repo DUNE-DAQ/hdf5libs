@@ -548,12 +548,13 @@ T
 HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
 {
   if (!m_file_ptr->hasAttribute(name)) {
+     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
     return default_value;
   }
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
-  std::cout << "Debug: Attribute \"" << name << "\" found. Value: " << value << std::endl;
+  TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" found. Value: " << value;
   return value;
 }
 
