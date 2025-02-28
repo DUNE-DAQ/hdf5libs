@@ -177,6 +177,11 @@ main(int argc, char** argv)
         std::exit(1);
       }
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
+      if (print_calendar_time) {
+        std::string trigger_timestamp_string = get_calendar_time_string(trh_ptr->get_header().trigger_timestamp);
+        ss << "\n\t\t"
+           << "Trigger timestamp corresponds to UTC " << trigger_timestamp_string;
+      }
     }
     TLOG() << ss.str();
     ss.str("");
