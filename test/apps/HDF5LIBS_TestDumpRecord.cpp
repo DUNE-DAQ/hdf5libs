@@ -209,6 +209,12 @@ main(int argc, char** argv)
           ss << "\n\t\t"
              << "Readout window begin = " << begin_diff << ", end = " << end_diff
              << " (relative to the trigger_timestamp)";
+          if (print_calendar_time) {
+            std::string window_begin_string = get_calendar_time_string(cr.window_begin);
+            std::string window_end_string = get_calendar_time_string(cr.window_end);
+            ss << "\n\t\t\t"
+               << "Readout window times corresponds to UTC " << window_begin_string << " and " << window_end_string;
+          }
         } catch (std::exception const& excpt) {
           ss << "\n\t\t"
              << "Unable to determine readout window, exception was \"" << excpt.what() << "\"";
