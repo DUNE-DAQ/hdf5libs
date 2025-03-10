@@ -314,15 +314,28 @@ main(int argc, char** argv)
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
+        TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
+        if (tpptr->version != TriggerPrimitive::s_trigger_primitive_version) {
+          std::cout << std::endl;
+          std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
+                    << std::endl
+                    << "       used a different version of the TriggerPrimitive data structure than this "
+                    << std::endl
+                    << "       application (built with the current version of the software) is expecting."
+                    << std::endl;
+          std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
+          std::cout << "(Expected TP version " << static_cast<int>(TriggerPrimitive::s_trigger_primitive_version)
+                    << " and found version " << tpptr->version << ".)" << std::endl;
+          std::exit(1);
+        }
         ss << "\n\t\t"
            << "Number of TPs in this fragment="
            << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
-        TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
         ss << "\n\t\t"
-           << "First TP type = " << static_cast<int>(tpptr->type)
-           << ", TP algorithm = " << static_cast<int>(tpptr->algorithm);
+           << "First TP flag = " << static_cast<int>(tpptr->flag)
+           << ", TP detid = " << static_cast<int>(tpptr->detid);
         ss << "\n\t\t"
            << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
            << ", and time over threshold=" << tpptr->time_over_threshold;
