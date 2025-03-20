@@ -91,7 +91,6 @@ HDF5RawDataFile::~HDF5RawDataFile()
 {
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
     if (! m_file_ptr->hasAttribute("recorded_size")) {
-      TLOG() << "TEST final m_recorded_size: " << m_recorded_size;
       write_attribute("recorded_size", m_recorded_size);
     }
 
@@ -100,7 +99,7 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
     if (! m_file_ptr->hasAttribute("total_file_size")) {
-      write_attribute("total_file_size", m_file_ptr->getFileSize());
+      write_attribute("total_file_size", m_total_file_size);
     }
 
     if (! m_file_ptr->hasAttribute("closing_timestamp")) {
@@ -330,7 +329,6 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     data_set_create_props.add(HighFive::Deflate(compression_level));
   }
 
-  // Track the uncompressed raw data size
   m_uncompressed_raw_data_size += raw_data_size_bytes;
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
@@ -368,6 +366,11 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writin
     m_recorded_size = get_attribute<size_t>("recorded_size");
   else
     m_recorded_size = 0;
+
+  if (m_file_ptr->hasAttribute("uncompressed_raw_data_size"))
+    m_uncompressed_raw_data_size = get_attribute<size_t>("uncompressed_raw_data_size");
+  else
+    m_uncompressed_raw_data_size = 0;
 
   if (m_file_ptr->hasAttribute("compression_level"))
     m_compression_level = get_attribute<unsigned>("compression_level");

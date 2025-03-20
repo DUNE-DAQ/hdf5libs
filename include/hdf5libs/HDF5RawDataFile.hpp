@@ -152,6 +152,7 @@ public:
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
   size_t get_total_file_size() const noexcept { return m_file_ptr->getFileSize(); }
+  unsigned get_compression_level() const noexcept { return m_compression_level; }
 
   std::string get_record_type() const noexcept { return m_record_type; }
 
@@ -465,6 +466,7 @@ private:
   // Total size of data being written
   size_t m_recorded_size;
   size_t m_uncompressed_raw_data_size;
+  size_t m_total_file_size;
   std::string m_record_type;
 
   // file layout writing/reading
@@ -585,6 +587,7 @@ HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
 }
 
 } // namespace hdf5libs
+
 } // namespace dunedaq
 
 #endif // HDF5LIBS_INCLUDE_HDF5LIBS_HDF5RAWDATAFILE_HPP_
