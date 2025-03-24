@@ -337,7 +337,7 @@ main(int argc, char** argv)
            << "First TP flag = " << static_cast<int>(tpptr->flag)
            << ", TP detid = " << static_cast<int>(tpptr->detid);
         ss << "\n\t\t"
-           << "First TP start time=" << tpptr->time_start << ", peak time=" << tpptr->time_peak
+           << "First TP start time=" << tpptr->time_start << ", samples to peak=" << tpptr->samples_to_peak
            << ", and samples over threshold=" << tpptr->samples_over_threshold;
         if (print_calendar_time) {
           std::string time_string = get_calendar_time_string(tpptr->time_start);
