@@ -100,7 +100,6 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
     if (! m_file_ptr->hasAttribute("total_file_size")) {
-      m_total_file_size = m_file_ptr->getFileSize();
       write_attribute("total_file_size", m_total_file_size);
     }
 
@@ -337,6 +336,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
+    m_total_file_size = m_file_ptr->getFileSize();
     m_file_ptr->flush();
     return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
   } else {
