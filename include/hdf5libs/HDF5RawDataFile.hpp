@@ -152,7 +152,7 @@ public:
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
-  size_t get_total_file_size() const noexcept { return m_file_ptr->getFileSize(); }
+  size_t get_total_file_size() const noexcept { return m_total_file_size; }
   unsigned get_compression_level() const noexcept { return m_compression_level; }
 
   std::string get_record_type() const noexcept { return m_record_type; }

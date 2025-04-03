@@ -57,6 +57,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
 
   m_recorded_size = 0;
   m_uncompressed_raw_data_size = 0;
+  m_total_file_size = 0;
 
   size_t file_creation_timestamp =
     std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -99,6 +100,7 @@ HDF5RawDataFile::~HDF5RawDataFile()
     }
 
     if (! m_file_ptr->hasAttribute("total_file_size")) {
+      m_total_file_size = m_file_ptr->getFileSize();
       write_attribute("total_file_size", m_total_file_size);
     }
 
@@ -371,6 +373,11 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writin
     m_uncompressed_raw_data_size = get_attribute<size_t>("uncompressed_raw_data_size");
   else
     m_uncompressed_raw_data_size = 0;
+
+  if (m_file_ptr->hasAttribute("total_file_size"))
+    m_total_file_size = get_attribute<size_t>("total_file_size");
+  else
+    m_total_file_size = 0;
 
   if (m_file_ptr->hasAttribute("compression_level"))
     m_compression_level = get_attribute<unsigned>("compression_level");
