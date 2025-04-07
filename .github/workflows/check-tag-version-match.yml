@@ -38,7 +38,7 @@ jobs:
       - name: Check version against tag
         run: |
           TAG_VERSION=${LATEST_TAG#v}
-          echo "Comparing latest tag: $TAG_VERSION to the CMakeLists.txt version: $CMAKE_VERSION
+          echo "Comparing latest tag: $TAG_VERSION to the CMakeLists.txt version: $CMAKE_VERSION"
           if [[ "$TAG_VERSION" != "$CMAKE_VERSION" ]]; then
             echo "ERROR: Version mismatch! Latest tag is $TAG_VERSION but CMakeLists.txt has $CMAKE_VERSION"
             exit 1
