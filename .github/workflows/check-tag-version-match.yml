@@ -2,6 +2,8 @@ name: Check CMake version matches tag
 
 on:
   push:
+    tags:
+      'v*'
     branches: 
         - develop
         - patch/*
@@ -19,19 +21,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract version from CMakeLists.txt
-        id: extract
+      - name: Get latest tag
+        id: latest_tag
         run: |
-          VERSION_LINE=$(grep -E '^project\(.*VERSION' CMakeLists.txt)
-          CMAKE_VERSION=$(echo $VERSION_LINE | sed -E 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-          echo "CMAKE_VERSION=$CMAKE_VERSION" >> $GITHUB_OUTPUT
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "LATEST_TAG=$LATEST_TAG"
+          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
+
+      - name: Extract version from CMakeLists.txt
+        id: extracted_tag
+        run: |
+          CMAKE_VERSION=$(grep -Po 'project\([^)]*VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt)
+          echo "CMAKE_VERSION=$CMAKE_VERSION"
+          echo "CMAKE_VERSION=${CMAKE_VERSION}" >> $GITHUB_ENV
 
       - name: Check version against tag
         run: |
-          TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Tag: $TAG_VERSION | CMakeLists.txt version: ${{ steps.extract.outputs.CMAKE_VERSION }}"
-          if [[ "$TAG_VERSION" != "${{ steps.extract.outputs.CMAKE_VERSION }}" ]]; then
-            echo ":x: Version mismatch! Tag is $TAG_VERSION but CMakeLists.txt has ${{ steps.extract.outputs.CMAKE_VERSION }}"
+          TAG_VERSION=${LATEST_TAG#v}
+          echo "Comparing latest tag: $TAG_VERSION to the CMakeLists.txt version: $CMAKE_VERSION
+          if [[ "$TAG_VERSION" != "$CMAKE_VERSION" ]]; then
+            echo "ERROR: Version mismatch! Latest tag is $TAG_VERSION but CMakeLists.txt has $CMAKE_VERSION"
             exit 1
           fi
 
