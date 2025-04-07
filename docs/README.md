@@ -98,12 +98,14 @@ Upon opening the file -- at object construction -- the following attributes are 
 - "file_index" (`size_t`)
 - "creation_timestamp" (`std::string`, string translation of the number of milliseconds since epoch)
 - "application_name" (`std::string)
-- "compression_level" (`unsigned`, zlib compression level, 0-9)
+- "compression_level" (`unsigned`, zlib compression level 0&ndash-9, default: 0)
 
 alongside the file layout paramters as described [above](#hdf5filelayout).
 
 Upon closing the file -- at object destruction -- the following attributes are written:
 - "recorded_size" (`size_t`, number of bytes written in datasets)
+- "uncompressed_raw_data_size" (`size_t`, uncompressed number of bytes contained in all TriggerRecord or TimeSlice objects)
+- "total_file_size" (`size_t`, total number of bytes in the file, including datasets, metadata, and unallocated space)
 - "closing_timestamp" (`std::string`, string translation of the number of milliseconds since epoch).
 
 The key interface for writing is the `HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)` member, which takes a TriggerRecord, creates a group in the HDF5 file for it, and then writes all of the underlying data (`TriggerRecordHeader` and `Fragment`s) to appropriate datasets and subgroups. All data are written as dimension 1 `char` arrays, with no change to the input `TriggerRecord` object.
