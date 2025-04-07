@@ -2,8 +2,6 @@ name: Check CMake version matches tag
 
 on:
   push:
-    tags:
-      - 'v*'
     branches: 
         - develop
         - patch/*
