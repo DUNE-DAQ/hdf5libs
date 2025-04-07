@@ -144,7 +144,7 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 - Updated the file format version from 3 to 4 in response to the SW_TriggerPrimitive-to-TriggerPrimitive data structure name change.
 
 ## Version 3 Notes
-Extensive notes on the version 3 updates can be found [here](docs/V3FileFormatInterfaceChanges.md).
+Extensive notes on the version 3 updates can be found [here](V3FileFormatInterfaceChanges.md).
 
 ## Version 2 Notes
 
