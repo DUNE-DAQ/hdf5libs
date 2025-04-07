@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - 'v*'
+    branches: 
+        - develop
+        - patch/*
+        - prep-release/*
+    paths-ignore:
+        - 'docs/**'
+        - '.github/**'
+  pull_request:
+    branches: [ develop ]
 
 jobs:
   check-version:
