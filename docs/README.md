@@ -126,13 +126,31 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 -  `get_trh_ptr(...)` members return a unique ptr to a `TriggerRecordHeader`, with inputs either being a full path as you may get from `get_trigger_record_header_dataset_paths()`, or with an input specifying the desired trigger number;
 -  `get_frag_ptr(...)` members return a unique ptr to a `Fragment`, with inputs either being a full path as you would get from `get_all_fragment_dataset_paths()`, or by specifying the trigger number and `GeoID` of the desired data (or also the elements of the `GeoID`). 
 
-### Version 2 (Latest) Notes
+# Version Notes
 
-This version is the initial version of `hdf5libs` after significant restructuring of many of the existing utilities, including the introduction of the `HDF5FileLayout` class, and separation of the `HDF5RawDataFile` class from `dfmodules`. 
+## Version 7 Notes
 
-Please see the notes in [Version 0](#version0notes)
+- Support for gzip compression was added with the `compression_level` parameter.
+- Added the file attributes `uncompressed_raw_data_size` and `total_file_size`.
+- Added getter methods `get_compression_level`, `get_uncompressed_raw_data_size`, and `get_total_file_size`.
 
-#### Version 0 Notes
+## Version 6 Notes
+- The data types of the `creation_timestamp` and `closing_timestamp` HDF5 File Attributes were changed from string to integer.
+
+## Version 5 Notes
+- The contents of the `TriggerRecordHeaderData` structure changed (support for additional trigger types was added), and it seemed prudent to update the `file_layout_version` to reflect this data format change.
+
+## Version 4 Notes
+- Updated the file format version from 3 to 4 in response to the SW_TriggerPrimitive-to-TriggerPrimitive data structure name change.
+
+## Version 3 Notes
+Extensive notes on the version 3 updates can be found [here](docs/V3FileFormatInterfaceChanges.md).
+
+## Version 2 Notes
+
+This version is the initial version of `hdf5libs` after significant restructuring of many of the existing utilities, including the introduction of the `HDF5FileLayout` class, and separation of the `HDF5RawDataFile` class from `dfmodules`.
+
+## Version 0 Notes
 This version refers to files that were written before the introduction of the `HDF5FileLayout` class. Currently, on reading a file, if there is no file layout attributes found in the file, it assumes a file layout parameter set as such:
 ```
 hdf5filelayout::FileLayoutParams flp;
