@@ -46,6 +46,7 @@ main(int argc, char** argv)
   const std::string ifile_name = std::string(argv[1]);
   const std::string hw_map_file_name = std::string(argv[2]);
   const std::string ofile_name = std::string(argv[3]);
+  const unsigned compression_level = 0;
 
   // read in configuration
   nlohmann::json j_in, fl_conf;
@@ -93,6 +94,7 @@ main(int argc, char** argv)
                                                      app_name,   // app_name
                                                      fl_conf,    // file_layout_confs
                                                      srcid_geoid_map,
+                                                     compression_level, // gzip compression_level
                                                      ".writing", // optional: suffix to use for files being written
                                                      HighFive::File::Overwrite); // optional: overwrite existing file
 

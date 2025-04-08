@@ -39,6 +39,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <optional>
 
 namespace dunedaq {
 
@@ -138,6 +139,7 @@ public:
                   std::string application_name,
                   HDF5FileLayoutParameters fl_params,
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
+                  unsigned compression_level = 0,
                   std::string inprogress_filename_suffix = s_inprogress_suffix,
                   unsigned open_flags = HighFive::File::Create);
 
@@ -149,6 +151,9 @@ public:
   std::string get_file_name() const { return m_file_ptr->getName(); }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
+  size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
+  size_t get_total_file_size() const noexcept { return m_total_file_size; }
+  unsigned get_compression_level() const noexcept { return m_compression_level; }
 
   std::string get_record_type() const noexcept { return m_record_type; }
 
@@ -190,6 +195,9 @@ public:
   T get_attribute(const HighFive::Group& grp, const std::string& name);
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
+  // For backwards compatibility with files created before compression_level existed
+  template<typename T>
+  T get_attribute_if_exists(const std::string& name, const T& default_value);
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
@@ -453,10 +461,13 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   std::string m_bare_file_name;
+  unsigned m_compression_level;
   unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
+  size_t m_uncompressed_raw_data_size;
+  size_t m_total_file_size;
   std::string m_record_type;
 
   // file layout writing/reading
@@ -468,7 +479,7 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t);
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
@@ -537,6 +548,21 @@ HDF5RawDataFile::get_attribute(const std::string& name)
 
 template<typename T>
 T
+HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
+{
+  if (!m_file_ptr->hasAttribute(name)) {
+     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
+    return default_value;
+  }
+  auto attr = m_file_ptr->getAttribute(name);
+  T value;
+  attr.read(value);
+  TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" found. Value: " << value;
+  return value;
+}
+
+template<typename T>
+T
 HDF5RawDataFile::get_attribute(const HighFive::Group& grp, const std::string& name)
 {
   if (!(grp.hasAttribute(name))) {
@@ -562,6 +588,7 @@ HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
 }
 
 } // namespace hdf5libs
+
 } // namespace dunedaq
 
 #endif // HDF5LIBS_INCLUDE_HDF5LIBS_HDF5RAWDATAFILE_HPP_

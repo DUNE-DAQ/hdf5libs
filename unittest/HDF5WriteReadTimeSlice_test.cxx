@@ -8,6 +8,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/test/HDF5TestUtils.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -33,36 +34,10 @@ const std::string application_name = "HDF5WriteReadTimeSlice_test";
 constexpr size_t fragment_size = 100;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
+size_t compressed_raw_data_size = 0;
+size_t uncompressed_raw_data_size = 0;
 
 const size_t components_per_record = element_count_tpc + element_count_pds;
-
-std::vector<std::string>
-get_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      file_list.push_back(entry.path());
-    }
-  }
-  return file_list;
-}
-
-std::vector<std::string>
-delete_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      if (std::filesystem::remove(entry.path())) {
-        file_list.push_back(entry.path());
-      }
-    }
-  }
-  return file_list;
-}
 
 HDF5FileLayoutParameters
 create_file_layout_params()
@@ -93,48 +68,6 @@ create_file_layout_params()
   layout_params.record_header_dataset_name = "TimeSliceHeader";
 
   return layout_params;
-}
-
-uint64_t
-encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
-{
-  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
-         (static_cast<uint64_t>(crate_id) << 16) | det_id;
-}
-
-HDF5SourceIDHandler::source_id_geo_id_map_t
-create_srcid_geoid_map()
-{
-  HDF5SourceIDHandler::source_id_geo_id_map_t map;
-
-  dunedaq::daqdataformats::SourceID sid;
-  sid.subsystem = dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout;
-
-  sid.id = 0;
-  map[sid].push_back(encode_geoid(3, 1, 0, 0));
-
-  sid.id = 1;
-  map[sid].push_back(encode_geoid(3, 1, 0, 1));
-
-  sid.id = 3;
-  map[sid].push_back(encode_geoid(3, 1, 1, 0));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(3, 1, 1, 1));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(2, 1, 0, 0));
-
-  sid.id = 5;
-  map[sid].push_back(encode_geoid(2, 1, 0, 1));
-
-  sid.id = 6;
-  map[sid].push_back(encode_geoid(2, 1, 1, 0));
-
-  sid.id = 7;
-  map[sid].push_back(encode_geoid(2, 1, 1, 1));
-
-  return map;
 }
 
 dunedaq::daqdataformats::TimeSlice
@@ -213,239 +146,260 @@ create_timeslice(int ts_num)
   return ts;
 }
 
+struct FileWriteFixture 
+{
+  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0) 
+    : timeslice_count(num_slices), 
+      compression_level(comp_lvl),
+      file_path(std::filesystem::temp_directory_path()),
+      hdf5_filename(
+        "demo" + std::to_string(getpid()) + "_" 
+        + std::string(getenv("USER")) + "_comp" 
+        + std::to_string(compression_level) + ".hdf5"),
+      fl_pars(create_file_layout_params()),
+      recorded_size_at_write(0)
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+
+    // convert file_params to json, allows for easy comp later
+    auto fl_pars = create_file_layout_params();
+
+    // create src-geo id map
+    auto srcid_geoid_map = create_srcid_geoid_map();
+    // create the file
+    std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                    run_number,
+                                                                    file_index,
+                                                                    application_name,
+                                                                    fl_pars,
+                                                                    srcid_geoid_map,
+                                                                    compression_level));
+
+
+    // write several events, each with several fragments
+    for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
+      h5file_ptr->write(create_timeslice(timeslice_number));
+
+    // get recorded size for checking
+    recorded_size_at_write = h5file_ptr->get_recorded_size();
+
+    h5file_ptr.reset(); // explicit destruction
+  }
+
+  ~FileWriteFixture() 
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+  }
+
+  void read_file_attributes()
+  {
+    // open file for reading now
+    //std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    // check attributes
+    auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
+    auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
+    auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
+    auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
+    auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
+    auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
+
+    BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
+    BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
+    BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
+    BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
+    BOOST_REQUIRE_EQUAL("TimeSlice", record_type_attr);
+    BOOST_REQUIRE_EQUAL(this->compression_level, compression_level_attr);
+
+    // extract and check file layout parameters
+    auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
+    BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
+
+    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
+    else {
+      compressed_raw_data_size = recorded_size_at_write;
+      BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
+    }
+  }
+
+  void read_file_datasets()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+    BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
+
+    auto first_timeslice = *(timeslices.begin());
+    auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_timeslice);
+    BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
+
+    auto all_datasets = h5file_ptr->get_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
+
+    auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count, all_tsh_paths.size());
+
+    auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count * components_per_record, all_frag_paths.size());
+
+    // test access by name
+    std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
+    trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
+    BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 3);
+    BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
+
+    // test access by trigger number
+    trs_ptr = h5file_ptr->get_tsh_ptr(2);
+    BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 2);
+    BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
+
+    std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
+
+    // test access by name
+    frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
+
+    // test access by passing in SourceID
+    dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+  }
+
+  void read_file_max_sequence()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto timeslices = h5file_ptr->get_all_timeslice_numbers();
+    BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
+
+    auto first_timeslice = *(timeslices.begin());
+    auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_timeslice);
+    BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
+
+    auto all_datasets = h5file_ptr->get_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
+
+    auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count, all_tsh_paths.size());
+
+    auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
+    BOOST_REQUIRE_EQUAL(timeslice_count * components_per_record, all_frag_paths.size());
+
+    // test access by name
+    std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
+    trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
+    BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 3);
+    BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
+
+    // test access by trigger number
+    trs_ptr = h5file_ptr->get_tsh_ptr(2);
+    BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 2);
+    BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
+
+    std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
+
+    // test access by name
+    frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
+
+    // test access by passing in SourceID
+    dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+  }
+
+  int timeslice_count;
+  unsigned compression_level;
+  std::string file_path;
+  std::string hdf5_filename;
+  HDF5FileLayoutParameters fl_pars;
+  size_t recorded_size_at_write;
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr;
+};
+
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTimeSlice_test)
 
-BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
+BOOST_AUTO_TEST_CASE(ReadFileAttributes) 
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int timeslice_count = 5;
-
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  // convert file_params to json, allows for easy comp later
-  auto flp_in = create_file_layout_params();
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, flp_in, srcid_geoid_map));
-
-  // write several events, each with several fragments
-  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
-    h5file_ptr->write(create_timeslice(timeslice_number));
-
-  // get recorded size for checking
-  size_t recorded_size_at_write = h5file_ptr->get_recorded_size();
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  // check attributes
-  auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
-  auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
-  auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
-  auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
-  auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
-  BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
-  BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
-  BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
-  BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
-  BOOST_REQUIRE_EQUAL("TimeSlice", record_type_attr);
-
-  // extract and check file layout parameters
-  auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-  BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json());
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+  FileWriteFixture fixture(5, 0);
+  fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileDatasets)
+BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes) 
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int timeslice_count = 5;
-
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  create_file_layout_params(),
-                                                                  srcid_geoid_map));
-
-  // write several events, each with several fragments
-  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
-    h5file_ptr->write(create_timeslice(timeslice_number));
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
-  BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
-
-  auto first_timeslice = *(timeslices.begin());
-  auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_timeslice);
-  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
-
-  auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
-
-  auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count, all_tsh_paths.size());
-
-  auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count * components_per_record, all_frag_paths.size());
-
-  // test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
-  trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 3);
-  BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
-
-  // test access by trigger number
-  trs_ptr = h5file_ptr->get_tsh_ptr(2);
-  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 2);
-  BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
-
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
-
-  // test access by name
-  frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
-
-  // test access by passing in SourceID
-  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
-  frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+  FileWriteFixture fixture(5, 1);
+  fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
+BOOST_AUTO_TEST_CASE(ReadFileDatasets) 
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int timeslice_count = 5;
+  FileWriteFixture fixture(5, 0);
+  fixture.read_file_datasets();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets) 
+{
+  FileWriteFixture fixture(5, 1);
+  fixture.read_file_datasets();
+}
 
-  auto fl_pars = create_file_layout_params();
-  fl_pars.digits_for_sequence_number = 4;
+BOOST_AUTO_TEST_CASE(ReadFileMaxSequence) 
+{
+  FileWriteFixture fixture(5, 0);
+  fixture.read_file_max_sequence();
+}
 
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(
-    file_path + "/" + hdf5_filename, run_number, file_index, application_name, fl_pars, srcid_geoid_map));
-
-  // write several events, each with several fragments
-  for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
-    h5file_ptr->write(create_timeslice(timeslice_number));
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto timeslices = h5file_ptr->get_all_timeslice_numbers();
-  BOOST_REQUIRE_EQUAL(timeslice_count, timeslices.size());
-
-  auto first_timeslice = *(timeslices.begin());
-  auto last_timeslice = *(std::next(timeslices.begin(), timeslices.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_timeslice);
-  BOOST_REQUIRE_EQUAL(timeslice_count, last_timeslice);
-
-  auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count * (1 + components_per_record), all_datasets.size());
-
-  auto all_tsh_paths = h5file_ptr->get_timeslice_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count, all_tsh_paths.size());
-
-  auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(timeslice_count * components_per_record, all_frag_paths.size());
-
-  // test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TimeSliceHeader> trs_ptr;
-  trs_ptr = h5file_ptr->get_tsh_ptr(all_tsh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 3);
-  BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
-
-  // test access by trigger number
-  trs_ptr = h5file_ptr->get_tsh_ptr(2);
-  BOOST_REQUIRE_EQUAL(trs_ptr->timeslice_number, 2);
-  BOOST_REQUIRE_EQUAL(trs_ptr->run_number, run_number);
-
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
-
-  // test access by name
-  frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_timeslice);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
-
-  // test access by passing in SourceID
-  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
-  frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence) 
+{
+  FileWriteFixture fixture(5, 1);
+  fixture.read_file_max_sequence();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
