@@ -49,7 +49,7 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session
       // module
 
       // Loop over senders
-      for (auto dros : d2d_conn->get_streams()) {
+      for (auto dros : d2d_conn->streams()) {
 
         // Are we sure?
         if (dros->is_disabled(*session)) {
