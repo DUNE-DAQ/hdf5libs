@@ -31,33 +31,28 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session* session
 {
   HDF5SourceIDHandler::source_id_geo_id_map_t output_map;
 
-  for (auto& app : session->get_all_applications()) {
+  for (auto& app : session->all_applications()) {
     auto ro_app = app->cast<appmodel::ReadoutApplication>();
     if (!ro_app)
       continue;
 
-    for (auto d2d_conn_res : ro_app->get_contains()) {
+    for (auto d2d_conn : ro_app->get_detector_connections()) {
 
       // Are we sure?
-      if (d2d_conn_res->disabled(*session)) {
-        TLOG_DEBUG(7) << "Ignoring disabled DetectorToDaqConnection " << d2d_conn_res->UID();
+      if (d2d_conn->is_disabled(*session)) {
+        TLOG_DEBUG(7) << "Ignoring disabled DetectorToDaqConnection " << d2d_conn->UID();
         continue;
       }
 
-      TLOG() << "Processing DetectorToDaqConnection " << d2d_conn_res->UID();
+      TLOG() << "Processing DetectorToDaqConnection " << d2d_conn->UID();
       // get the readout groups and the interfaces and streams therein; 1 reaout group corresponds to 1 data reader
       // module
-      auto d2d_conn = d2d_conn_res->cast<confmodel::DetectorToDaqConnection>();
-
-      if (!d2d_conn) {
-        continue;
-      }
 
       // Loop over senders
-      for (auto dros : d2d_conn->get_streams()) {
+      for (auto dros : d2d_conn->streams()) {
 
         // Are we sure?
-        if (dros->disabled(*session)) {
+        if (dros->is_disabled(*session)) {
           TLOG_DEBUG(7) << "Ignoring disabled DetectorStream " << dros->UID();
           continue;
         }
