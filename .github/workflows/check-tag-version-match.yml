@@ -1,0 +1,30 @@
+name: Check CMake version matches tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from CMakeLists.txt
+        id: extract
+        run: |
+          VERSION_LINE=$(grep -E '^project\(.*VERSION' CMakeLists.txt)
+          CMAKE_VERSION=$(echo $VERSION_LINE | sed -E 's/.*VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "CMAKE_VERSION=$CMAKE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check version against tag
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Tag: $TAG_VERSION | CMakeLists.txt version: ${{ steps.extract.outputs.CMAKE_VERSION }}"
+          if [[ "$TAG_VERSION" != "${{ steps.extract.outputs.CMAKE_VERSION }}" ]]; then
+            echo ":x: Version mismatch! Tag is $TAG_VERSION but CMakeLists.txt has ${{ steps.extract.outputs.CMAKE_VERSION }}"
+            exit 1
+          fi
+

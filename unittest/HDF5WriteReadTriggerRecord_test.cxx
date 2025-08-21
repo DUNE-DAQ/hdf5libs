@@ -8,6 +8,7 @@
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
+#include "hdf5libs/test/HDF5TestUtils.hpp"
 
 #include "detdataformats/DetID.hpp"
 
@@ -35,36 +36,10 @@ constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 constexpr size_t element_count_ta = 4;
 constexpr size_t element_count_tc = 1;
+size_t compressed_raw_data_size;
+size_t uncompressed_raw_data_size;
 
 const size_t components_per_record = element_count_tpc + element_count_pds + element_count_ta + element_count_tc;
-
-std::vector<std::string>
-get_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      file_list.push_back(entry.path());
-    }
-  }
-  return file_list;
-}
-
-std::vector<std::string>
-delete_files_matching_pattern(const std::string& path, const std::string& pattern)
-{
-  std::regex regex_search_pattern(pattern);
-  std::vector<std::string> file_list;
-  for (const auto& entry : std::filesystem::directory_iterator(path)) {
-    if (std::regex_match(entry.path().filename().string(), regex_search_pattern)) {
-      if (std::filesystem::remove(entry.path())) {
-        file_list.push_back(entry.path());
-      }
-    }
-  }
-  return file_list;
-}
 
 HDF5FileLayoutParameters
 create_file_layout_params()
@@ -95,48 +70,6 @@ create_file_layout_params()
   layout_params.record_header_dataset_name = "TriggerRecordHeader";
 
   return layout_params;
-}
-
-uint64_t
-encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
-{
-  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
-         (static_cast<uint64_t>(crate_id) << 16) | det_id;
-}
-
-HDF5SourceIDHandler::source_id_geo_id_map_t
-create_srcid_geoid_map()
-{
-  HDF5SourceIDHandler::source_id_geo_id_map_t map;
-
-  dunedaq::daqdataformats::SourceID sid;
-  sid.subsystem = dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout;
-
-  sid.id = 0;
-  map[sid].push_back(encode_geoid(3, 1, 0, 0));
-
-  sid.id = 1;
-  map[sid].push_back(encode_geoid(3, 1, 0, 1));
-
-  sid.id = 3;
-  map[sid].push_back(encode_geoid(3, 1, 1, 0));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(3, 1, 1, 1));
-
-  sid.id = 4;
-  map[sid].push_back(encode_geoid(2, 1, 0, 0));
-
-  sid.id = 5;
-  map[sid].push_back(encode_geoid(2, 1, 0, 1));
-
-  sid.id = 6;
-  map[sid].push_back(encode_geoid(2, 1, 1, 0));
-
-  sid.id = 7;
-  map[sid].push_back(encode_geoid(2, 1, 1, 1));
-
-  return map;
 }
 
 dunedaq::daqdataformats::TriggerRecord
@@ -270,290 +203,290 @@ create_trigger_record(uint64_t trig_num)
   return tr;
 }
 
+struct FileWriteFixture 
+{
+  FileWriteFixture(int num_triggers = 5, 
+                   unsigned comp_lvl = 0, 
+                   uint64_t trigger_record_number_offset = 0) 
+    : trigger_count(num_triggers), 
+      compression_level(comp_lvl),
+      file_path(std::filesystem::temp_directory_path()),
+      hdf5_filename(
+        "demo" + std::to_string(getpid()) + "_" 
+        + std::string(getenv("USER")) + "_comp" 
+        + std::to_string(compression_level) + ".hdf5"),
+      fl_pars(create_file_layout_params()),
+      recorded_size_at_write(0)
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+
+    // create src-geo id map
+    auto srcid_geoid_map = create_srcid_geoid_map();
+    // create the file
+    std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
+                                                                    run_number,
+                                                                    file_index,
+                                                                    application_name,
+                                                                    fl_pars,
+                                                                    srcid_geoid_map,
+                                                                    compression_level));
+
+    // write several events, each with several fragments
+    for (uint64_t idx = 0; idx < trigger_count; ++idx) {
+        // Allow for the possibility of large trigger record numbers, otherwise just write trigger_count fragments
+        trigger_number = (trigger_record_number_offset == 0)
+                          ? idx + 1 // Sequential numbering
+                          : 1 + (idx * trigger_record_number_offset); // Large offset numbering
+
+        h5file_ptr->write(create_trigger_record(trigger_number));
+    }
+
+    // get recorded size for checking
+    recorded_size_at_write = h5file_ptr->get_recorded_size();
+
+    h5file_ptr.reset(); // explicit destruction
+
+  }
+  ~FileWriteFixture() 
+  {
+    delete_files_matching_pattern(file_path, hdf5_filename);
+  }
+
+  void read_file_attributes()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    // check attributes
+    auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
+    auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
+    auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
+    auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
+    auto record_type_attr = h5file_ptr->get_attribute<std::string>("record_type");
+    auto compression_level_attr = h5file_ptr->get_attribute<unsigned>("compression_level");
+    BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
+    BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
+    BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
+    BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
+    BOOST_REQUIRE_EQUAL("TriggerRecord", record_type_attr);
+    BOOST_REQUIRE_EQUAL(this->compression_level, compression_level_attr);
+
+    // extract and check file layout parameters
+    auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
+    BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
+
+    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
+    else {
+      compressed_raw_data_size = recorded_size_at_write;
+      BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
+    }
+  }
+
+  void read_file_datasets()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+    BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+    auto first_trigger_record_id = *(trigger_record_ids.begin());
+    auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+    BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
+
+    auto all_datasets = h5file_ptr->get_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
+
+    auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count, all_trh_paths.size());
+
+    auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count * components_per_record, all_frag_paths.size());
+
+    // test access by name
+    std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
+    trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 3);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
+
+    // test access by trigger number
+    trh_ptr = h5file_ptr->get_trh_ptr(2, 0);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
+
+    std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
+
+    // test access by name
+    frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+
+    // test access by trigger number, type,  element
+    frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
+
+    // test access by passing in SourceID
+    dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+  }
+
+  void read_file_max_sequence()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+    BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+    auto first_trigger_record_id = *(trigger_record_ids.begin());
+    auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+    BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
+
+    auto all_datasets = h5file_ptr->get_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
+
+    auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count, all_trh_paths.size());
+
+    auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
+    BOOST_REQUIRE_EQUAL(trigger_count * components_per_record, all_frag_paths.size());
+
+    // test access by name
+    std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
+    trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 3);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
+
+    // test access by trigger number
+    trh_ptr = h5file_ptr->get_trh_ptr(2, 0);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
+
+    std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
+
+    // test access by name
+    frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
+
+    // test access by trigger number, type, element
+    frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
+
+    // test access by passing in SourceID
+    dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
+                        dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
+    BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
+  }
+
+  void read_write_large_trigger_numbers() 
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
+    BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
+
+    auto first_trigger_record_id = *(trigger_record_ids.begin());
+    auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
+    BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
+    BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
+    BOOST_REQUIRE(trigger_number > 0xffffffff);
+  }
+
+  uint64_t trigger_count;
+  uint64_t trigger_number;
+  unsigned compression_level;
+  std::string file_path;
+  std::string hdf5_filename;
+  HDF5FileLayoutParameters fl_pars;
+  size_t recorded_size_at_write;
+  std::unique_ptr<HDF5RawDataFile> h5file_ptr;
+};
+
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTriggerRecord_test)
 
-BOOST_AUTO_TEST_CASE(WriteFileAndAttributes)
+BOOST_AUTO_TEST_CASE(ReadFileAttributes)
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int trigger_count = 5;
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_file_attributes();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  // convert file_params to json, allows for easy comp later
-  auto flp_in=create_file_layout_params();
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name, flp_in,
-                                                                  srcid_geoid_map));
-                                                                  
-  // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
-
-  // get recorded size for checking
-  size_t recorded_size_at_write = h5file_ptr->get_recorded_size();
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  // check attributes
-  auto recorded_size_attr = h5file_ptr->get_attribute<size_t>("recorded_size");
-  auto run_number_attr = h5file_ptr->get_attribute<size_t>("run_number");
-  auto file_index_attr = h5file_ptr->get_attribute<size_t>("file_index");
-  auto app_name_attr = h5file_ptr->get_attribute<std::string>("application_name");
-  BOOST_REQUIRE_EQUAL(recorded_size_at_write, recorded_size_attr);
-  BOOST_REQUIRE_EQUAL(run_number, run_number_attr);
-  BOOST_REQUIRE_EQUAL(file_index, file_index_attr);
-  BOOST_REQUIRE_EQUAL(application_name, app_name_attr);
-
-  // extract and check file layout parameters
-  auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
-  BOOST_REQUIRE_EQUAL(flp_in.to_json(), file_layout_parameters_read.to_json());
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes)
+{
+  FileWriteFixture fixture(5, 1, 0);
+  fixture.read_file_attributes();
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int trigger_count = 5;
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_file_datasets();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  create_file_layout_params(),
-                                                                  srcid_geoid_map));
-  // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
-
-  auto first_trigger_record_id = *(trigger_record_ids.begin());
-  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
-
-  auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
-
-  auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count, all_trh_paths.size());
-
-  auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count * components_per_record, all_frag_paths.size());
-
-  // test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
-  trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 3);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
-
-  // test access by trigger number
-  trh_ptr = h5file_ptr->get_trh_ptr(2, 0);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
-
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
-
-  // test access by name
-  frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-
-  // test access by trigger number, type,  element
-  frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
-
-  // test access by passing in SourceID
-  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
-  frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets)
+{
+  FileWriteFixture fixture(5, 1, 0);
+  fixture.read_file_datasets();
 }
 
 BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const int trigger_count = 5;
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_file_max_sequence();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  auto fl_pars = create_file_layout_params();
-  fl_pars.digits_for_sequence_number = 4;
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  fl_pars,
-                                                                  srcid_geoid_map));
-
-  // write several events, each with several fragments
-  for (int trigger_number = 1; trigger_number <= trigger_count; ++trigger_number)
-    h5file_ptr->write(create_trigger_record(trigger_number));
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
-
-  auto first_trigger_record_id = *(trigger_record_ids.begin());
-  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(trigger_count, last_trigger_record_id.first);
-
-  auto all_datasets = h5file_ptr->get_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count * (1 + components_per_record), all_datasets.size());
-
-  auto all_trh_paths = h5file_ptr->get_trigger_record_header_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count, all_trh_paths.size());
-
-  auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
-  BOOST_REQUIRE_EQUAL(trigger_count * components_per_record, all_frag_paths.size());
-
-  // test access by name
-  std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
-  trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 3);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
-
-  // test access by trigger number
-  trh_ptr = h5file_ptr->get_trh_ptr(2, 0);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(trh_ptr->get_run_number(), run_number);
-
-  std::unique_ptr<dunedaq::daqdataformats::Fragment> frag_ptr;
-
-  // test access by name
-  frag_ptr = h5file_ptr->get_frag_ptr(all_frag_paths.back());
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), last_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(2, 0, "Detector_Readout", 0);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 2);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 0);
-
-  // test access by trigger number, type, element
-  frag_ptr = h5file_ptr->get_frag_ptr(4, 0, "Detector_Readout", 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 4);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 4);
-
-  // test access by passing in SourceID
-  dunedaq::daqdataformats::SourceID gid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
-  frag_ptr = h5file_ptr->get_frag_ptr(5, 0, gid);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_trigger_number(), 5);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_run_number(), run_number);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().subsystem,
-                      dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout);
-  BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence)
+{
+  FileWriteFixture fixture(5, 1, 0);
+  fixture.read_file_max_sequence();
 }
 
 BOOST_AUTO_TEST_CASE(LargeTriggerRecordNumbers)
 {
-  std::string file_path(std::filesystem::temp_directory_path());
-  std::string hdf5_filename = "demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const uint64_t trigger_count = 10;
+  FileWriteFixture fixture(5, 0, 2000000000);
+  fixture.read_write_large_trigger_numbers();
+}
 
-  // delete any pre-existing files so that we start with a clean slate
-  delete_files_matching_pattern(file_path, hdf5_filename);
-
-  auto fl_pars = create_file_layout_params();
-  fl_pars.digits_for_sequence_number = 4;
-
-  // create src-geo id map
-  auto srcid_geoid_map = create_srcid_geoid_map();
-  // create the file
-  std::unique_ptr<HDF5RawDataFile> h5file_ptr(new HDF5RawDataFile(file_path + "/" + hdf5_filename,
-                                                                  run_number,
-                                                                  file_index,
-                                                                  application_name,
-                                                                  fl_pars,
-                                                                  srcid_geoid_map));
-
-  // write several events, each with several fragments
-  uint64_t trigger_number = 1;
-  for (uint64_t idx = 0; idx < trigger_count; ++idx) {
-    trigger_number = 1 + (idx * 2000000000);
-    h5file_ptr->write(create_trigger_record(trigger_number));
-  }
-
-  h5file_ptr.reset(); // explicit destruction
-
-  // open file for reading now
-  h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-
-  auto trigger_record_ids = h5file_ptr->get_all_trigger_record_ids();
-  BOOST_REQUIRE_EQUAL(trigger_count, trigger_record_ids.size());
-
-  auto first_trigger_record_id = *(trigger_record_ids.begin());
-  auto last_trigger_record_id = *(std::next(trigger_record_ids.begin(), trigger_record_ids.size() - 1));
-  BOOST_REQUIRE_EQUAL(1, first_trigger_record_id.first);
-  BOOST_REQUIRE_EQUAL(trigger_number, last_trigger_record_id.first);
-  BOOST_REQUIRE(trigger_number > 0xffffffff);
-
-  // clean up the files that were created
-  delete_files_matching_pattern(file_path, hdf5_filename);
+BOOST_AUTO_TEST_CASE(CompressedLargeTriggerRecordNumbers)
+{
+  FileWriteFixture fixture(5, 1, 2000000000);
+  fixture.read_write_large_trigger_numbers();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -12,7 +12,7 @@ import sys
 
 # Current allowed range of file layout versions
 FILELAYOUT_MIN_VERSION = 4
-FILELAYOUT_MAX_VERSION = 5
+FILELAYOUT_MAX_VERSION = 7
 
 # Current header versions
 TRIGGER_RECORD_HEADER_VERSION = 4
@@ -90,7 +90,7 @@ class DAQDataFile:
                 observed_filelayout_version <= FILELAYOUT_MAX_VERSION:
             print(f"INFO: input file \"{self.name}\" matches the supported file layout versions: {FILELAYOUT_MIN_VERSION} <= {observed_filelayout_version} <= {FILELAYOUT_MAX_VERSION}")
         else:
-            sys.exit(f"ERROR: this script expects a file layout version {FILELAYOUT_VERSION} but this wasn't confirmed in the HDF5 file \"{self.name}\"")
+            sys.exit(f"ERROR: this script expects a file layout version between {FILELAYOUT_MIN_VERSION} and {FILELAYOUT_MAX_VERSION} but this wasn't confirmed in the HDF5 file \"{self.name}\", version={observed_filelayout_version}")
         if 'record_type' in self.h5file.attrs.keys():
             self.record_type = self.h5file.attrs['record_type']
         for i in self.h5file.keys():

@@ -18,6 +18,7 @@
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
+#include "logging/Logging.hpp" // NOTE: if ISSUES ARE DECLARED BEFORE include logging/Logging.hpp, TLOG_DEBUG<<issue wont work.
 
 // External Packages
 #include <highfive/H5DataSet.hpp>
@@ -38,6 +39,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <optional>
 
 namespace dunedaq {
 
@@ -101,6 +103,12 @@ ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " alrea
 
 ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
+                  "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
+
+ERS_DECLARE_ISSUE(hdf5libs, InvalidSubdetectorString,
+                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.", ((std::string)name))
+
 namespace hdf5libs {
 
 /**
@@ -122,6 +130,8 @@ public:
   typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
   typedef std::set<record_id_t, std::less<>> record_id_set;
 
+  inline static const std::string s_inprogress_suffix = ".writing";
+
   // constructor for writing
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
@@ -129,17 +139,21 @@ public:
                   std::string application_name,
                   HDF5FileLayoutParameters fl_params,
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
-                  std::string inprogress_filename_suffix = ".writing",
+                  unsigned compression_level = 0,
+                  std::string inprogress_filename_suffix = s_inprogress_suffix,
                   unsigned open_flags = HighFive::File::Create);
 
-  // constructor for reading
-  explicit HDF5RawDataFile(const std::string& file_name);
+  // constructor for reading and optional writing
+  explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
   ~HDF5RawDataFile();
 
   std::string get_file_name() const { return m_file_ptr->getName(); }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
+  size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
+  size_t get_total_file_size() const noexcept { return m_total_file_size; }
+  unsigned get_compression_level() const noexcept { return m_compression_level; }
 
   std::string get_record_type() const noexcept { return m_record_type; }
 
@@ -181,6 +195,9 @@ public:
   T get_attribute(const HighFive::Group& grp, const std::string& name);
   template<typename T>
   T get_attribute(const HighFive::DataSet& dset, std::string name);
+  // For backwards compatibility with files created before compression_level existed
+  template<typename T>
+  T get_attribute_if_exists(const std::string& name, const T& default_value);
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
@@ -318,6 +335,8 @@ public:
                                                                       const std::string& frag_type_name)
   {
     daqdataformats::FragmentType frag_type = daqdataformats::string_to_fragment_type(frag_type_name);
+    if (frag_type == daqdataformats::FragmentType::kUnknown)
+      throw InvalidFragmentTypeString(ERS_HERE, frag_type_name);
     return get_source_ids_for_fragment_type(rid, frag_type);
   }
   std::set<daqdataformats::SourceID> get_source_ids_for_fragment_type(const uint64_t rec_num, // NOLINT(build/unsigned)
@@ -332,6 +351,11 @@ public:
   {
     return get_source_ids_for_fragment_type(std::make_pair(rec_num, seq_num), frag_type_name);
   }
+
+  // get SourceIDs for given fragment type and subdetector in a record
+  std::set<daqdataformats::SourceID> get_source_ids_for_fragtype_and_subdetector(const record_id_t& rid,
+                                                                                 const std::string& frag_type_name,
+                                                                                 const std::string& subdet_name);
 
   // get SourceIDs for given subdetector in a record
   std::set<daqdataformats::SourceID> get_source_ids_for_subdetector(const record_id_t& rid,
@@ -436,11 +460,14 @@ private:
 
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
-  const std::string m_bare_file_name;
-  const unsigned m_open_flags;
+  std::string m_bare_file_name;
+  unsigned m_compression_level;
+  unsigned m_open_flags;
 
   // Total size of data being written
   size_t m_recorded_size;
+  size_t m_uncompressed_raw_data_size;
+  size_t m_total_file_size;
   std::string m_record_type;
 
   // file layout writing/reading
@@ -452,7 +479,7 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t);
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
@@ -506,11 +533,6 @@ HDF5RawDataFile::write_attribute(HighFive::DataSet& dset, const std::string& nam
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
 
-std::vector<std::string> HDF5RawDataFile::get_attribute_names()
-{
-  return m_file_ptr->listAttributeNames();
-}
-
 template<typename T>
 T
 HDF5RawDataFile::get_attribute(const std::string& name)
@@ -521,6 +543,21 @@ HDF5RawDataFile::get_attribute(const std::string& name)
   auto attr = m_file_ptr->getAttribute(name);
   T value;
   attr.read(value);
+  return value;
+}
+
+template<typename T>
+T
+HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
+{
+  if (!m_file_ptr->hasAttribute(name)) {
+     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
+    return default_value;
+  }
+  auto attr = m_file_ptr->getAttribute(name);
+  T value;
+  attr.read(value);
+  TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" found. Value: " << value;
   return value;
 }
 
@@ -551,6 +588,7 @@ HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
 }
 
 } // namespace hdf5libs
+
 } // namespace dunedaq
 
 #endif // HDF5LIBS_INCLUDE_HDF5LIBS_HDF5RAWDATAFILE_HPP_
