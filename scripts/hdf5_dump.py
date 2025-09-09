@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import daqdataformats
+import detdataformats
+
 import argparse
 import datetime
 import h5py
@@ -15,16 +18,6 @@ FILELAYOUT_MAX_VERSION = 7
 TRIGGER_RECORD_HEADER_VERSION = 4
 FRAGMENT_HEADER_VERSION = 5
 TIME_SLICE_HEADER_VERSION = 2
-
-# detdataformats/include/detdataformats/DetID.hpp
-DETECTOR = {0: 'Unknown', 1: 'DAQ', 2: 'HD_PDS', 3: 'HD_TPC',
-            4: 'HD_CRT', 8: 'VD_CathodePDS', 9: 'VD_MembranePDS',
-            10: 'VD_BottomTPC', 11: 'VD_TopTPC',
-            32: 'NDLAr_TPC', 33: 'NDLAr_PDS', 'ND_GAr': 34}
-
-# daqdataformats/include/daqdataformats/SourceID.hpp
-SUBSYSTEM = {0: 'Unknown', 1: 'DetectorReadout', 2: 'HwSignalsInterface',
-             3: 'Trigger', 4: 'TRBuilder'}
 
 DATA_FORMAT = {
     # daqdataformats/include/daqdataformats/TimeSliceHeader.hpp
@@ -246,9 +239,13 @@ def print_header_dict(hdict, clock_speed_hz):
         elif 'Marker word' in ik:
             print("{:<30}: {}".format(ik, hex(iv)))
         elif ik == 'Detector':
-            print("{:<30}: {}".format(ik, DETECTOR[iv]))
+            subdet = detdataformats.DetID.Subdetector(iv)
+            det_name = detdataformats.DetID.subdetector_to_string(subdet)
+            print("{:<30}: {}".format(ik, det_name))
         elif ik == 'Source ID subsystem' in ik:
-            print("{:<30}: {}".format(ik, SUBSYSTEM[iv]))
+            subsys = daqdataformats.SourceID.Subsystem(iv)
+            subsys_name = daqdataformats.SourceID.subsystem_to_string(subsys)
+            print("{:<30}: {}".format(ik, subsys_name))
         else:
             print("{:<30}: {}".format(ik, iv))
     return
