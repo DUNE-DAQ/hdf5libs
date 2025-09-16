@@ -1,5 +1,5 @@
 ---
-name: General Report
+name: Large Impact Radius Change
 about: Provide general feedback or inquiries
 title: "[LargeImpact]: "
 labels: ''
