@@ -1,3 +1,11 @@
+---
+name: Large Impact Radius Change
+about: Describe or request modifications that change software or user interfaces, change the way that users run the system, or change underlying system behavior
+title: "[LargeImpactChange]: "
+labels: ''
+assignees: ''
+---
+
 ## Description
 
 > What is changing and why.  For example, what prompted this change?

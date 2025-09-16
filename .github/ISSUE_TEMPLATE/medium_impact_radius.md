@@ -1,3 +1,11 @@
+---
+name: Medium impact radius change
+about: Describe or request changes that affect multiple repositories or include multiple Issues or PRs in a single repo, or will benefit from coordination between developers
+title: "[MediumImpactChange]: "
+labels: ''
+assignees: ''
+---
+   
 ## Description
 
 > What is changing and why.  For example, what prompted this change?
