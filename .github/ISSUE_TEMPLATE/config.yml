@@ -15,18 +15,13 @@ issue_templates:
     title: "[Docs]: "
     labels: ["documentation"]
     body: "./ISSUE_TEMPLATE/documentation_change.md"
-  - name: "General Report"
-    description: "Provide general feedback or inquiries."
-    title: "[General]: "
-    labels: ["general"]
-    body: "./ISSUE_TEMPLATE/general_report.md"
   - name: "Changes with moderate external impact"
     description: "Describe or request changes that affect multiple repositories or include multiple Issues or PRs in a single repo, or will benefit from coordination between developers."
-    title: "[MediumChange]: "
+    title: "[MediumImpactChange]: "
     labels: []
     body: "./ISSUE_TEMPLATE/medium_impact_radius.md"
   - name: "Changes with large external impact"
     description: "Describe or request modifications that change software or user interfaces, change the way that users run the system, or change underlying system behavior."
-    title: "[LargeChange]: "
+    title: "[LargeImpactChange]: "
     labels: []
     body: "./ISSUE_TEMPLATE/large_impact_radius.md"
