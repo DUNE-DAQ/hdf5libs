@@ -1,5 +1,5 @@
 ---
-name: Changes with moderate external impact
+name: Changes with medium impact radius
 about: Describe or request changes that affect multiple repositories or include multiple Issues or PRs in a single repo, or will benefit from coordination between developers
 title: "[MediumImpactChange]: "
 labels: ''
