@@ -1,3 +1,11 @@
+---
+name: General Report
+about: Provide general feedback or inquiries
+title: "[LargeImpact]: "
+labels: ''
+assignees: ''
+---
+
 ## Description
 
 > What is changing and why.  For example, what prompted this change?
