@@ -17,9 +17,11 @@ issue_templates:
     body: "./ISSUE_TEMPLATE/documentation_change.md"
   - name: "Changes with moderate external impact"
     description: "Describe or request changes that affect multiple repositories or include multiple Issues or PRs in a single repo, or will benefit from coordination between developers."
-    title: "[Medium Impact Radius Changes]: "
+    title: "[MediumChange]: "
+    labels: []
     body: "./ISSUE_TEMPLATE/medium_impact_radius.md"
   - name: "Changes with large external impact"
     description: "Describe or request modifications that change software or user interfaces, change the way that users run the system, or change underlying system behavior."
-    title: "[Large Impact Radius Changes]: "
+    title: "[LargeChange]: "
+    labels: []
     body: "./ISSUE_TEMPLATE/large_impact_radius.md"
