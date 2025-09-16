@@ -1,7 +1,7 @@
 ---
 name: Large Impact Radius Change
-about: Provide general feedback or inquiries
-title: "[LargeImpact]: "
+about: Describe or request modifications that change software or user interfaces, change the way that users run the system, or change underlying system behavior
+title: "[LargeImpactChange]: "
 labels: ''
 assignees: ''
 ---
