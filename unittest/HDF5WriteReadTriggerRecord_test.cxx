@@ -72,6 +72,50 @@ create_file_layout_params()
   return layout_params;
 }
 
+std::vector<dunedaq::daqdataformats::ComponentRequest>
+create_component_requests(dunedaq::daqdataformats::timestamp_t ts)
+{
+  std::vector<dunedaq::daqdataformats::ComponentRequest> components;
+  // loop over elements tpc
+  for (size_t ele_num = 0; ele_num < element_count_tpc; ++ele_num) {
+
+    auto sid =
+      dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, ele_num);
+
+    components.emplace_back(sid, ts, ts);
+
+  } // end loop over elements
+
+  // loop over elements pds
+  for (size_t ele_num = 0; ele_num < element_count_pds; ++ele_num) {
+    auto sid = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout,
+                                                 ele_num + element_count_tpc);
+
+    components.emplace_back(sid, ts, ts);
+
+  } // end loop over elements
+
+  // loop over TriggerActivity
+  for (size_t ele_num = 0; ele_num < element_count_ta; ++ele_num) {
+
+    auto sid = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger, ele_num);
+
+    components.emplace_back(sid, ts, ts);
+
+  } // end loop over elements
+
+  // loop over TriggerCandidate
+  for (size_t ele_num = 0; ele_num < element_count_tc; ++ele_num) {
+
+    auto sid = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTrigger,
+                                                 ele_num + element_count_ta);
+
+    components.emplace_back(sid, ts, ts);
+
+  } // end loop over elements
+  return components;
+}
+
 dunedaq::daqdataformats::TriggerRecord
 create_trigger_record(uint64_t trig_num)
 {
@@ -83,16 +127,13 @@ create_trigger_record(uint64_t trig_num)
   int64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
 
   // create TriggerRecordHeader
-  dunedaq::daqdataformats::TriggerRecordHeaderData trh_data;
-  trh_data.trigger_number = trig_num;
-  trh_data.trigger_timestamp = ts;
-  trh_data.num_requested_components = components_per_record;
-  trh_data.run_number = run_number;
-  trh_data.sequence_number = 0;
-  trh_data.max_sequence_number = 1;
-  trh_data.element_id = dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTRBuilder, 0);
-
-  dunedaq::daqdataformats::TriggerRecordHeader trh(&trh_data);
+  dunedaq::daqdataformats::TriggerRecordHeader trh(create_component_requests(ts));
+  trh.set_trigger_number(trig_num);
+  trh.set_trigger_timestamp(ts);
+  trh.set_run_number(run_number);
+  trh.set_sequence_number(0);
+  trh.set_max_sequence_number(1);
+  trh.set_element_id(dunedaq::daqdataformats::SourceID(dunedaq::daqdataformats::SourceID::Subsystem::kTRBuilder, 0));
 
   // create our TriggerRecord
   dunedaq::daqdataformats::TriggerRecord tr(trh);
@@ -203,20 +244,16 @@ create_trigger_record(uint64_t trig_num)
   return tr;
 }
 
-struct FileWriteFixture 
+struct FileWriteFixture
 {
-  FileWriteFixture(int num_triggers = 5, 
-                   unsigned comp_lvl = 0, 
-                   uint64_t trigger_record_number_offset = 0) 
-    : trigger_count(num_triggers), 
-      compression_level(comp_lvl),
-      file_path(std::filesystem::temp_directory_path()),
-      hdf5_filename(
-        "demo" + std::to_string(getpid()) + "_" 
-        + std::string(getenv("USER")) + "_comp" 
-        + std::to_string(compression_level) + ".hdf5"),
-      fl_pars(create_file_layout_params()),
-      recorded_size_at_write(0)
+  FileWriteFixture(int num_triggers = 5, unsigned comp_lvl = 0, uint64_t trigger_record_number_offset = 0)
+    : trigger_count(num_triggers)
+    , compression_level(comp_lvl)
+    , file_path(std::filesystem::temp_directory_path())
+    , hdf5_filename("demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + "_comp" +
+                    std::to_string(compression_level) + ".hdf5")
+    , fl_pars(create_file_layout_params())
+    , recorded_size_at_write(0)
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
 
@@ -233,24 +270,20 @@ struct FileWriteFixture
 
     // write several events, each with several fragments
     for (uint64_t idx = 0; idx < trigger_count; ++idx) {
-        // Allow for the possibility of large trigger record numbers, otherwise just write trigger_count fragments
-        trigger_number = (trigger_record_number_offset == 0)
-                          ? idx + 1 // Sequential numbering
-                          : 1 + (idx * trigger_record_number_offset); // Large offset numbering
+      // Allow for the possibility of large trigger record numbers, otherwise just write trigger_count fragments
+      trigger_number = (trigger_record_number_offset == 0)
+                         ? idx + 1                                   // Sequential numbering
+                         : 1 + (idx * trigger_record_number_offset); // Large offset numbering
 
-        h5file_ptr->write(create_trigger_record(trigger_number));
+      h5file_ptr->write(create_trigger_record(trigger_number));
     }
 
     // get recorded size for checking
     recorded_size_at_write = h5file_ptr->get_recorded_size();
 
     h5file_ptr.reset(); // explicit destruction
-
   }
-  ~FileWriteFixture() 
-  {
-    delete_files_matching_pattern(file_path, hdf5_filename);
-  }
+  ~FileWriteFixture() { delete_files_matching_pattern(file_path, hdf5_filename); }
 
   void read_file_attributes()
   {
@@ -275,8 +308,9 @@ struct FileWriteFixture
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
-    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
-    else {
+    if (this->compression_level == 0) {
+      uncompressed_raw_data_size = recorded_size_at_write;
+    } else {
       compressed_raw_data_size = recorded_size_at_write;
       BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
     }
@@ -414,7 +448,7 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
   }
 
-  void read_write_large_trigger_numbers() 
+  void read_write_large_trigger_numbers()
   {
     // open file for reading now
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
