@@ -36,3 +36,4 @@ daq_add_application(HDF5LIBS_TestDumpRecord HDF5LIBS_TestDumpRecord.cpp TEST LIN
 daq_add_application(HDF5LIBS_TestRecoverFile HDF5LIBS_TestRecoverFile.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 
 daq_install()
+
