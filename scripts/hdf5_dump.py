@@ -15,8 +15,8 @@ FILELAYOUT_MIN_VERSION = 4
 FILELAYOUT_MAX_VERSION = 7
 
 # Current header versions
-TRIGGER_RECORD_HEADER_VERSION = 4
-FRAGMENT_HEADER_VERSION = 5
+TRIGGER_RECORD_HEADER_VERSION = 5
+FRAGMENT_HEADER_VERSION = 6
 TIME_SLICE_HEADER_VERSION = 2
 
 DATA_FORMAT = {
@@ -32,7 +32,7 @@ DATA_FORMAT = {
     "TriggerRecord Header": {
         "keys": ['Marker word', 'Version', 'Trigger number',                       # I I Q
                  'Trigger timestamp', 'No. of requested components', 'Run number', # Q Q I
-                 'Error bits', 'Trigger type', 'Sequence number',                  # I Q H
+                 'Status bits', 'Trigger type', 'Sequence number',                  # I Q H
                  'Max sequence num', 'Padding',                                    # H I
                  'Source ID version', 'Source ID subsystem', 'Source ID'],         # H H I
         "size": 64,
@@ -42,7 +42,7 @@ DATA_FORMAT = {
     "Fragment Header":{
         "keys": ['Marker word', 'Version', 'Fragment size', 'Trigger number',      # I I Q Q
                  'Trigger timestamp', 'Window begin', 'Window end', 'Run number',  # Q Q Q I
-                 'Error bits', 'Fragment type', 'Sequence number',                 # I I H
+                 'Status bits', 'Fragment type', 'Sequence number',                 # I I H
                  'Detector',                                                       # H
                  'Source ID version', 'Source ID subsystem', 'Source ID'],         # H H I
         "size": 72,
@@ -237,6 +237,8 @@ def print_header_dict(hdict, clock_speed_hz):
             print("{:<30}: {} ({})".format(
                 ik, iv, tick_to_timestamp(iv, clock_speed_hz)))
         elif 'Marker word' in ik:
+            print("{:<30}: {}".format(ik, hex(iv)))
+        elif 'Status bits' in ik:
             print("{:<30}: {}".format(ik, hex(iv)))
         elif ik == 'Detector':
             subdet = detdataformats.DetID.Subdetector(iv)
