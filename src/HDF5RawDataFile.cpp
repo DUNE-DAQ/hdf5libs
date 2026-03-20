@@ -70,6 +70,8 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_attribute("creation_timestamp", file_creation_timestamp);
   write_attribute("application_name", application_name);
 
+  std::cout << "Here's a garbage cout statement." << std::endl;
+
   // set the file layout contents
   m_file_layout_ptr.reset(new HDF5FileLayout(fl_params));
   write_file_layout();
