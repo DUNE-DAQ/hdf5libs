@@ -10,6 +10,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl/filesystem.h>
 #include <pybind11/stl_bind.h>
 
 #include <string>
@@ -25,7 +26,7 @@ register_hdf5rawdatafile(py::module& m)
 {
 
   py::class_<HDF5RawDataFile>(m, "_HDF5RawDataFile")
-    .def(py::init<std::string>())
+    .def(py::init<std::filesystem::path>())
 
     .def("get_attribute_names",
          &HDF5RawDataFile::get_attribute_names,
