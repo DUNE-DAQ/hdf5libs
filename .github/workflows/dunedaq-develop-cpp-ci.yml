@@ -23,13 +23,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  troubleshoot:
-    runs-on: ubuntu-latest 
-    steps:
-    - name: Troubleshoot event name
-      run: |
-        echo "Event name from upstream workflow: ${{ github.event_name }}"
-
   build_develop_dispatch:
     name: Build against the development release
     uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@amogan/single_package_linting
