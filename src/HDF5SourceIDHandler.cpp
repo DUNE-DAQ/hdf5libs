@@ -178,6 +178,7 @@ void
 HDF5SourceIDHandler::fetch_subdetector_source_id_info(const HighFive::Group& record_group,
                                                       subdetector_source_id_map_t& subdetector_source_id_map)
 {
+  std::cout << "Yet another cout statement. The linter should catch this." << std::endl;
   if (m_version >= 3) {
     try {
       std::string map_string = get_attribute<HighFive::Group, std::string>(record_group, "subdetector_source_id_map");
