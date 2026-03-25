@@ -194,6 +194,7 @@ HDF5SourceIDHandler::add_source_id_path_to_map(source_id_path_map_t& source_id_p
                                                const std::string& hdf5_path)
 {
   source_id_path_map[source_id] = hdf5_path;
+  std::cout << "Yet another cout statement. The linter should catch this." << std::endl;
 }
 
 void
