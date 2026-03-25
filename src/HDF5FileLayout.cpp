@@ -34,6 +34,7 @@ HDF5FileLayout::check_config()
   if (m_version < 2)
     return;
 
+  std::cout << "Yet more cout garbage" << std::endl;
   if (m_conf_params.record_name_prefix.compare("TriggerRecord") == 0) {
     if (m_conf_params.digits_for_sequence_number == 0) {
       ers::error(FileLayoutSequenceIDsCannotBeZero(ERS_HERE, 4));
