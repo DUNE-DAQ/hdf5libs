@@ -250,12 +250,16 @@ struct FileWriteFixture
     : trigger_count(num_triggers)
     , compression_level(comp_lvl)
     , file_path(std::filesystem::temp_directory_path())
-    , hdf5_filename("demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + "_comp" +
+    , hdf5_filename("demo" + std::to_string(getpid()) + "_" + 
+                    std::string(getenv("USER") ? getenv("USER") : "") + "_comp" +
                     std::to_string(compression_level) + ".hdf5")
     , fl_pars(create_file_layout_params())
     , recorded_size_at_write(0)
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
+
+    BOOST_TEST_MESSAGE("file_path: " << file_path);
+    BOOST_TEST_MESSAGE("hdf5_filename: " << hdf5_filename);
 
     // create src-geo id map
     auto srcid_geoid_map = create_srcid_geoid_map();
