@@ -258,9 +258,6 @@ struct FileWriteFixture
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
 
-    BOOST_TEST_MESSAGE("file_path: " << file_path);
-    BOOST_TEST_MESSAGE("hdf5_filename: " << hdf5_filename);
-
     // create src-geo id map
     auto srcid_geoid_map = create_srcid_geoid_map();
     // create the file
