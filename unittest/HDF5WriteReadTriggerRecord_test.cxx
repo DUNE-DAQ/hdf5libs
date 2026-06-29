@@ -251,8 +251,8 @@ struct FileWriteFixture
     , compression_level(comp_lvl)
     , file_path(std::filesystem::temp_directory_path())
     , hdf5_filename("demo" + std::to_string(getpid()) + "_" + 
-                    std::string(getenv("USER") ? getenv("USER") : "") + "_comp" +
-                    std::to_string(compression_level) + ".hdf5")
+                    std::string(getenv("USER") ? getenv("USER") : "") +
+                    "_comp" + std::to_string(compression_level) + ".hdf5")
     , fl_pars(create_file_layout_params())
     , recorded_size_at_write(0)
   {
