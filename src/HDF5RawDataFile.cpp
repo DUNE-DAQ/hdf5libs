@@ -179,9 +179,6 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
 void
 HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
 {
-  std::string tsh_path = m_file_layout_ptr->get_path_string(ts.get_header());
-  if (m_file_ptr->exist(tsh_path)) {throw TimeSliceAlreadyExists(ERS_HERE, tsh_path);}
-
   // the source_id_path map that we will build up as we write the TR header
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
