@@ -27,15 +27,15 @@ constexpr uint32_t MAX_FILELAYOUT_VERSION = 4294967295; // NOLINT(build/unsigned
 /**
  * @brief Constructor for writing a new file
  */
-HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
-                                 daqdataformats::run_number_t run_number,
-                                 size_t file_index,
-                                 std::string application_name,
-                                 HDF5FileLayoutParameters fl_params,
-                                 HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
-                                 unsigned compression_level,
-                                 std::string inprogress_filename_suffix,
-                                 unsigned open_flags)
+HDF5RawDataFile::HDF5RawDataFile(const std::string file_name,
+                                 const daqdataformats::run_number_t run_number,
+                                 const size_t file_index,
+                                 const std::string application_name,
+                                 const HDF5FileLayoutParameters fl_params,
+                                 const HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
+                                 const unsigned compression_level,
+                                 const std::string inprogress_filename_suffix,
+                                 const unsigned open_flags)
   : m_bare_file_name(file_name)
   , m_compression_level(compression_level)
   , m_open_flags(open_flags)
