@@ -147,6 +147,7 @@ public:
   ~HDF5RawDataFile();
 
   std::string get_file_name() const { return m_file_ptr->getName(); }
+  std::string get_file_name_extension() const { return "hdf5"; }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
