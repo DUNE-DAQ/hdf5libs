@@ -28,6 +28,6 @@ on:
 jobs:
   build_develop_dispatch:
     name: Build against the development release
-    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@develop
+    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@dependabot/github_actions/lycheeverse/lychee-action-649b0e4890508ea3e11ea6b3ee35ce899a25afd5
     with:
       caller_event_name: ${{ github.event.inputs.caller_event_name || github.event_name }}
