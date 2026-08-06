@@ -274,7 +274,7 @@ main(int argc, char** argv)
            << ", overall number of referenced TAs=" << number_of_referenced_TAs
            << ", size of TC data=" << (sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs));
         ss << "\n\t\t"
-           << "First TC type = " << get_trigger_candidate_type_names()[tcptr->data.type] << " ("
+           << "First TC type = " << trigger_candidate_type_to_string(tcptr->data.type) << " ("
            << static_cast<int>(tcptr->data.type) << "), TC algorithm = " << static_cast<int>(tcptr->data.algorithm)
            << ", number of TAs = " << tcptr->n_inputs;
         ss << "\n\t\t"
@@ -285,7 +285,7 @@ main(int argc, char** argv)
           offset += (tcptr->n_inputs * sizeof(TriggerActivityData));
           TriggerCandidate* tmp_tcptr =
             reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
-          ss << "\n\t\t" << "Second TC type = " << get_trigger_candidate_type_names()[tmp_tcptr->data.type]
+          ss << "\n\t\t" << "Second TC type = " << trigger_candidate_type_to_string(tmp_tcptr->data.type)
              << " (" << static_cast<int>(tmp_tcptr->data.type) << "), TC algorithm = "
              << static_cast<int>(tmp_tcptr->data.algorithm) << ", number of TAs = " << tmp_tcptr->n_inputs;
           ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start << ", end time=" << tmp_tcptr->data.time_end
