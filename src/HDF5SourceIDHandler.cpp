@@ -38,7 +38,7 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session& session
 
     for (auto d2d_conn : ro_app->get_detector_connections()) {
 
-      if (d2d_conn->is_excluded(*session)) {
+      if (d2d_conn->is_excluded(session)) {
         TLOG_DEBUG(7) << "Ignoring excluded DetectorToDaqConnection " << d2d_conn->UID();
         continue;
       }
@@ -51,7 +51,7 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session& session
       for (auto dros : d2d_conn->streams()) {
 
         // Are we sure?
-        if (dros->is_excluded(*session)) {
+        if (dros->is_excluded(session)) {
           TLOG_DEBUG(7) << "Ignoring excluded DetectorStream " << dros->UID();
           continue;
         }
