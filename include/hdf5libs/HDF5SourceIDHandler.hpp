@@ -51,7 +51,7 @@ public:
   typedef std::map<daqdataformats::FragmentType, std::set<daqdataformats::SourceID>> fragment_type_source_id_map_t;
   typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
-  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session* session);
+  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session& session);
 
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.
