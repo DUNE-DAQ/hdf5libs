@@ -33,13 +33,13 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <sys/statvfs.h>
 #include <utility>
 #include <variant>
 #include <vector>
-#include <optional>
 
 namespace dunedaq {
 
@@ -61,8 +61,7 @@ ERS_DECLARE_ISSUE(hdf5libs,
 
 ERS_DECLARE_ISSUE(hdf5libs,
                   MissingFileLayout,
-                  "No DUNEDAQ FileLayout information available."
-                    << " Assigning version " << version,
+                  "No DUNEDAQ FileLayout information available." << " Assigning version " << version,
                   ((uint32_t)version)) // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs,
@@ -101,13 +100,20 @@ ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Attribute, "Attribute " << name << " not 
 
 ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " already exists.", ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
+ERS_DECLARE_ISSUE(hdf5libs,
+                  TimeSliceAlreadyExists,
+                  "The TimeSlice record for " << name << " already exists.",
+                  ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
-                  "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
+ERS_DECLARE_ISSUE(hdf5libs,
+                  InvalidFragmentTypeString,
+                  "Fragment type name \"" << name << "\" does not map to a valid type.",
+                  ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, InvalidSubdetectorString,
-                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.", ((std::string)name))
+ERS_DECLARE_ISSUE(hdf5libs,
+                  InvalidSubdetectorString,
+                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.",
+                  ((std::string)name))
 
 namespace hdf5libs {
 
@@ -253,19 +259,19 @@ public:
 
   HDF5SourceIDHandler::source_id_geo_id_map_t get_srcid_geoid_map() const;
 
-  //get a list of all the geo ids anywhere in the file
+  // get a list of all the geo ids anywhere in the file
   std::set<uint64_t> get_all_geo_ids() const; // NOLINT(build/unsigned)
 
-  //get GeoIDs in a record
+  // get GeoIDs in a record
   std::set<uint64_t> get_geo_ids(const record_id_t& rid); // NOLINT(build/unsigned)
-  std::set<uint64_t> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids(const uint64_t rec_num,  // NOLINT(build/unsigned)
                                  const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_geo_ids(std::make_pair(rec_num, seq_num));
   }
   std::set<uint64_t> get_geo_ids_for_subdetector(const record_id_t& rid, // NOLINT(build/unsigned)
                                                  const detdataformats::DetID::Subdetector subdet);
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const detdataformats::DetID::Subdetector subdet)
   {
@@ -277,7 +283,7 @@ public:
     detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
     return get_geo_ids_for_subdetector(rid, subdet);
   }
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const std::string& subdet_name)
   {
@@ -479,7 +485,10 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&,
+                                                            const char*,
+                                                            size_t,
+                                                            unsigned compression_level);
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
@@ -551,7 +560,7 @@ T
 HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
 {
   if (!m_file_ptr->hasAttribute(name)) {
-     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
+    TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
     return default_value;
   }
   auto attr = m_file_ptr->getAttribute(name);

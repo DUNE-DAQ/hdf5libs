@@ -69,7 +69,8 @@ struct HDF5FileLayoutParameters
   std::vector<HDF5PathParameters> path_params_list;
 
   HDF5FileLayoutParameters() = default;
-  HDF5FileLayoutParameters(appmodel::HDF5FileLayoutParams const* from_conf) {
+  HDF5FileLayoutParameters(appmodel::HDF5FileLayoutParams const* from_conf)
+  {
     record_name_prefix = from_conf->get_record_name_prefix();
     digits_for_record_number = from_conf->get_digits_for_record_number();
     digits_for_sequence_number = from_conf->get_digits_for_sequence_number();
@@ -79,8 +80,7 @@ struct HDF5FileLayoutParameters
 
     for (auto& pp : from_conf->get_path_params_list()) {
       path_params_list.emplace_back(pp);
-    } 
-
+    }
   }
   HDF5FileLayoutParameters(nlohmann::json from_json)
   {
@@ -93,11 +93,11 @@ struct HDF5FileLayoutParameters
 
     for (auto& pp : from_json["path_param_list"]) {
       path_params_list.emplace_back(pp);
-    } 
-  
+    }
   }
 
-  nlohmann::json to_json() {
+  nlohmann::json to_json()
+  {
 
     nlohmann::json output;
 

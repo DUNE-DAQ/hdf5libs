@@ -100,7 +100,8 @@ main(int argc, char** argv)
 
   ss << "\nFile name: " << h5_raw_data_file.get_file_name();
   ss << "\n\tRecorded size: " << h5_raw_data_file.get_recorded_size();
-  size_t uncompressed_raw_data_size = h5_raw_data_file.get_attribute_if_exists<size_t>("uncompressed_raw_data_size", h5_raw_data_file.get_recorded_size());
+  size_t uncompressed_raw_data_size = h5_raw_data_file.get_attribute_if_exists<size_t>(
+    "uncompressed_raw_data_size", h5_raw_data_file.get_recorded_size());
   ss << "\n\tUncompressed raw data size: " << uncompressed_raw_data_size;
 
   auto record_type = h5_raw_data_file.get_record_type();
@@ -284,12 +285,13 @@ main(int argc, char** argv)
           offset = sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs);
           offset += (tcptr->n_inputs * sizeof(TriggerActivityData));
           TriggerCandidate* tmp_tcptr =
-            reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
-          ss << "\n\t\t" << "Second TC type = " << get_trigger_candidate_type_names()[tmp_tcptr->data.type]
-             << " (" << static_cast<int>(tmp_tcptr->data.type) << "), TC algorithm = "
-             << static_cast<int>(tmp_tcptr->data.algorithm) << ", number of TAs = " << tmp_tcptr->n_inputs;
-          ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start << ", end time=" << tmp_tcptr->data.time_end
-             << ", and candidate time=" << tmp_tcptr->data.time_candidate;
+            reinterpret_cast<TriggerCandidate*>(offset + reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          ss << "\n\t\t" << "Second TC type = " << get_trigger_candidate_type_names()[tmp_tcptr->data.type] << " ("
+             << static_cast<int>(tmp_tcptr->data.type)
+             << "), TC algorithm = " << static_cast<int>(tmp_tcptr->data.algorithm)
+             << ", number of TAs = " << tmp_tcptr->n_inputs;
+          ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start
+             << ", end time=" << tmp_tcptr->data.time_end << ", and candidate time=" << tmp_tcptr->data.time_candidate;
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
@@ -320,11 +322,12 @@ main(int argc, char** argv)
           offset = sizeof(TriggerActivityData) + sizeof(taptr->n_inputs);
           offset += (taptr->n_inputs * sizeof(TriggerPrimitive));
           TriggerActivity* tmp_taptr =
-            reinterpret_cast<TriggerActivity*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
-          ss << "\n\t\t" << "Second TA type = " << static_cast<int>(tmp_taptr->data.type) << ", TA algorithm = "
-             << static_cast<int>(tmp_taptr->data.algorithm) << ", number of TPs = " << tmp_taptr->n_inputs;
-          ss << "\n\t\t" << "Second TA start time=" << tmp_taptr->data.time_start << ", end time=" << tmp_taptr->data.time_end
-             << ", and activity time=" << tmp_taptr->data.time_activity;
+            reinterpret_cast<TriggerActivity*>(offset + reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          ss << "\n\t\t" << "Second TA type = " << static_cast<int>(tmp_taptr->data.type)
+             << ", TA algorithm = " << static_cast<int>(tmp_taptr->data.algorithm)
+             << ", number of TPs = " << tmp_taptr->n_inputs;
+          ss << "\n\t\t" << "Second TA start time=" << tmp_taptr->data.time_start
+             << ", end time=" << tmp_taptr->data.time_end << ", and activity time=" << tmp_taptr->data.time_activity;
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
@@ -333,10 +336,8 @@ main(int argc, char** argv)
           std::cout << std::endl;
           std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
                     << std::endl
-                    << "       used a different version of the TriggerPrimitive data structure than this "
-                    << std::endl
-                    << "       application (built with the current version of the software) is expecting."
-                    << std::endl;
+                    << "       used a different version of the TriggerPrimitive data structure than this " << std::endl
+                    << "       application (built with the current version of the software) is expecting." << std::endl;
           std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
           std::cout << "(Expected TP version " << static_cast<int>(TriggerPrimitive::s_trigger_primitive_version)
                     << " and found version " << tpptr->version << ".)" << std::endl;
@@ -348,8 +349,7 @@ main(int argc, char** argv)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         ss << "\n\t\t"
-           << "First TP flag = " << static_cast<int>(tpptr->flag)
-           << ", TP detid = " << static_cast<int>(tpptr->detid);
+           << "First TP flag = " << static_cast<int>(tpptr->flag) << ", TP detid = " << static_cast<int>(tpptr->detid);
         ss << "\n\t\t"
            << "First TP start time=" << tpptr->time_start << ", samples to peak=" << tpptr->samples_to_peak
            << ", and samples over threshold=" << tpptr->samples_over_threshold;

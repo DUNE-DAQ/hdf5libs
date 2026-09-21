@@ -146,18 +146,16 @@ create_timeslice(int ts_num)
   return ts;
 }
 
-struct FileWriteFixture 
+struct FileWriteFixture
 {
-  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0) 
-    : timeslice_count(num_slices), 
-      compression_level(comp_lvl),
-      file_path(std::filesystem::temp_directory_path()),
-      hdf5_filename(
-        "demo" + std::to_string(getpid()) + "_" 
-        + std::string(getenv("USER")) + "_comp" 
-        + std::to_string(compression_level) + ".hdf5"),
-      fl_pars(create_file_layout_params()),
-      recorded_size_at_write(0)
+  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0)
+    : timeslice_count(num_slices)
+    , compression_level(comp_lvl)
+    , file_path(std::filesystem::temp_directory_path())
+    , hdf5_filename("demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + "_comp" +
+                    std::to_string(compression_level) + ".hdf5")
+    , fl_pars(create_file_layout_params())
+    , recorded_size_at_write(0)
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
 
@@ -175,7 +173,6 @@ struct FileWriteFixture
                                                                     srcid_geoid_map,
                                                                     compression_level));
 
-
     // write several events, each with several fragments
     for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
       h5file_ptr->write(create_timeslice(timeslice_number));
@@ -186,15 +183,12 @@ struct FileWriteFixture
     h5file_ptr.reset(); // explicit destruction
   }
 
-  ~FileWriteFixture() 
-  {
-    delete_files_matching_pattern(file_path, hdf5_filename);
-  }
+  ~FileWriteFixture() { delete_files_matching_pattern(file_path, hdf5_filename); }
 
   void read_file_attributes()
   {
     // open file for reading now
-    //std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
+    // std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
     // check attributes
@@ -216,8 +210,9 @@ struct FileWriteFixture
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
-    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
-    else {
+    if (this->compression_level == 0) {
+      uncompressed_raw_data_size = recorded_size_at_write;
+    } else {
       compressed_raw_data_size = recorded_size_at_write;
       BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
     }
@@ -366,37 +361,37 @@ struct FileWriteFixture
 
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTimeSlice_test)
 
-BOOST_AUTO_TEST_CASE(ReadFileAttributes) 
+BOOST_AUTO_TEST_CASE(ReadFileAttributes)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileDatasets) 
+BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_datasets();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_datasets();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileMaxSequence) 
+BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_max_sequence();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_max_sequence();

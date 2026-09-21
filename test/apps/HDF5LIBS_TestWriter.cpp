@@ -81,10 +81,10 @@ main(int argc, char** argv)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // Read src-geo id map
-  //std::ifstream f(hw_map_file_name);
-  //nlohmann::json data = nlohmann::json::parse(f);
+  // std::ifstream f(hw_map_file_name);
+  // nlohmann::json data = nlohmann::json::parse(f);
 
-  //auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
+  // auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map;
 
   // open our file for writing
