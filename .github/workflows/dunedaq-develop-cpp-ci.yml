@@ -28,6 +28,6 @@ on:
 jobs:
   build_develop_dispatch:
     name: Build against the development release
-    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@dependabot/github_actions/cvmfs-contrib/github-action-cvmfs-d79d292a9fc4a1d34fe5caa390308d0ec4ffe993
+    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@dependabot/github_actions/cvmfs-contrib/github-action-cvmfs-72f2a8d366043978d6aebee154bc9ed321c2f2a8
     with:
       caller_event_name: ${{ github.event.inputs.caller_event_name || github.event_name }}
