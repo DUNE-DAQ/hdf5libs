@@ -101,8 +101,6 @@ ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Attribute, "Attribute " << name << " not 
 
 ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " already exists.", ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
-
 ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
                   "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
 
@@ -149,6 +147,7 @@ public:
   ~HDF5RawDataFile();
 
   std::string get_file_name() const { return m_file_ptr->getName(); }
+  std::string get_file_name_extension() const { return "hdf5"; }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
@@ -451,6 +450,11 @@ public:
 
   daqdataformats::SourceID get_source_id_for_geo_id(const record_id_t& rid,
                                                     const uint64_t geo_id); // NOLINT(build/unsigned)
+
+  bool timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const {
+    const std::string& timeslice_header_path { m_file_layout_ptr->get_path_string(timeslice.get_header()) };
+    return m_file_ptr->exist(timeslice_header_path);
+  }
 
 private:
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
