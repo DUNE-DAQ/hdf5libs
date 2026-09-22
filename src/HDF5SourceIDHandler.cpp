@@ -7,11 +7,11 @@
 
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 
+#include "appmodel/ReadoutApplication.hpp"
 #include "confmodel/Application.hpp"
 #include "confmodel/DetectorStream.hpp"
 #include "confmodel/DetectorToDaqConnection.hpp"
 #include "confmodel/GeoId.hpp"
-#include "appmodel/ReadoutApplication.hpp"
 
 #include "logging/Logging.hpp"
 #include <nlohmann/json.hpp>

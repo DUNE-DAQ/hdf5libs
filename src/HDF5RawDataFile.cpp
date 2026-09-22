@@ -75,7 +75,7 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_file_layout();
 
   // write the SourceID-related attributes
-  //HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
+  // HDF5SourceIDHandler::populate_source_id_geo_id_map(srcid_geoid_map, m_file_level_source_id_geo_id_map);
   m_file_level_source_id_geo_id_map = srcid_geoid_map;
   HDF5SourceIDHandler::store_file_level_geo_id_info(*m_file_ptr, m_file_level_source_id_geo_id_map);
 
@@ -87,25 +87,24 @@ HDF5RawDataFile::HDF5RawDataFile(std::string file_name,
   write_attribute("compression_level", m_compression_level);
 }
 
-
 HDF5RawDataFile::~HDF5RawDataFile()
 {
   if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    if (! m_file_ptr->hasAttribute("recorded_size")) {
+    if (!m_file_ptr->hasAttribute("recorded_size")) {
       write_attribute("recorded_size", m_recorded_size);
     }
 
-    if (! m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
+    if (!m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
       write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
     }
 
-    if (! m_file_ptr->hasAttribute("total_file_size")) {
+    if (!m_file_ptr->hasAttribute("total_file_size")) {
       write_attribute("total_file_size", m_total_file_size);
     }
 
-    if (! m_file_ptr->hasAttribute("closing_timestamp")) {
+    if (!m_file_ptr->hasAttribute("closing_timestamp")) {
       size_t file_closing_timestamp =
-	std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+        std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
       write_attribute("closing_timestamp", file_closing_timestamp);
     }
 
@@ -180,7 +179,9 @@ void
 HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
 {
   std::string tsh_path = m_file_layout_ptr->get_path_string(ts.get_header());
-  if (m_file_ptr->exist(tsh_path)) {throw TimeSliceAlreadyExists(ERS_HERE, tsh_path);}
+  if (m_file_ptr->exist(tsh_path)) {
+    throw TimeSliceAlreadyExists(ERS_HERE, tsh_path);
+  }
 
   // the source_id_path map that we will build up as we write the TR header
   // and fragments (and then write the map into the HDF5 TR_record Group)
@@ -241,11 +242,10 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecordHeader& trh,
 HighFive::Group
 HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-  std::tuple<size_t, std::string, HighFive::Group> write_results =
-    do_write(m_file_layout_ptr->get_path_elements(tsh), 
-            (const char*)(&tsh), 
-            sizeof(daqdataformats::TimeSliceHeader), 
-            m_compression_level);
+  std::tuple<size_t, std::string, HighFive::Group> write_results = do_write(m_file_layout_ptr->get_path_elements(tsh),
+                                                                            (const char*)(&tsh),
+                                                                            sizeof(daqdataformats::TimeSliceHeader),
+                                                                            m_compression_level);
   m_recorded_size += std::get<0>(write_results);
   HDF5SourceIDHandler::add_source_id_path_to_map(path_map, tsh.element_id, std::get<1>(write_results));
   return std::get<2>(write_results);
@@ -325,7 +325,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   HighFive::DataSetAccessProps data_set_access_props;
 
   if (compression_level > 0) {
-    std::vector<hsize_t> chunk_size = {raw_data_size_bytes, 1}; 
+    std::vector<hsize_t> chunk_size = { raw_data_size_bytes, 1 };
     data_set_create_props.add(HighFive::Chunking(chunk_size));
     data_set_create_props.add(HighFive::Deflate(compression_level));
   }
@@ -350,7 +350,9 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 HDF5RawDataFile::HDF5RawDataFile(const std::string& file_name, bool allow_writing)
   : m_open_flags(HighFive::File::ReadOnly)
 {
-  if (allow_writing) {m_open_flags = HighFive::File::ReadWrite;}
+  if (allow_writing) {
+    m_open_flags = HighFive::File::ReadWrite;
+  }
   m_bare_file_name = file_name;
   size_t pos = m_bare_file_name.rfind(s_inprogress_suffix);
   if (pos != std::string::npos) {
@@ -883,7 +885,8 @@ HDF5RawDataFile::get_source_ids(std::vector<std::string> const& frag_dataset_pat
 #endif
 
 HDF5SourceIDHandler::source_id_geo_id_map_t
-HDF5RawDataFile::get_srcid_geoid_map() const {
+HDF5RawDataFile::get_srcid_geoid_map() const
+{
 
   return m_file_level_source_id_geo_id_map;
 }
@@ -893,7 +896,7 @@ HDF5RawDataFile::get_all_geo_ids() const
 {
   std::set<uint64_t> set_of_geo_ids;
   // 13-Sep-2022, KAB
-  // It would be safer, but slower, to fetch all of the geo_ids from the 
+  // It would be safer, but slower, to fetch all of the geo_ids from the
   // individual records, and we'll go with faster, for now.  If/when we
   // change the way that we determine the file-level and record-level
   // source_id-to-geo_id maps, we may need to change this code.
@@ -924,8 +927,7 @@ HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
 }
 
 std::set<uint64_t> // NOLINT(build/unsigned)
-HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
-                                             const detdataformats::DetID::Subdetector subdet)
+HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
   auto rec_id = get_all_record_ids().find(rid);
   if (rec_id == get_all_record_ids().end())
@@ -946,7 +948,6 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid,
   }
   return set_of_geo_ids;
 }
-
 
 // get all SourceIDs for given record ID
 std::set<daqdataformats::SourceID>

@@ -13,10 +13,10 @@
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
 
-#include <vector>
-#include <string>
 #include <filesystem>
 #include <regex>
+#include <string>
+#include <vector>
 
 namespace dunedaq {
 
