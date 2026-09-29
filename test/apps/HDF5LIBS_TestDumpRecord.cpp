@@ -285,12 +285,13 @@ main(int argc, char** argv)
           offset = sizeof(TriggerCandidateData) + sizeof(tcptr->n_inputs);
           offset += (tcptr->n_inputs * sizeof(TriggerActivityData));
           TriggerCandidate* tmp_tcptr =
-            reinterpret_cast<TriggerCandidate*>(offset+reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
-          ss << "\n\t\t" << "Second TC type = " << trigger_candidate_type_to_string(tmp_tcptr->data.type)
-             << " (" << static_cast<int>(tmp_tcptr->data.type) << "), TC algorithm = "
-             << static_cast<int>(tmp_tcptr->data.algorithm) << ", number of TAs = " << tmp_tcptr->n_inputs;
-          ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start << ", end time=" << tmp_tcptr->data.time_end
-             << ", and candidate time=" << tmp_tcptr->data.time_candidate;
+            reinterpret_cast<TriggerCandidate*>(offset + reinterpret_cast<uint8_t*>(frag_ptr->get_data()));
+          ss << "\n\t\t" << "Second TC type = " << trigger_candidate_type_to_string(tmp_tcptr->data.type) << " ("
+             << static_cast<int>(tmp_tcptr->data.type)
+             << "), TC algorithm = " << static_cast<int>(tmp_tcptr->data.algorithm)
+             << ", number of TAs = " << tmp_tcptr->n_inputs;
+          ss << "\n\t\t" << "Second TC start time=" << tmp_tcptr->data.time_start
+             << ", end time=" << tmp_tcptr->data.time_end << ", and candidate time=" << tmp_tcptr->data.time_candidate;
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
