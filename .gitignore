@@ -2,3 +2,7 @@
 
 # clang formatting temporary files
 .clang-format*
+
+# Python bytecode
+__pycache__/
+*.pyc
