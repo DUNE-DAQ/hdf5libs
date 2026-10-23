@@ -88,6 +88,17 @@ ERS_DECLARE_ISSUE(hdf5libs,
                   "Record ID with record number=" << rec_num << " and sequence number=" << seq_num << " not found.",
                   ((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  SourceIDNotFound,
+                  "SourceID " << source_id << " not found in record with record number=" << rec_num
+                              << " and sequence number=" << seq_num << ".",
+                  ((std::string)source_id)((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
+
+ERS_DECLARE_ISSUE(hdf5libs,
+                  FileCloseFailed,
+                  "Issue when closing file " << file << ": " << message,
+                  ((std::string)file)((std::string)message))
+
 ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Group, "Group " << name << " is invalid.", ((std::string)name))
 
 ERS_DECLARE_ISSUE(hdf5libs,
@@ -133,7 +144,9 @@ public:
 
   inline static const std::string s_inprogress_suffix = ".writing";
 
-  // constructor for writing
+  // constructor for writing. By default the file is created exclusively: if a file with the
+  // in-progress name already exists (e.g. left over from a crash), the open fails with
+  // FileOpenFailed and the existing file is left untouched, never appended to or overwritten.
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
@@ -142,15 +155,23 @@ public:
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                   unsigned compression_level = 0,
                   std::string inprogress_filename_suffix = s_inprogress_suffix,
-                  unsigned open_flags = HighFive::File::Create);
+                  unsigned open_flags = HighFive::File::Excl);
 
   // constructor for reading and optional writing
   explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
+  // Calls close(); any failure is reported with ers::error, since a destructor must not throw
   ~HDF5RawDataFile();
 
-  std::string get_file_name() const { return m_file_ptr->getName(); }
-  std::string get_file_name_extension() const { return "hdf5"; }
+  // Finalizes the file: for a writable file, writes the closing attributes, flushes, closes it,
+  // and renames it to drop the in-progress suffix. The underlying file is always released, even
+  // when this throws, so a failed close is never retried. Calling it again is a no-op.
+  // Apart from get_file_name(), no other member function may be used after close().
+  void close();
+
+  // The name of the file on disk: the in-progress name while open, the final name once closed
+  std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_bare_file_name; }
+  static std::string get_file_name_extension() { return "hdf5"; }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
@@ -499,6 +520,9 @@ private:
 
   // adds record-level information to caches, if needed
   void add_record_level_info_to_caches_if_needed(record_id_t rid);
+
+  // dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent
+  const std::string& get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const;
 
   // caches of full-file and record-specific information
   record_id_set m_all_record_ids_in_file;

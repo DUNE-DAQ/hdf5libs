@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <regex>
 #include <string>
@@ -463,6 +464,22 @@ struct FileWriteFixture
     BOOST_REQUIRE(trigger_number > 0xffffffff);
   }
 
+  void read_unknown_source_id()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    dunedaq::daqdataformats::SourceID unknown_sid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout,
+                                                      9999 };
+    BOOST_REQUIRE_THROW(h5file_ptr->get_frag_ptr(1, 0, unknown_sid), dunedaq::hdf5libs::SourceIDNotFound);
+    BOOST_REQUIRE(h5file_ptr->get_geo_ids_for_source_id(std::make_pair(1, 0), unknown_sid).empty());
+
+    // the failed lookups must not have disturbed the record's contents
+    BOOST_REQUIRE_EQUAL(h5file_ptr->get_fragment_source_ids(1, 0).size(), components_per_record);
+    dunedaq::daqdataformats::SourceID known_sid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    BOOST_REQUIRE_EQUAL(h5file_ptr->get_frag_ptr(1, 0, known_sid)->get_element_id().id, 1);
+  }
+
   uint64_t trigger_count;
   uint64_t trigger_number;
   unsigned compression_level;
@@ -521,6 +538,73 @@ BOOST_AUTO_TEST_CASE(CompressedLargeTriggerRecordNumbers)
 {
   FileWriteFixture fixture(5, 1, 2000000000);
   fixture.read_write_large_trigger_numbers();
+}
+
+BOOST_AUTO_TEST_CASE(UnknownSourceID)
+{
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_unknown_source_id();
+}
+
+BOOST_AUTO_TEST_CASE(ExplicitClose)
+{
+  const std::string file_path(std::filesystem::temp_directory_path());
+  const std::string bare_filename =
+    file_path + "/close_test" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+  std::filesystem::remove(inprogress_filename);
+
+  HDF5RawDataFile h5file(
+    bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map());
+  h5file.write(create_trigger_record(1));
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), inprogress_filename);
+  BOOST_REQUIRE(std::filesystem::exists(inprogress_filename));
+
+  h5file.close();
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), bare_filename);
+  BOOST_REQUIRE(std::filesystem::exists(bare_filename));
+  BOOST_REQUIRE(!std::filesystem::exists(inprogress_filename));
+
+  // a second close, and the destructor's close, are no-ops
+  BOOST_REQUIRE_NO_THROW(h5file.close());
+
+  // the closing attributes were written
+  HDF5RawDataFile reader(bare_filename);
+  BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
+  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1);
+  reader.close();
+
+  std::filesystem::remove(bare_filename);
+}
+
+BOOST_AUTO_TEST_CASE(StaleInProgressFileIsNotReused)
+{
+  const std::string file_path(std::filesystem::temp_directory_path());
+  const std::string bare_filename =
+    file_path + "/stale_test" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+
+  // stand-in for a file left behind by a crashed writer
+  const std::string stale_contents = "left over from a crash";
+  {
+    std::ofstream stale_file(inprogress_filename);
+    stale_file << stale_contents;
+  }
+
+  BOOST_REQUIRE_THROW(
+    HDF5RawDataFile(
+      bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map()),
+    dunedaq::hdf5libs::FileOpenFailed);
+
+  // the stale file must be untouched, and no final file created
+  std::ifstream stale_file(inprogress_filename);
+  std::string contents_after((std::istreambuf_iterator<char>(stale_file)), std::istreambuf_iterator<char>());
+  BOOST_REQUIRE_EQUAL(contents_after, stale_contents);
+  BOOST_REQUIRE(!std::filesystem::exists(bare_filename));
+
+  std::filesystem::remove(inprogress_filename);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
