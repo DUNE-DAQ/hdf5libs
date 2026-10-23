@@ -1,7 +1,11 @@
 /**
  * @file HDF5RawDataFile.hpp
  *
- * Class for reading out HDF5 files as
+ * DEPRECATED interface for reading and writing DUNE DAQ HDF5 files. New code should use
+ * rawdatafilelibs::open_raw_data_file() / create_raw_data_file() (RawDataFileReader and
+ * RawDataFileWriter), which work for any file format. HDF5RawDataFile is kept, unchanged in
+ * behaviour, for one release cycle; it is now implemented on top of those classes and the
+ * HDF5 backend (HDF5Backend.hpp).
  *
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
@@ -12,13 +16,22 @@
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5RAWDATAFILE_HPP_
 
 // DUNE-DAQ
+#include "hdf5libs/HDF5Backend.hpp"
 #include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 
+#include "rawdatafilelibs/FileMetadata.hpp"
+#include "rawdatafilelibs/RawDataFileReader.hpp"
+#include "rawdatafilelibs/RawDataFileWriter.hpp"
+
 #include "daqdataformats/Fragment.hpp"
+#include "daqdataformats/RecordID.hpp"
+#include "daqdataformats/SourceIDGeoIDMap.hpp"
 #include "daqdataformats/TimeSlice.hpp"
 #include "daqdataformats/TriggerRecord.hpp"
 #include "logging/Logging.hpp" // NOTE: if ISSUES ARE DECLARED BEFORE include logging/Logging.hpp, TLOG_DEBUG<<issue wont work.
+
+#include "hdf5libs/Issues.hpp"
 
 // External Packages
 #include <highfive/H5DataSet.hpp>
@@ -44,97 +57,29 @@
 
 namespace dunedaq {
 
-ERS_DECLARE_ISSUE(hdf5libs,
-                  DeprecatedUsage,
-                  func_name << " is deprecated. " << message,
-                  ((std::string)func_name)((std::string)message))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  FileOpenFailed,
-                  "Issue when opening file " << file << ": " << message,
-                  ((std::string)file)((std::string)message))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  IncompatibleOpenFlags,
-                  "Issue when opening file " << file << ": "
-                                             << "bad open flags " << open_flags,
-                  ((std::string)file)((unsigned)open_flags))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  MissingFileLayout,
-                  "No DUNEDAQ FileLayout information available." << " Assigning version " << version,
-                  ((uint32_t)version)) // NOLINT(build/unsigned)
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  IncompatibleFileLayoutVersion,
-                  "FileLayout version incompatibility. Found version " << version << " but min allowed version is "
-                                                                       << min_allowed << " and max allowed version is "
-                                                                       << max_allowed,
-                  ((uint32_t)version)((uint32_t)min_allowed)((uint32_t)max_allowed)) // NOLINT(build/unsigned)
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  BadRecordType,
-                  "Record type attribute " << rt_attr << " does not match file layout config record name prefix "
-                                           << rt_fl,
-                  ((std::string)rt_attr)((std::string)rt_fl))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  WrongRecordTypeRequested,
-                  "Record type requested " << rname << " does not match file layout config record name prefix "
-                                           << rt_fl,
-                  ((std::string)rname)((std::string)rt_fl))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  RecordIDNotFound,
-                  "Record ID with record number=" << rec_num << " and sequence number=" << seq_num << " not found.",
-                  ((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  SourceIDNotFound,
-                  "SourceID " << source_id << " not found in record with record number=" << rec_num
-                              << " and sequence number=" << seq_num << ".",
-                  ((std::string)source_id)((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  FileCloseFailed,
-                  "Issue when closing file " << file << ": " << message,
-                  ((std::string)file)((std::string)message))
-
-ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Group, "Group " << name << " is invalid.", ((std::string)name))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  InvalidHDF5Dataset,
-                  "The HDF5 Dataset associated with name \"" << data_set << "\" is invalid. (file = " << filename
-                                                             << ")",
-                  ((std::string)data_set)((std::string)filename))
-
-ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Attribute, "Attribute " << name << " not found.", ((std::string)name))
-
-ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " already exists.", ((std::string)name))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  InvalidFragmentTypeString,
-                  "Fragment type name \"" << name << "\" does not map to a valid type.",
-                  ((std::string)name))
-
-ERS_DECLARE_ISSUE(hdf5libs,
-                  InvalidSubdetectorString,
-                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.",
-                  ((std::string)name))
-
 namespace hdf5libs {
-
-// Renames a file without ever replacing an existing file at the new name, atomically (so a file
-// that appears at the new name concurrently is not replaced either). Uses renameat2 with
-// RENAME_NOREPLACE, or link() + unlink() on filesystems without it. Throws std::system_error
-// (code EEXIST if the new name exists); on failure the file keeps its old name.
-void
-rename_without_replacing(const std::string& from, const std::string& to);
 
 /**
  * @brief HDF5RawDataFile is the class responsible
  * for interfacing the DAQ format with the HDF5 file format.
+ *
+ * DEPRECATED: see the file comment. Differences from earlier releases:
+ *  - files are always created exclusively (open_flags other than Excl are ignored, with a warning);
+ *  - per-record GeoID functions (get_geo_ids(rid), get_geo_ids_for_subdetector(),
+ *    get_geo_ids_for_source_id(), get_source_id_for_geo_id()) only report GeoIDs of fragments
+ *    that are actually in the record;
+ *  - records of layout version <= 2 files are indexed by scanning their dataset paths, so the
+ *    SourceID-based functions work for them too;
+ *  - a file opened for writing can't use the record-reading functions (they throw FileOpenFailed);
+ *    attributes and dataset paths can still be read.
  */
+// Renames a file without ever replacing an existing file at the new name, atomically (so a file
+// that appears at the new name concurrently is not replaced either). The same as
+// rawdatafilelibs::rename_without_replacing: throws std::system_error (code EEXIST if the new
+// name exists); on failure the file keeps its old name.
+void
+rename_without_replacing(const std::string& from, const std::string& to);
+
 class HDF5RawDataFile
 {
 
@@ -155,8 +100,8 @@ public:
   // constructor for writing. By default the file is created exclusively: if a file with the
   // in-progress name already exists (e.g. left over from a crash), the open fails with
   // FileOpenFailed and the existing file is left untouched, never appended to or overwritten.
-  // With an in-progress suffix, a file that already has the final name is never replaced either:
-  // the open fails if it exists, and close() keeps the in-progress name if it appears meanwhile.
+  // A file that already has the final name is never replaced either: the open fails if it exists,
+  // and close() keeps the in-progress name if it appears meanwhile.
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
@@ -166,6 +111,15 @@ public:
                   unsigned compression_level = 0,
                   std::string inprogress_filename_suffix = s_inprogress_suffix,
                   unsigned open_flags = HighFive::File::Excl);
+
+  // constructor for writing, with the complete file metadata: besides the attributes written by the
+  // constructor above, this also writes operational_environment, offline_data_stream and
+  // run_was_for_test_purposes, and uses metadata.creation_timestamp_ms (0 means now)
+  HDF5RawDataFile(const std::string& file_name,
+                  const rawdatafilelibs::FileMetadata& metadata,
+                  const HDF5FileLayoutParameters& fl_params,
+                  const daqdataformats::SourceIDGeoIDMap& geo_id_map,
+                  const std::string& inprogress_filename_suffix = s_inprogress_suffix);
 
   // constructor for reading and optional writing
   explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
@@ -181,13 +135,14 @@ public:
   // Apart from get_file_name(), no other member function may be used after close().
   void close();
 
-  // The name of the file on disk: the in-progress name while open, the final name once closed
-  std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_closed_file_name; }
+  // The name of the file on disk: the in-progress name while open; after close(), the final name,
+  // or the in-progress name if close() could not rename the file
+  std::string get_file_name() const;
   static std::string get_file_name_extension() { return "hdf5"; }
 
-  size_t get_recorded_size() const noexcept { return m_recorded_size; }
-  size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
-  size_t get_total_file_size() const noexcept { return m_total_file_size; }
+  size_t get_recorded_size() const noexcept { return get_stats().recorded_size; }
+  size_t get_uncompressed_raw_data_size() const noexcept { return get_stats().uncompressed_raw_data_size; }
+  size_t get_total_file_size() const noexcept { return get_stats().total_file_size; }
   unsigned get_compression_level() const noexcept { return m_compression_level; }
 
   std::string get_record_type() const noexcept { return m_record_type; }
@@ -207,14 +162,6 @@ public:
   void write(const daqdataformats::TriggerRecord& tr);
   void write(const daqdataformats::TimeSlice& ts);
 
-private:
-  HighFive::Group write(const daqdataformats::TriggerRecordHeader& trh,
-                        HDF5SourceIDHandler::source_id_path_map_t& path_map);
-  HighFive::Group write(const daqdataformats::TimeSliceHeader& tsh,
-                        HDF5SourceIDHandler::source_id_path_map_t& path_map);
-  void write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map);
-
-public:
   // attribute writers/getters
   template<typename T>
   void write_attribute(std::string name, T value);
@@ -488,11 +435,7 @@ public:
   daqdataformats::SourceID get_source_id_for_geo_id(const record_id_t& rid,
                                                     const uint64_t geo_id); // NOLINT(build/unsigned)
 
-  bool timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const
-  {
-    const std::string& timeslice_header_path{ m_file_layout_ptr->get_path_string(timeslice.get_header()) };
-    return m_file_ptr->exist(timeslice_header_path);
-  }
+  bool timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const;
 
 private:
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
@@ -500,69 +443,50 @@ private:
   HDF5RawDataFile(HDF5RawDataFile&&) = delete;
   HDF5RawDataFile& operator=(HDF5RawDataFile&&) = delete;
 
-  std::unique_ptr<HighFive::File> m_file_ptr;
+  // the open reader or writer (at most one of them), and its HDF5 backend
+  std::unique_ptr<rawdatafilelibs::RawDataFileWriter> m_writer;
+  HDF5WriterBackend* m_writer_backend{ nullptr };
+  std::unique_ptr<rawdatafilelibs::RawDataFileReader> m_reader;
+  HDF5ReaderBackend* m_reader_backend{ nullptr };
+  bool m_allow_writing{ false }; // a file opened for reading that may be modified (and is finalized by close())
+
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   std::string m_bare_file_name;
-  std::string m_closed_file_name; // the file's name after close(): normally the bare name
-  unsigned m_compression_level;
-  unsigned m_open_flags;
-
-  // Total size of data being written
-  size_t m_recorded_size;
-  size_t m_uncompressed_raw_data_size;
-  size_t m_total_file_size;
+  std::string m_closed_file_name; // the file's name after close(); empty while open
+  unsigned m_compression_level{ 0 };
   std::string m_record_type;
+  daqdataformats::SourceIDGeoIDMap m_geo_id_map;
+  rawdatafilelibs::FileStats m_final_stats; // the stats once the file is closed, or as read from the file
 
-  // file layout writing/reading
-  void write_file_layout();
-  void read_file_layout();
-  void check_file_layout();
+  void open_for_writing(const std::string& file_name,
+                        rawdatafilelibs::FileMetadata metadata,
+                        const HDF5FileLayoutParameters& fl_params,
+                        const std::string& inprogress_filename_suffix,
+                        bool write_run_context_attributes);
+
+  rawdatafilelibs::FileStats get_stats() const noexcept;
+
+  // the open HighFive file; throws FileOpenFailed after close()
+  HighFive::File& get_h5_file() const;
+
+  // the reader; throws FileOpenFailed if the file was opened for writing, or after close()
+  rawdatafilelibs::RawDataFileReader& get_reader() const;
+  HDF5ReaderBackend& get_reader_backend() const;
 
   // checking function
   void check_record_type(std::string);
 
-  // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&,
-                                                            const char*,
-                                                            size_t,
-                                                            unsigned compression_level);
-
-  // unpacking groups when reading
-  void explore_subgroup(const HighFive::Group& parent_group,
-                        std::string relative_path,
-                        std::vector<std::string>& path_list);
-
-  // adds record-level information to caches, if needed
-  void add_record_level_info_to_caches_if_needed(record_id_t rid);
-
-  // a dataset read into a buffer allocated with std::malloc, which a Fragment can take over
-  struct FreeDeleter
-  {
-    void operator()(void* ptr) const noexcept { std::free(ptr); } // NOLINT(cppcoreguidelines-no-malloc)
-  };
-  using malloc_buffer_t = std::unique_ptr<char[], FreeDeleter>; // NOLINT(modernize-avoid-c-arrays)
-  malloc_buffer_t get_dataset_raw_data_malloc(const std::string& dataset_path);
-
-  // the dataset at dataset_path; throws InvalidHDF5Dataset if it isn't valid
-  HighFive::DataSet get_valid_dataset(const std::string& dataset_path);
-
   // throws RecordIDNotFound if the record is not in the file
   void throw_if_record_id_not_found(const record_id_t& rid);
 
-  // dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent
-  const std::string& get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const;
+  // the record's index (as stored in the file); throws RecordIDNotFound
+  const daqdataformats::RecordIndex& get_index(const record_id_t& rid);
 
-  // caches of full-file and record-specific information
+  // the GeoID map restricted to the fragments in the record; throws RecordIDNotFound
+  daqdataformats::SourceIDGeoIDMap get_record_geo_id_map(const record_id_t& rid);
+
+  // caches of full-file information
   record_id_set m_all_record_ids_in_file;
-  HDF5SourceIDHandler::source_id_geo_id_map_t m_file_level_source_id_geo_id_map;
-  std::map<record_id_t, std::set<daqdataformats::SourceID>> m_source_id_cache;
-  std::map<record_id_t, daqdataformats::SourceID> m_record_header_source_id_cache;
-  std::map<record_id_t, std::set<daqdataformats::SourceID>> m_fragment_source_id_cache;
-  std::map<record_id_t, HDF5SourceIDHandler::source_id_path_map_t> m_source_id_path_cache;
-  std::map<record_id_t, HDF5SourceIDHandler::source_id_geo_id_map_t> m_source_id_geo_id_cache;
-  std::map<record_id_t, HDF5SourceIDHandler::subsystem_source_id_map_t> m_subsystem_source_id_cache;
-  std::map<record_id_t, HDF5SourceIDHandler::fragment_type_source_id_map_t> m_fragment_type_source_id_cache;
-  std::map<record_id_t, HDF5SourceIDHandler::subdetector_source_id_map_t> m_subdetector_source_id_cache;
 };
 
 // HDF5RawDataFile attribute writers/getters definitions
@@ -570,8 +494,8 @@ template<typename T>
 void
 HDF5RawDataFile::write_attribute(std::string name, T value)
 {
-  if (!m_file_ptr->hasAttribute(name))
-    m_file_ptr->createAttribute(name, value);
+  if (!get_h5_file().hasAttribute(name))
+    get_h5_file().createAttribute(name, value);
   else
     ers::warning(HDF5AttributeExists(ERS_HERE, name));
 }
@@ -600,10 +524,10 @@ template<typename T>
 T
 HDF5RawDataFile::get_attribute(const std::string& name)
 {
-  if (!m_file_ptr->hasAttribute(name)) {
+  if (!get_h5_file().hasAttribute(name)) {
     throw InvalidHDF5Attribute(ERS_HERE, name);
   }
-  auto attr = m_file_ptr->getAttribute(name);
+  auto attr = get_h5_file().getAttribute(name);
   T value;
   attr.read(value);
   return value;
@@ -613,11 +537,11 @@ template<typename T>
 T
 HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
 {
-  if (!m_file_ptr->hasAttribute(name)) {
+  if (!get_h5_file().hasAttribute(name)) {
     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
     return default_value;
   }
-  auto attr = m_file_ptr->getAttribute(name);
+  auto attr = get_h5_file().getAttribute(name);
   T value;
   attr.read(value);
   TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" found. Value: " << value;

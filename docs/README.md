@@ -1,5 +1,12 @@
 ## Overview
 
+> **Note:** `hdf5libs` is now the HDF5 backend of [_rawdatafilelibs_](https://github.com/DUNE-DAQ/rawdatafilelibs), the format-independent
+> raw data file library. New code should read and write files with `rawdatafilelibs::open_raw_data_file()` and
+> `rawdatafilelibs::create_raw_data_file()`, which load the `hdf5` backend plugin (`HDF5ReaderBackend`/`HDF5WriterBackend`
+> in `HDF5Backend.hpp`) for `*.hdf5` files, and should iterate over SourceIDs rather than HDF5 dataset paths.
+> `HDF5RawDataFile` is **deprecated** and kept for one release cycle, implemented on top of those classes; see
+> `HDF5RawDataFile.hpp` for the few ways its behaviour has changed. The on-disk layout (version 7) is unchanged.
+
 The _hdflibs_ repository contains the classes that are used for interfacing between _dunedaq_ data applications (writers and readers) and the [HighFive](https://github.com/BlueBrain/HighFive) library to read/write HDF5 files. 
 
 There are two main classes in use:

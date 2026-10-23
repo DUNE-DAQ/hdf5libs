@@ -64,7 +64,7 @@ def main():
             print(f"{record_header_dataset}: {tsh.timeslice_number}")
 
         #loop through fragment datasets
-        for gid in h5_file.get_geo_ids(rid)[:10]:
+        for gid in sorted(h5_file.get_geo_ids(rid))[:10]:
             print(gid)
             frag = h5_file.get_frag(rid,gid)
             print(f"\tFragment (rec_num,seq_num)=({frag.get_trigger_number()},{frag.get_sequence_number()})")

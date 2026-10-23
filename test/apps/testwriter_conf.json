@@ -5,6 +5,8 @@
     "digits_for_record_number": 6,
     "digits_for_sequence_number": 4,
     "record_header_dataset_name": "TriggerRecordHeader",
+    "raw_data_group_name": "RawData",
+    "view_group_name": "Views",
 
     "path_param_list":[ ]
   },

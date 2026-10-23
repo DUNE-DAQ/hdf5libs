@@ -13,18 +13,12 @@
 #include "confmodel/DetectorToDaqConnection.hpp"
 #include "confmodel/GeoId.hpp"
 
+#include "detdataformats/GeoID.hpp"
 #include "logging/Logging.hpp"
 #include <nlohmann/json.hpp>
 
 namespace dunedaq {
 namespace hdf5libs {
-
-uint64_t
-encode_geoid(int det_id, int crate_id, int slot_id, int stream_id)
-{
-  return (static_cast<uint64_t>(stream_id) << 48) | (static_cast<uint64_t>(slot_id) << 32) |
-         (static_cast<uint64_t>(crate_id) << 16) | det_id;
-}
 
 HDF5SourceIDHandler::source_id_geo_id_map_t
 HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session& session)
@@ -60,7 +54,11 @@ HDF5SourceIDHandler::make_source_id_geo_id_map(const confmodel::Session& session
           continue;
         auto geoid = stream->get_geo_id();
         auto geoid_int =
-          encode_geoid(geoid->get_detector_id(), geoid->get_crate_id(), geoid->get_slot_id(), geoid->get_stream_id());
+          detdataformats::GeoID(static_cast<detdataformats::DetID::Subdetector>(geoid->get_detector_id()),
+                                static_cast<uint16_t>(geoid->get_crate_id()),  // NOLINT(build/unsigned)
+                                static_cast<uint16_t>(geoid->get_slot_id()),   // NOLINT(build/unsigned)
+                                static_cast<uint16_t>(geoid->get_stream_id())) // NOLINT(build/unsigned)
+            .encode();
         daqdataformats::SourceID sid;
         sid.subsystem = daqdataformats::SourceID::Subsystem::kDetectorReadout;
         sid.id = stream->get_source_id();

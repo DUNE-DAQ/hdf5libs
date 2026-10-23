@@ -156,6 +156,26 @@ HDF5FileLayout::get_path_elements(const daqdataformats::FragmentHeader& fh) cons
   return path_elements;
 }
 
+std::vector<std::string>
+HDF5FileLayout::get_record_header_path_elements(const daqdataformats::RecordID& record_id,
+                                                const daqdataformats::SourceID& header_source_id) const
+{
+  // TimeSlice layouts have no sequence-number digits, so the sequence number is ignored for them
+  return { get_record_number_string(record_id.number, record_id.sequence),
+           m_conf_params.raw_data_group_name,
+           header_source_id.to_string() + "_" + m_conf_params.record_header_dataset_name };
+}
+
+std::vector<std::string>
+HDF5FileLayout::get_fragment_path_elements(const daqdataformats::RecordID& record_id,
+                                           const daqdataformats::SourceID& source_id,
+                                           daqdataformats::FragmentType fragment_type) const
+{
+  return { get_record_number_string(record_id.number, record_id.sequence),
+           m_conf_params.raw_data_group_name,
+           source_id.to_string() + "_" + daqdataformats::fragment_type_to_string(fragment_type) };
+}
+
 /**
  * @brief get the path for the TimeSliceHeader as a single string
  */

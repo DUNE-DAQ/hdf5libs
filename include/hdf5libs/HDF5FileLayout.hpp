@@ -17,6 +17,7 @@
 #include "hdf5libs/HDF5FileLayoutParameters.hpp"
 
 #include "daqdataformats/Fragment.hpp"
+#include "daqdataformats/RecordID.hpp"
 #include "daqdataformats/SourceID.hpp"
 #include "daqdataformats/TimeSliceHeader.hpp"
 #include "daqdataformats/TriggerRecordHeader.hpp"
@@ -126,6 +127,21 @@ public:
    * @brief get the correct path for the Fragment
    */
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const;
+
+  /**
+   * @brief the path for a record header, from the record's ID and the header's SourceID.
+   * Gives the same path as the TriggerRecordHeader and TimeSliceHeader versions above.
+   */
+  std::vector<std::string> get_record_header_path_elements(const daqdataformats::RecordID& record_id,
+                                                           const daqdataformats::SourceID& header_source_id) const;
+
+  /**
+   * @brief the path for a fragment, from its record's ID, its SourceID and its type.
+   * Gives the same path as the FragmentHeader version above, for a fragment of that record.
+   */
+  std::vector<std::string> get_fragment_path_elements(const daqdataformats::RecordID& record_id,
+                                                      const daqdataformats::SourceID& source_id,
+                                                      daqdataformats::FragmentType fragment_type) const;
 
   /**
    * @brief get the path for the TimeSliceHeader as a single string (e.g. /a/b/c)
