@@ -28,6 +28,7 @@
 #include <nlohmann/json.hpp>
 
 // System
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -521,6 +522,17 @@ private:
 
   // adds record-level information to caches, if needed
   void add_record_level_info_to_caches_if_needed(record_id_t rid);
+
+  // a dataset read into a buffer allocated with std::malloc, which a Fragment can take over
+  struct FreeDeleter
+  {
+    void operator()(void* ptr) const noexcept { std::free(ptr); } // NOLINT(cppcoreguidelines-no-malloc)
+  };
+  using malloc_buffer_t = std::unique_ptr<char[], FreeDeleter>; // NOLINT(modernize-avoid-c-arrays)
+  malloc_buffer_t get_dataset_raw_data_malloc(const std::string& dataset_path);
+
+  // the dataset at dataset_path; throws InvalidHDF5Dataset if it isn't valid
+  HighFive::DataSet get_valid_dataset(const std::string& dataset_path);
 
   // throws RecordIDNotFound if the record is not in the file
   void throw_if_record_id_not_found(const record_id_t& rid);

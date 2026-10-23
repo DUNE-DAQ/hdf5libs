@@ -10,9 +10,11 @@
 #include "logging/Logging.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <new>
 #include <set>
 #include <sstream>
 #include <string>
@@ -1080,8 +1082,8 @@ HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const de
   return value_or_empty(m_subdetector_source_id_cache[rid], subdet);
 }
 
-std::unique_ptr<char[]>
-HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
+HighFive::DataSet
+HDF5RawDataFile::get_valid_dataset(const std::string& dataset_path)
 {
   HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
@@ -1089,6 +1091,13 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
   if (!data_set.isValid())
     throw InvalidHDF5Dataset(ERS_HERE, dataset_path, get_file_name());
 
+  return data_set;
+}
+
+std::unique_ptr<char[]>
+HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
+{
+  HighFive::DataSet data_set = get_valid_dataset(dataset_path);
   size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
 
   auto membuffer = std::make_unique<char[]>(data_size);
@@ -1097,10 +1106,27 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
   return membuffer;
 }
 
+HDF5RawDataFile::malloc_buffer_t
+HDF5RawDataFile::get_dataset_raw_data_malloc(const std::string& dataset_path)
+{
+  HighFive::DataSet data_set = get_valid_dataset(dataset_path);
+  size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
+
+  // malloc(0) may return nullptr; always allocate at least one byte
+  malloc_buffer_t membuffer(static_cast<char*>(std::malloc(data_size > 0 ? data_size : 1))); // NOLINT
+  if (membuffer == nullptr) {
+    throw std::bad_alloc();
+  }
+
+  data_set.read(membuffer.get());
+  return membuffer;
+}
+
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
-  auto membuffer = get_dataset_raw_data(dataset_name);
+  // Fragment frees an adopted buffer with free(), so the buffer must come from malloc
+  auto membuffer = get_dataset_raw_data_malloc(dataset_name);
   auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
     membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
   return frag_ptr;
@@ -1189,7 +1215,8 @@ std::unique_ptr<daqdataformats::TriggerRecordHeader>
 HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
-  auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.release(), true);
+  // the header copies the buffer, which is then freed by membuffer
+  auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.get(), true);
   return trh_ptr;
 }
 
