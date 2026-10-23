@@ -224,7 +224,8 @@ public:
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
-  record_id_set get_all_record_ids();
+  // the returned set is owned by this object and cached on first use
+  const record_id_set& get_all_record_ids();
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
 
@@ -520,6 +521,9 @@ private:
 
   // adds record-level information to caches, if needed
   void add_record_level_info_to_caches_if_needed(record_id_t rid);
+
+  // throws RecordIDNotFound if the record is not in the file
+  void throw_if_record_id_not_found(const record_id_t& rid);
 
   // dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent
   const std::string& get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const;
