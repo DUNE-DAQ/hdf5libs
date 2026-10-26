@@ -16,6 +16,8 @@
 #include <highfive/H5Group.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <cctype>
 #include <exception>
 #include <map>
 #include <memory>
@@ -219,17 +221,24 @@ HDF5ReaderBackend::read_record_ids()
   // records are the top-level groups named <prefix><number>[.<sequence>]
   std::set<RecordID> record_ids;
   const std::string record_prefix = m_file_layout->get_record_name_prefix();
+  auto all_digits = [](const std::string& text) {
+    return !text.empty() && std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c); });
+  };
   for (auto const& name : m_file->listObjectNames()) {
-    auto loc = name.find(record_prefix);
-    if (loc == std::string::npos) {
+    // the whole name must be the prefix followed by digits, optionally "." and more digits
+    if (name.rfind(record_prefix, 0) != 0) {
       continue;
     }
-    std::string number_string = name.substr(loc + record_prefix.size());
+    std::string number_string = name.substr(record_prefix.size());
     std::string sequence_string = "0";
     auto dot = number_string.find('.');
     if (dot != std::string::npos) {
       sequence_string = number_string.substr(dot + 1);
       number_string.resize(dot);
+    }
+    if (!all_digits(number_string) || !all_digits(sequence_string)) {
+      TLOG_DEBUG(7) << "Ignoring top-level group " << name << ", which isn't a record";
+      continue;
     }
     try {
       record_ids.insert(RecordID{ std::stoull(number_string),

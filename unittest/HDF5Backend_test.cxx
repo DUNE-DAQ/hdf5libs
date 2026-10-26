@@ -401,6 +401,38 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsOldSemantics)
   std::filesystem::remove_all(dir);
 }
 
+// Only top-level groups named exactly <prefix><digits>[.<digits>] are records; other groups that
+// merely contain the prefix, or look like records but aren't, are ignored
+BOOST_AUTO_TEST_CASE(OnlyWellFormedRecordNamesAreRecords)
+{
+  const auto dir = make_test_dir("OnlyWellFormedRecordNamesAreRecords");
+  const std::string file_name = dir + "/names.hdf5";
+  {
+    auto writer = rawdatafilelibs::create_raw_data_file(file_name, make_metadata(), make_geo_id_map());
+    writer->write(make_trigger_record(1));
+    writer->write(make_trigger_record(2));
+    writer->close();
+  }
+  {
+    HighFive::File file(file_name, HighFive::File::ReadWrite);
+    for (auto const& name : { "backupTriggerRecord000003",
+                              "TriggerRecord",
+                              "TriggerRecord00000x",
+                              "TriggerRecord000004.",
+                              "TriggerRecord000005.0000extra",
+                              "TriggerRecord+00006",
+                              "TriggerRecord 000007" }) {
+      file.createGroup(name);
+    }
+  }
+
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  BOOST_REQUIRE((reader->get_record_ids() == std::set<RecordID>{ RecordID{ 1 }, RecordID{ 2 } }));
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
+  reader->close();
+  std::filesystem::remove_all(dir);
+}
+
 BOOST_AUTO_TEST_CASE(NeverReusesAnExistingFile)
 {
   const auto dir = make_test_dir("NeverReusesAnExistingFile");
