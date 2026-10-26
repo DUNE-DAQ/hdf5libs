@@ -59,6 +59,13 @@ namespace dunedaq {
 
 namespace hdf5libs {
 
+// Renames a file without ever replacing an existing file at the new name, atomically (so a file
+// that appears at the new name concurrently is not replaced either). The same as
+// rawdatafilelibs::rename_without_replacing: throws std::system_error (code EEXIST if the new
+// name exists); on failure the file keeps its old name.
+void
+rename_without_replacing(const std::string& from, const std::string& to);
+
 /**
  * @brief HDF5RawDataFile is the class responsible
  * for interfacing the DAQ format with the HDF5 file format.
@@ -72,14 +79,9 @@ namespace hdf5libs {
  *    SourceID-based functions work for them too;
  *  - a file opened for writing can't use the record-reading functions (they throw FileOpenFailed);
  *    attributes and dataset paths can still be read.
+ * get_source_id_for_geo_id() still returns the first (lowest) SourceID for a GeoID that the file
+ * lists under more than one SourceID, unlike rawdatafilelibs, which gives no single answer for one.
  */
-// Renames a file without ever replacing an existing file at the new name, atomically (so a file
-// that appears at the new name concurrently is not replaced either). The same as
-// rawdatafilelibs::rename_without_replacing: throws std::system_error (code EEXIST if the new
-// name exists); on failure the file keeps its old name.
-void
-rename_without_replacing(const std::string& from, const std::string& to);
-
 class HDF5RawDataFile
 {
 

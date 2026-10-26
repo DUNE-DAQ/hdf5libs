@@ -916,8 +916,10 @@ daqdataformats::SourceID
 HDF5RawDataFile::get_source_id_for_geo_id(const record_id_t& rid,
                                           const uint64_t requested_geo_id) // NOLINT(build/unsigned)
 {
-  auto source_id = get_record_geo_id_map(rid).get_source_id(detdataformats::GeoID::decode(requested_geo_id));
-  return source_id.value_or(daqdataformats::SourceID());
+  // as in earlier releases, the first (lowest) SourceID, even for a GeoID that the file lists under
+  // more than one SourceID (SourceIDGeoIDMap::get_source_id() gives no answer for those)
+  auto source_ids = get_record_geo_id_map(rid).get_source_ids(detdataformats::GeoID::decode(requested_geo_id));
+  return source_ids.empty() ? daqdataformats::SourceID() : source_ids.front();
 }
 
 } // namespace hdf5libs

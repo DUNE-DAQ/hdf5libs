@@ -433,6 +433,36 @@ BOOST_AUTO_TEST_CASE(OnlyWellFormedRecordNamesAreRecords)
   std::filesystem::remove_all(dir);
 }
 
+// A file whose stored map lists a GeoID under two SourceIDs (possible only in stored data; building
+// such a map is rejected): the facade still answers with the first SourceID, as in earlier releases
+BOOST_AUTO_TEST_CASE(FacadeKeepsFirstMatchForSharedGeoID)
+{
+  const auto dir = make_test_dir("FacadeKeepsFirstMatchForSharedGeoID");
+  const std::string file_name = dir + "/shared.hdf5";
+  const GeoID shared(DetID::Subdetector::kHD_TPC, 1, 0, 0); // s_fragments[0]'s GeoID
+  auto encoded = make_geo_id_map().to_encoded();
+  encoded[s_fragments[1].source_id].push_back(shared.encode());
+  {
+    auto writer = rawdatafilelibs::create_raw_data_file(
+      file_name, make_metadata(), daqdataformats::SourceIDGeoIDMap::from_encoded(encoded));
+    writer->write(make_trigger_record(1));
+    writer->close();
+  }
+
+  HDF5RawDataFile file(file_name);
+  const HDF5RawDataFile::record_id_t rid{ 1, 0 };
+  BOOST_REQUIRE_EQUAL(file.get_source_id_for_geo_id(rid, shared.encode()), s_fragments[0].source_id);
+  BOOST_REQUIRE_EQUAL(file.get_frag_ptr(rid, shared.encode())->get_element_id(), s_fragments[0].source_id);
+  file.close();
+
+  // the format-independent reader reads the file too, but gives no single SourceID for that GeoID
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  BOOST_REQUIRE(!reader->get_geo_id_map().get_source_id(shared).has_value());
+  BOOST_REQUIRE_EQUAL(reader->get_geo_id_map().get_source_ids(shared).size(), 2);
+  reader->close();
+  std::filesystem::remove_all(dir);
+}
+
 BOOST_AUTO_TEST_CASE(NeverReusesAnExistingFile)
 {
   const auto dir = make_test_dir("NeverReusesAnExistingFile");
