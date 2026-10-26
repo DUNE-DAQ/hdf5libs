@@ -9,9 +9,12 @@
 
 #include "hdf5libs/HDF5Backend.hpp"
 
+#include <hdf5.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <cstdint>
+#include <stdexcept>
 #include <string>
 
 namespace py = pybind11;
@@ -19,6 +22,39 @@ namespace py = pybind11;
 namespace dunedaq {
 namespace hdf5libs {
 namespace python {
+
+namespace {
+// A scalar file attribute as a Python value of the stored type (str, int or float)
+py::object
+attribute_value(const HighFive::Attribute& attribute)
+{
+  auto type = attribute.getDataType();
+  switch (type.getClass()) {
+    case HighFive::DataTypeClass::String: {
+      std::string value;
+      attribute.read(value);
+      return py::str(value);
+    }
+    case HighFive::DataTypeClass::Integer:
+      if (H5Tget_sign(type.getId()) == H5T_SGN_NONE) {
+        uint64_t value = 0; // NOLINT(build/unsigned)
+        attribute.read(value);
+        return py::int_(value);
+      } else {
+        int64_t value = 0;
+        attribute.read(value);
+        return py::int_(value);
+      }
+    case HighFive::DataTypeClass::Float: {
+      double value = 0;
+      attribute.read(value);
+      return py::float_(value);
+    }
+    default:
+      throw std::runtime_error("attribute " + attribute.getName() + " has a type that isn't supported here");
+  }
+}
+} // namespace
 
 void
 register_hdf5backend(py::module& m)
@@ -31,6 +67,24 @@ register_hdf5backend(py::module& m)
 
   py::class_<HDF5ReaderBackend, rawdatafilelibs::ReaderBackend>(m, "HDF5ReaderBackend")
     .def("get_file_layout_version", &HDF5ReaderBackend::get_file_layout_version)
+    .def(
+      "get_attribute_names",
+      [](HDF5ReaderBackend& self) { return self.get_file().listAttributeNames(); },
+      "The names of the file-level HDF5 attributes (HDF5-only; prefer FileMetadata where it has the value)")
+    .def(
+      "has_attribute",
+      [](HDF5ReaderBackend& self, const std::string& name) { return self.get_file().hasAttribute(name); },
+      py::arg("name"))
+    .def(
+      "get_attribute",
+      [](HDF5ReaderBackend& self, const std::string& name) {
+        if (!self.get_file().hasAttribute(name)) {
+          throw py::key_error("no file attribute named " + name);
+        }
+        return attribute_value(self.get_file().getAttribute(name));
+      },
+      py::arg("name"),
+      "A file-level HDF5 attribute's value (str, int or float), e.g. \"file_recovery_timestamp\"; KeyError if absent")
     .def("is_legacy_layout", &HDF5ReaderBackend::is_legacy_layout)
     .def("get_record_type_name", &HDF5ReaderBackend::get_record_type_name)
     .def("get_dataset_path",

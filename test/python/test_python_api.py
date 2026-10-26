@@ -13,6 +13,7 @@ import warnings
 import pytest
 
 import daqdataformats
+import detdataformats
 import rawdatafilelibs
 import hdf5libs
 
@@ -84,17 +85,19 @@ def test_compatibility_names_match_hdf5rawdatafile(test_file):
 
     with rawdatafilelibs.open(path) as new:
         assert new.get_all_record_ids() == [tuple(rid) for rid in old.get_all_record_ids()]
-        assert new.get_all_trigger_record_ids() == [tuple(rid) for rid in old.get_all_trigger_record_ids()]
+        with pytest.deprecated_call():
+            assert new.get_all_trigger_record_ids() == [tuple(rid) for rid in old.get_all_trigger_record_ids()]
         assert new.get_record_type() == old.get_record_type()
         assert new.is_trigger_record_type() and not new.is_timeslice_type()
         assert new.get_recorded_size() == old.get_recorded_size()
         for rid in old.get_all_record_ids():
-            assert new.get_source_ids(rid) == set(old.get_source_ids(rid))
+            with pytest.deprecated_call():
+                assert new.get_source_ids(rid) == set(old.get_source_ids(rid))
             assert new.get_geo_ids(rid) == set(old.get_geo_ids(rid))
             assert new.get_trh(rid).get_trigger_timestamp() == old.get_trh(rid).get_trigger_timestamp()
             for source_id in new.get_fragment_source_ids(rid):
                 assert new.get_frag(rid, source_id).get_data_bytes() == old.get_frag(rid, source_id).get_data_bytes()
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError), pytest.deprecated_call():
             new.get_all_timeslice_ids()
     old.close()
 
@@ -137,3 +140,54 @@ def test_file_open_for_writing_is_hidden_from_readers_until_closed(test_file, tm
     with rawdatafilelibs.open(destination) as copy:
         assert copy.metadata.closing_timestamp_ms >= copy.metadata.creation_timestamp_ms > 0
         assert copy.metadata.stats.recorded_size > 0
+
+
+def test_file_attributes_through_the_backend(test_file):
+    path, conf = test_file
+    with rawdatafilelibs.open(path) as f:
+        backend = f.backend
+        names = backend.get_attribute_names()
+        assert {"run_number", "creation_timestamp", "record_type"} <= set(names)
+        assert backend.get_attribute("run_number") == conf["run_number"] == f.metadata.run_number
+        assert backend.get_attribute("creation_timestamp") == f.metadata.creation_timestamp_ms
+        assert backend.get_attribute("record_type") == "TriggerRecord"
+        assert not backend.has_attribute("file_recovery_timestamp")
+        with pytest.raises(KeyError):
+            backend.get_attribute("file_recovery_timestamp")
+
+
+def test_recover_an_unfinished_file(test_file, tmp_path):
+    path, _ = test_file
+    unfinished = tmp_path / "recovered.hdf5.writing"
+    shutil.copy(path, unfinished)  # a complete file still under its in-progress name
+
+    report = rawdatafilelibs.recover_raw_data_file(str(unfinished))
+    assert not report.applied and report.final_path == str(tmp_path / "recovered.hdf5")
+    assert any(change.startswith("rename to") for change in report.changes)
+    assert unfinished.exists()
+
+    report = rawdatafilelibs.recover_raw_data_file(str(unfinished), apply=True)
+    assert report.applied and report.renamed and "Done" in str(report)
+    with rawdatafilelibs.open(tmp_path / "recovered.hdf5") as f:
+        assert f.metadata.recovery_timestamp_ms > 0
+        assert f.backend.get_attribute("file_recovery_timestamp") == f.metadata.recovery_timestamp_ms
+
+
+def test_shared_geo_id_gives_the_first_source_id(test_file):
+    """The compatibility get_frag(record, geo_id) answers like HDF5RawDataFile: the first SourceID."""
+    path, _ = test_file
+    rawdatafilelibs.clear_in_memory_files()
+    with rawdatafilelibs.open(path) as source:
+        record = source[1]
+        first, second = list(record.source_ids())[:2]
+        shared = 0x0001000200030003  # an encoded GeoID listed under both SourceIDs
+        geo_id_map = daqdataformats.SourceIDGeoIDMap.from_encoded({first: [shared], second: [shared]})
+        with rawdatafilelibs.create("shared.rdfmem", "TriggerRecord", geo_id_map=geo_id_map) as writer:
+            writer.write(record.assemble())
+    with rawdatafilelibs.open("shared.rdfmem") as copy:
+        assert copy.geo_id_map.get_source_id(detdataformats.GeoID.decode(shared)) is None
+        owners = copy.geo_id_map.get_source_ids(detdataformats.GeoID.decode(shared))
+        assert len(owners) == 2 and set(owners) == {first, second}
+        with pytest.deprecated_call():
+            assert copy.get_frag(1, shared).get_element_id() == owners[0]
+    rawdatafilelibs.clear_in_memory_files()
