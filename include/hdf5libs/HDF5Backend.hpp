@@ -156,6 +156,17 @@ public:
   rawdatafilelibs::FileStats get_stats() const override { return m_stats; }
   void close(const rawdatafilelibs::FileMetadata& final_metadata) override;
 
+  // Recovery of unfinished files (rawdatafilelibs::recover_raw_data_file()). The recalculated
+  // recorded_size is the storage size of each readable dataset (after compression), as close()
+  // counts it; uncompressed_raw_data_size their byte counts; total_file_size the file's size.
+  // Missing values are stored with the attribute names and types of the file's layout version
+  // (closing_timestamp as a string before version 6), and the recovery time as
+  // "file_recovery_timestamp".
+  rawdatafilelibs::RecoveryScan scan_for_recovery(const std::string& path) override;
+  void store_recovery_metadata(const std::string& path,
+                               const rawdatafilelibs::RecoveryScan& scan,
+                               const rawdatafilelibs::FileMetadata& final_metadata) override;
+
   // ---- HDF5-only (expert) functions ----
 
   HighFive::File& get_file();

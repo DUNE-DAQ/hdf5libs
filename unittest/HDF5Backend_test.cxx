@@ -15,6 +15,7 @@
 #include "rawdatafilelibs/Issues.hpp"
 #include "rawdatafilelibs/RawDataFileReader.hpp"
 #include "rawdatafilelibs/RawDataFileWriter.hpp"
+#include "rawdatafilelibs/Recovery.hpp"
 
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/TimeSlice.hpp"
@@ -28,6 +29,7 @@
 
 #include <highfive/H5File.hpp>
 
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -501,6 +503,106 @@ BOOST_AUTO_TEST_CASE(LayoutMustMatchRecordType)
 }
 
 // Files whose timestamps are strings (layout versions <= 5) are read too
+namespace {
+// An HDF5 file as a crashed writer leaves it: records written, but no closing attributes and still
+// named "<name>.writing". Returns the stats a normal close stored.
+rawdatafilelibs::FileStats
+make_unfinished_hdf5_file(const std::string& file_name, unsigned compression_level) // NOLINT(build/unsigned)
+{
+  auto metadata = make_metadata();
+  metadata.compression_level = compression_level;
+  rawdatafilelibs::FileStats stats;
+  {
+    auto writer = rawdatafilelibs::create_raw_data_file(file_name, metadata, make_geo_id_map());
+    writer->write(make_trigger_record(1));
+    writer->write(make_trigger_record(2));
+    writer->close();
+    stats = writer->get_metadata().stats;
+  }
+  {
+    HighFive::File file(file_name, HighFive::File::ReadWrite);
+    for (auto const& name : { "recorded_size", "uncompressed_raw_data_size", "total_file_size", "closing_timestamp" }) {
+      file.deleteAttribute(name);
+    }
+  }
+  std::filesystem::rename(file_name, file_name + ".writing");
+  return stats;
+}
+} // namespace
+
+// Recovery recalculates the stats as close() counts them, compressed sizes included
+BOOST_AUTO_TEST_CASE(RecoverCompressedFile)
+{
+  const auto dir = make_test_dir("RecoverCompressedFile");
+  const std::string file_name = dir + "/recover.hdf5";
+  auto expected = make_unfinished_hdf5_file(file_name, 6);
+  BOOST_REQUIRE(expected.recorded_size < expected.uncompressed_raw_data_size); // the data did compress
+
+  auto report = rawdatafilelibs::recover_raw_data_file(file_name + ".writing", true);
+  BOOST_REQUIRE(report.applied && report.renamed);
+  BOOST_REQUIRE_EQUAL(report.scan.readable_records, 2);
+  BOOST_REQUIRE_EQUAL(report.scan.unreadable_records, 0);
+  BOOST_REQUIRE(!std::filesystem::exists(file_name + ".writing"));
+
+  {
+    HighFive::File file(file_name, HighFive::File::ReadOnly);
+    BOOST_REQUIRE_EQUAL(read_attribute<size_t>(file, "recorded_size"), expected.recorded_size);
+    BOOST_REQUIRE_EQUAL(read_attribute<size_t>(file, "uncompressed_raw_data_size"),
+                        expected.uncompressed_raw_data_size);
+    BOOST_REQUIRE(read_attribute<size_t>(file, "total_file_size") > 0);
+    BOOST_REQUIRE(file.getAttribute("closing_timestamp").getDataType() == HighFive::create_datatype<size_t>());
+    BOOST_REQUIRE(file.getAttribute("file_recovery_timestamp").getDataType() == HighFive::create_datatype<int64_t>());
+  }
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  BOOST_REQUIRE_EQUAL(reader->get_metadata().closing_timestamp_ms, report.scan.last_modified_ms);
+  BOOST_REQUIRE(reader->get_metadata().recovery_timestamp_ms > 0);
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
+  reader->close();
+
+  // nothing left to do
+  BOOST_REQUIRE(rawdatafilelibs::recover_raw_data_file(file_name, true).changes.empty());
+  std::filesystem::remove_all(dir);
+}
+
+BOOST_AUTO_TEST_CASE(RecoveryDryRunChangesNothing)
+{
+  const auto dir = make_test_dir("RecoveryDryRunChangesNothing");
+  const std::string file_name = dir + "/dry.hdf5";
+  make_unfinished_hdf5_file(file_name, 0);
+
+  auto report = rawdatafilelibs::recover_raw_data_file(file_name + ".writing", false);
+  BOOST_REQUIRE(!report.applied && !report.changes.empty());
+  HighFive::File file(file_name + ".writing", HighFive::File::ReadOnly);
+  BOOST_REQUIRE(!file.hasAttribute("closing_timestamp") && !file.hasAttribute("file_recovery_timestamp"));
+  BOOST_REQUIRE(!std::filesystem::exists(file_name));
+  std::filesystem::remove_all(dir);
+}
+
+// A record with a dataset that can't be read is reported, and only its readable parts are counted
+BOOST_AUTO_TEST_CASE(RecoveryWithAnUnreadableFragment)
+{
+  const auto dir = make_test_dir("RecoveryWithAnUnreadableFragment");
+  const std::string file_name = dir + "/partial.hdf5";
+  auto full = make_unfinished_hdf5_file(file_name, 0);
+  size_t lost = 0;
+  {
+    HDF5ReaderBackend reader(true);
+    reader.open(file_name + ".writing");
+    const std::string path = reader.get_dataset_path(RecordID{ 2 }, s_fragments[1].source_id);
+    auto& file = reader.get_file();
+    lost = file.getDataSet(path).getStorageSize();
+    auto slash = path.rfind('/');
+    file.getGroup(path.substr(0, slash)).unlink(path.substr(slash + 1));
+    reader.close();
+  }
+
+  auto report = rawdatafilelibs::recover_raw_data_file(file_name + ".writing", false);
+  BOOST_REQUIRE_EQUAL(report.scan.readable_records, 1);
+  BOOST_REQUIRE_EQUAL(report.scan.unreadable_records, 1);
+  BOOST_REQUIRE_EQUAL(report.scan.calculated_stats.recorded_size, full.recorded_size - lost);
+  std::filesystem::remove_all(dir);
+}
+
 BOOST_AUTO_TEST_CASE(StringTimestamps)
 {
   const auto dir = make_test_dir("StringTimestamps");

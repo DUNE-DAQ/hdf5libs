@@ -16,8 +16,11 @@
 #include <highfive/H5Group.hpp>
 #include <nlohmann/json.hpp>
 
+#include <sys/stat.h>
+
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <exception>
 #include <map>
 #include <memory>
@@ -193,6 +196,7 @@ HDF5ReaderBackend::read_metadata()
   metadata.record_type = rawdatafilelibs::string_to_record_type(m_record_type_name);
   metadata.creation_timestamp_ms = read_timestamp_attribute(*m_file, "creation_timestamp");
   metadata.closing_timestamp_ms = read_timestamp_attribute(*m_file, "closing_timestamp");
+  metadata.recovery_timestamp_ms = read_timestamp_attribute(*m_file, "file_recovery_timestamp");
   metadata.operational_environment = read_attribute_or<std::string>(*m_file, "operational_environment", "");
   metadata.offline_data_stream = read_attribute_or<std::string>(*m_file, "offline_data_stream", "");
   metadata.run_is_for_test_purposes =
@@ -551,6 +555,87 @@ HDF5WriterBackend::close(const rawdatafilelibs::FileMetadata& final_metadata)
   write_attribute_if_absent(*file, "total_file_size", final_metadata.stats.total_file_size);
   write_attribute_if_absent(*file, "closing_timestamp", static_cast<size_t>(final_metadata.closing_timestamp_ms));
   file->flush();
+}
+
+rawdatafilelibs::RecoveryScan
+HDF5WriterBackend::scan_for_recovery(const std::string& path)
+{
+  HDF5ReaderBackend reader;
+  reader.open(path);
+
+  rawdatafilelibs::RecoveryScan scan;
+  scan.stored = reader.read_metadata();
+  auto& file = reader.get_file();
+  scan.has_closing_timestamp = file.hasAttribute("closing_timestamp");
+  scan.has_stats = file.hasAttribute("recorded_size") && file.hasAttribute("uncompressed_raw_data_size") &&
+                   file.hasAttribute("total_file_size");
+  scan.has_recovery_timestamp = file.hasAttribute("file_recovery_timestamp");
+
+  // count every dataset (record header or fragment) that can still be read
+  std::set<daqdataformats::RecordID> record_ids;
+  try {
+    record_ids = reader.read_record_ids();
+  } catch (std::exception const&) {
+    // no readable records
+  }
+  for (auto const& record_id : record_ids) {
+    bool complete = true;
+    auto count = [&](const daqdataformats::SourceID& source_id) {
+      try {
+        auto data_set = file.getDataSet(reader.get_dataset_path(record_id, source_id));
+        scan.calculated_stats.recorded_size += data_set.getStorageSize();
+        scan.calculated_stats.uncompressed_raw_data_size += data_set.getElementCount();
+      } catch (std::exception const&) {
+        complete = false;
+      }
+    };
+    try {
+      auto index = reader.read_index(record_id);
+      count(index.get_header_source_id());
+      for (auto const& source_id : index.get_fragment_source_ids()) {
+        count(source_id);
+      }
+    } catch (std::exception const&) {
+      complete = false;
+    }
+    ++(complete ? scan.readable_records : scan.unreadable_records);
+  }
+  scan.calculated_stats.total_file_size = file.getFileSize();
+  reader.close();
+
+  struct stat stat_results;
+  if (stat(path.c_str(), &stat_results) == 0) {
+    scan.last_modified_ms = static_cast<uint64_t>(stat_results.st_mtime) * 1000; // NOLINT(build/unsigned)
+  }
+  return scan;
+}
+
+void
+HDF5WriterBackend::store_recovery_metadata(const std::string& path,
+                                           const rawdatafilelibs::RecoveryScan& scan,
+                                           const rawdatafilelibs::FileMetadata& final_metadata)
+{
+  HDF5ReaderBackend reader(true); // read-write
+  reader.open(path);
+  auto& file = reader.get_file();
+  if (!scan.has_stats) {
+    write_attribute_if_absent(file, "recorded_size", final_metadata.stats.recorded_size);
+    write_attribute_if_absent(file, "uncompressed_raw_data_size", final_metadata.stats.uncompressed_raw_data_size);
+    write_attribute_if_absent(file, "total_file_size", final_metadata.stats.total_file_size);
+  }
+  if (!scan.has_closing_timestamp) {
+    if (reader.get_file_layout_version() >= 6) {
+      write_attribute_if_absent(file, "closing_timestamp", static_cast<size_t>(final_metadata.closing_timestamp_ms));
+    } else {
+      write_attribute_if_absent(file, "closing_timestamp", std::to_string(final_metadata.closing_timestamp_ms));
+    }
+  }
+  if (!scan.has_recovery_timestamp) {
+    write_attribute_if_absent(
+      file, "file_recovery_timestamp", static_cast<int64_t>(final_metadata.recovery_timestamp_ms)); // as before
+  }
+  file.flush();
+  reader.close();
 }
 
 } // namespace dunedaq::hdf5libs

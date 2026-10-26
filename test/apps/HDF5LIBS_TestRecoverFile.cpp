@@ -27,11 +27,16 @@ print_usage(const char* appname)
   std::cout << "Usage: " << appname << " [-R] <file_name>" << std::endl;
   std::cout << "The default behavior is to simply print out the changes that need to be made." << std::endl;
   std::cout << "The -R option causes the file to be modifed (Recovered)." << std::endl;
+  std::cout << "DEPRECATED: use rawdatafile_recover [--apply] <file> (rawdatafilelibs), which works for any"
+            << std::endl;
+  std::cout << "file format, never replaces an existing file, and counts compressed sizes correctly." << std::endl;
 }
 
 int
 main(int argc, char** argv)
 {
+  std::cerr << "NOTE: HDF5LIBS_TestRecoverFile is deprecated; use rawdatafile_recover [--apply] <file> instead."
+            << std::endl;
   bool do_recovery = false;
   signed char opt;
   while ((opt = getopt(argc, argv, "hR")) != -1) {
