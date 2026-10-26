@@ -17,6 +17,7 @@
 #include "boost/test/unit_test.hpp"
 
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -350,6 +351,35 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
   }
 
+  // Reads every TimeSlice repeatedly through both the dataset-path and the record-ID overloads,
+  // adopting and freeing every buffer; under ASan this checks buffer ownership (H2, H7)
+  void read_through_all_overloads(int repeats = 3)
+  {
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+    auto record_ids = h5file_ptr->get_all_record_ids(); // a copy: the loop below uses the file's caches
+    BOOST_REQUIRE_EQUAL(record_ids.size(), static_cast<size_t>(timeslice_count));
+    for (int pass = 0; pass < repeats; ++pass) {
+      for (auto const& rid : record_ids) {
+        auto tsh_by_id = h5file_ptr->get_tsh_ptr(rid);
+        auto tsh_by_path = h5file_ptr->get_tsh_ptr(h5file_ptr->get_record_header_dataset_path(rid));
+        BOOST_REQUIRE(
+          std::memcmp(tsh_by_path.get(), tsh_by_id.get(), sizeof(dunedaq::daqdataformats::TimeSliceHeader)) == 0);
+
+        auto paths = h5file_ptr->get_fragment_dataset_paths(rid);
+        BOOST_REQUIRE(!paths.empty());
+        for (auto const& path : paths) {
+          auto frag_by_path = h5file_ptr->get_frag_ptr(path);
+          auto frag_by_sid = h5file_ptr->get_frag_ptr(rid, frag_by_path->get_element_id());
+          BOOST_REQUIRE_EQUAL(frag_by_sid->get_size(), frag_by_path->get_size());
+          BOOST_REQUIRE(std::memcmp(frag_by_sid->get_storage_location(),
+                                    frag_by_path->get_storage_location(),
+                                    frag_by_path->get_size()) == 0);
+        }
+      }
+    }
+    h5file_ptr->close();
+  }
+
   int timeslice_count;
   unsigned compression_level;
   std::string file_path;
@@ -395,6 +425,18 @@ BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_max_sequence();
+}
+
+BOOST_AUTO_TEST_CASE(ReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 0);
+  fixture.read_through_all_overloads();
+}
+
+BOOST_AUTO_TEST_CASE(CompressedReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 1);
+  fixture.read_through_all_overloads();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

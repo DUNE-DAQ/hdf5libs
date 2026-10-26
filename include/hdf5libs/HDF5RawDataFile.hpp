@@ -124,6 +124,13 @@ ERS_DECLARE_ISSUE(hdf5libs,
 
 namespace hdf5libs {
 
+// Renames a file without ever replacing an existing file at the new name, atomically (so a file
+// that appears at the new name concurrently is not replaced either). Uses renameat2 with
+// RENAME_NOREPLACE, or link() + unlink() on filesystems without it. Throws std::system_error
+// (code EEXIST if the new name exists); on failure the file keeps its old name.
+void
+rename_without_replacing(const std::string& from, const std::string& to);
+
 /**
  * @brief HDF5RawDataFile is the class responsible
  * for interfacing the DAQ format with the HDF5 file format.
@@ -148,6 +155,8 @@ public:
   // constructor for writing. By default the file is created exclusively: if a file with the
   // in-progress name already exists (e.g. left over from a crash), the open fails with
   // FileOpenFailed and the existing file is left untouched, never appended to or overwritten.
+  // With an in-progress suffix, a file that already has the final name is never replaced either:
+  // the open fails if it exists, and close() keeps the in-progress name if it appears meanwhile.
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
@@ -165,13 +174,15 @@ public:
   ~HDF5RawDataFile();
 
   // Finalizes the file: for a writable file, writes the closing attributes, flushes, closes it,
-  // and renames it to drop the in-progress suffix. The underlying file is always released, even
-  // when this throws, so a failed close is never retried. Calling it again is a no-op.
+  // and renames it to drop the in-progress suffix. The rename never replaces an existing file:
+  // if the final name exists, close() throws FileCloseFailed and the file keeps its in-progress
+  // name (as get_file_name() then reports). The underlying file is always released, even when
+  // this throws, so a failed close is never retried. Calling it again is a no-op.
   // Apart from get_file_name(), no other member function may be used after close().
   void close();
 
   // The name of the file on disk: the in-progress name while open, the final name once closed
-  std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_bare_file_name; }
+  std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_closed_file_name; }
   static std::string get_file_name_extension() { return "hdf5"; }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
@@ -492,6 +503,7 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   std::string m_bare_file_name;
+  std::string m_closed_file_name; // the file's name after close(): normally the bare name
   unsigned m_compression_level;
   unsigned m_open_flags;
 

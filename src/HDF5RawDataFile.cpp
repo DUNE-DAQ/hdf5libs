@@ -10,6 +10,8 @@
 #include "logging/Logging.hpp"
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <map>
@@ -18,8 +20,12 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -36,6 +42,27 @@ value_or_empty(const MapType& the_map, const typename MapType::key_type& key)
   return (iter == the_map.end()) ? typename MapType::mapped_type{} : iter->second;
 }
 } // namespace
+
+void
+rename_without_replacing(const std::string& from, const std::string& to)
+{
+  if (::renameat2(AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), RENAME_NOREPLACE) == 0) {
+    return;
+  }
+  int error = errno;
+  if (error == EINVAL || error == ENOSYS || error == ENOTSUP) {
+    // the filesystem doesn't support RENAME_NOREPLACE (e.g. NFS); link() also fails if the new name exists
+    if (::link(from.c_str(), to.c_str()) == 0) {
+      if (::unlink(from.c_str()) != 0) {
+        throw std::system_error(
+          errno, std::generic_category(), "renamed " + from + " to " + to + " but could not remove the old name");
+      }
+      return;
+    }
+    error = errno;
+  }
+  throw std::system_error(error, std::generic_category(), "could not rename " + from + " to " + to);
+}
 
 /**
  * @brief Constructor for writing a new file
@@ -60,6 +87,12 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string file_name,
   }
 
   auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
+
+  // never start a file that could not get its final name without replacing an existing one
+  if (filename_to_open != m_bare_file_name && std::filesystem::exists(m_bare_file_name)) {
+    throw FileOpenFailed(
+      ERS_HERE, filename_to_open, "a file with the final name " + m_bare_file_name + " already exists");
+  }
 
   // do the file open
   try {
@@ -145,18 +178,32 @@ HDF5RawDataFile::close()
       }
 
       m_file_ptr->flush();
-    } catch (...) { // NOLINT(runtime/exceptions)
+    } catch (std::exception const& excpt) {
       // release the file so that a failed close is not retried; the in-progress name stays on disk
       m_file_ptr.reset();
-      throw; // NOLINT here because we *ARE* re-throwing the exception!
+      m_closed_file_name = open_file_name;
+      throw FileCloseFailed(ERS_HERE, open_file_name, std::string("could not finalize the file: ") + excpt.what());
+    } catch (...) { // NOLINT(runtime/exceptions)
+      m_file_ptr.reset();
+      m_closed_file_name = open_file_name;
+      throw FileCloseFailed(ERS_HERE, open_file_name, "could not finalize the file: unknown exception");
     }
   }
 
   m_file_ptr.reset();
+  m_closed_file_name = open_file_name;
 
-  // rename file to the bare name, if needed
+  // rename file to the bare name, if needed, never replacing an existing file
   if (writable && open_file_name != m_bare_file_name) {
-    std::filesystem::rename(open_file_name, m_bare_file_name);
+    try {
+      rename_without_replacing(open_file_name, m_bare_file_name);
+    } catch (std::system_error const& excpt) {
+      std::string reason = (excpt.code() == std::errc::file_exists)
+                             ? "the final name " + m_bare_file_name + " already exists"
+                             : excpt.what();
+      throw FileCloseFailed(ERS_HERE, open_file_name, reason + "; the file keeps its in-progress name");
+    }
+    m_closed_file_name = m_bare_file_name;
   }
 }
 
