@@ -143,6 +143,7 @@ HDF5ReaderBackend::open(const std::string& path)
 {
   m_file =
     std::make_unique<HighFive::File>(path, m_allow_writing ? HighFive::File::ReadWrite : HighFive::File::ReadOnly);
+  m_warned_duplicate_source_ids = false;
 
   // Files written before the layout was stored get the version 0 layout
   HDF5FileLayoutParameters params;
@@ -283,10 +284,37 @@ HDF5ReaderBackend::load_record(const RecordID& record_id)
   handler.fetch_subdetector_source_id_info(record_group, subdetector_map);
   const SourceID header_source_id = handler.fetch_record_header_source_id(record_group);
 
-  std::map<SourceID, daqdataformats::FragmentInfo> fragment_info;
+  std::map<SourceID, std::set<daqdataformats::FragmentType>> fragment_types;
   for (auto const& [fragment_type, source_ids] : fragment_type_map) {
     for (auto const& source_id : source_ids) {
-      fragment_info[source_id].fragment_type = fragment_type;
+      fragment_types[source_id].insert(fragment_type);
+    }
+  }
+  std::map<SourceID, daqdataformats::FragmentInfo> fragment_info;
+  for (auto const& [source_id, types] : fragment_types) {
+    fragment_info[source_id].fragment_type = *types.begin();
+    if (types.size() == 1) {
+      continue;
+    }
+    // Two fragments of one record with the same SourceID (e.g. written by trgtools' process_tpstream
+    // before rdf-09). Only one of them is in the stored SourceID->path map: keep that one, with the
+    // type named in its dataset path, and warn once per file.
+    auto path = contents.dataset_paths.find(source_id);
+    std::string kept = "?";
+    std::string listed;
+    for (auto const& type : types) {
+      const std::string name = daqdataformats::fragment_type_to_string(type);
+      listed += (listed.empty() ? "" : ", ") + name;
+      if (path != contents.dataset_paths.end() && path->second.size() > name.size() &&
+          path->second.compare(path->second.size() - name.size(), name.size(), name) == 0) {
+        fragment_info[source_id].fragment_type = type;
+        kept = path->second;
+      }
+    }
+    if (!m_warned_duplicate_source_ids) {
+      m_warned_duplicate_source_ids = true;
+      ers::warning(DuplicateSourceIDInRecord(
+        ERS_HERE, m_file->getName(), record_id.number, record_id.sequence, source_id.to_string(), listed, kept));
     }
   }
   for (auto const& [subdetector, source_ids] : subdetector_map) {

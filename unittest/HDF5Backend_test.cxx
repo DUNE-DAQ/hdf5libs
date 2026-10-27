@@ -28,6 +28,7 @@
 #include "boost/test/unit_test.hpp"
 
 #include <highfive/H5File.hpp>
+#include <nlohmann/json.hpp>
 
 #include <cstdint>
 #include <cstring>
@@ -461,6 +462,50 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsFirstMatchForSharedGeoID)
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
   BOOST_REQUIRE(!reader->get_geo_id_map().get_source_id(shared).has_value());
   BOOST_REQUIRE_EQUAL(reader->get_geo_id_map().get_source_ids(shared).size(), 2);
+  reader->close();
+  std::filesystem::remove_all(dir);
+}
+
+// Older writers stored one path per SourceID, so a file where two fragments of a record share a
+// SourceID (e.g. trgtools' process_tpstream before rdf-09) lists that SourceID under both fragment
+// types but has only one path for it. The reader keeps that fragment, with the type in its path,
+// and warns (once per file) instead of picking a type at random
+BOOST_AUTO_TEST_CASE(SourceIDListedForTwoFragmentTypes)
+{
+  const auto dir = make_test_dir("SourceIDListedForTwoFragmentTypes");
+  const std::string file_name = dir + "/shared_source_id.hdf5";
+  const auto& shared = s_fragments[3]; // a Trigger_Activity fragment
+  {
+    auto writer = rawdatafilelibs::create_raw_data_file(file_name, make_metadata(), make_geo_id_map());
+    writer->write(make_trigger_record(1));
+    writer->close();
+  }
+  {
+    HDF5ReaderBackend reader(true);
+    reader.open(file_name);
+    const std::string path = reader.get_dataset_path(RecordID{ 1 }, shared.source_id);
+    auto group = reader.get_file().getGroup(path.substr(0, path.find('/', 1)));
+    std::string map_string;
+    group.getAttribute("fragment_type_source_id_map").read(map_string);
+    auto json = nlohmann::json::parse(map_string);
+    nlohmann::json source_id;
+    source_id["subsys"] = static_cast<uint32_t>(shared.source_id.subsystem); // NOLINT(build/unsigned)
+    source_id["id"] = shared.source_id.id;
+    nlohmann::json entry;
+    entry["fragment_type"] = static_cast<uint32_t>(FragmentType::kTriggerPrimitive); // NOLINT(build/unsigned)
+    entry["sourceids"].push_back(source_id);
+    json["map_entries"].push_back(entry);
+    group.deleteAttribute("fragment_type_source_id_map");
+    group.createAttribute("fragment_type_source_id_map", json.dump());
+    reader.close();
+  }
+
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  const auto& index = reader->get_index(RecordID{ 1 });
+  BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
+  BOOST_REQUIRE(index.get_fragments().at(shared.source_id).fragment_type == shared.fragment_type);
+  BOOST_REQUIRE_EQUAL(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type(),
+                      shared.fragment_type);
   reader->close();
   std::filesystem::remove_all(dir);
 }

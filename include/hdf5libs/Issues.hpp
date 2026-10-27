@@ -102,6 +102,16 @@ ERS_DECLARE_ISSUE(hdf5libs,
                                                             << record_type << "\" of file " << file,
                   ((std::string)prefix)((std::string)record_type)((std::string)file))
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  DuplicateSourceIDInRecord,
+                  "File " << file << ", record " << record_number << "." << sequence_number << ": SourceID "
+                          << source_id << " is used by more than one fragment (" << fragment_types
+                          << "). Only one can be read by SourceID: the one in dataset " << kept_path
+                          << ". The others are still in the file; read them by dataset path through"
+                          << " HDF5ReaderBackend. Reported once per file; the file may hold more such records.",
+                  ((std::string)file)((uint64_t)record_number)((uint32_t)sequence_number)( // NOLINT(build/unsigned)
+                    (std::string)source_id)((std::string)fragment_types)((std::string)kept_path))
+
 // Re-enable coverage checking LCOV_EXCL_STOP
 
 } // namespace dunedaq

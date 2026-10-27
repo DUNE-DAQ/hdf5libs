@@ -119,6 +119,7 @@ private:
   std::unique_ptr<HDF5FileLayout> m_file_layout;
   std::string m_record_type_name;
   std::map<RecordID, RecordContents> m_records;
+  bool m_warned_duplicate_source_ids{ false }; // DuplicateSourceIDInRecord is reported once per file
 };
 
 /**
