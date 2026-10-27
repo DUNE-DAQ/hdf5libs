@@ -504,8 +504,7 @@ BOOST_AUTO_TEST_CASE(SourceIDListedForTwoFragmentTypes)
   const auto& index = reader->get_index(RecordID{ 1 });
   BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
   BOOST_REQUIRE(index.get_fragments().at(shared.source_id).fragment_type == shared.fragment_type);
-  BOOST_REQUIRE_EQUAL(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type(),
-                      shared.fragment_type);
+  BOOST_REQUIRE(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type() == shared.fragment_type);
   reader->close();
   std::filesystem::remove_all(dir);
 }
