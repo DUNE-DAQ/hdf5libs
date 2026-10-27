@@ -603,6 +603,25 @@ BOOST_AUTO_TEST_CASE(RecoveryWithAnUnreadableFragment)
   std::filesystem::remove_all(dir);
 }
 
+// A file cut short (as a crash can leave it) can't be scanned: recovery refuses it, in a dry run
+// and with apply, and the file is left exactly as it was, still under its in-progress name
+BOOST_AUTO_TEST_CASE(TruncatedFileIsNotRecovered)
+{
+  const auto dir = make_test_dir("TruncatedFileIsNotRecovered");
+  const std::string file_name = dir + "/truncated.hdf5";
+  make_unfinished_hdf5_file(file_name, 0);
+  const std::string unfinished = file_name + ".writing";
+  const auto truncated_size = std::filesystem::file_size(unfinished) / 2;
+  std::filesystem::resize_file(unfinished, truncated_size);
+
+  BOOST_CHECK_THROW(rawdatafilelibs::recover_raw_data_file(unfinished, false), rawdatafilelibs::RecoveryFailed);
+  BOOST_CHECK_THROW(rawdatafilelibs::recover_raw_data_file(unfinished, true), rawdatafilelibs::RecoveryFailed);
+  BOOST_REQUIRE(std::filesystem::exists(unfinished));
+  BOOST_REQUIRE_EQUAL(std::filesystem::file_size(unfinished), truncated_size);
+  BOOST_REQUIRE(!std::filesystem::exists(file_name));
+  std::filesystem::remove_all(dir);
+}
+
 BOOST_AUTO_TEST_CASE(StringTimestamps)
 {
   const auto dir = make_test_dir("StringTimestamps");

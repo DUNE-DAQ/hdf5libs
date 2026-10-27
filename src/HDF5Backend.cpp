@@ -571,14 +571,9 @@ HDF5WriterBackend::scan_for_recovery(const std::string& path)
                    file.hasAttribute("total_file_size");
   scan.has_recovery_timestamp = file.hasAttribute("file_recovery_timestamp");
 
-  // count every dataset (record header or fragment) that can still be read
-  std::set<daqdataformats::RecordID> record_ids;
-  try {
-    record_ids = reader.read_record_ids();
-  } catch (std::exception const&) {
-    // no readable records
-  }
-  for (auto const& record_id : record_ids) {
+  // count every dataset (record header or fragment) that can still be read. If the records can't
+  // even be listed, the scan fails (and so does recovery), rather than report a file with no records.
+  for (auto const& record_id : reader.read_record_ids()) {
     bool complete = true;
     auto count = [&](const daqdataformats::SourceID& source_id) {
       try {
