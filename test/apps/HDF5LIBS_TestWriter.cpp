@@ -117,17 +117,16 @@ main(int argc, char** argv)
 
     TLOG() << "\tWriting trigger " << trig_num << " with time_stamp " << ts;
 
-    // create TriggerRecordHeader
-    TriggerRecordHeaderData trh_data;
-    trh_data.trigger_number = trig_num;
-    trh_data.trigger_timestamp = ts;
-    trh_data.num_requested_components = element_count;
-    trh_data.run_number = run_number;
-    trh_data.sequence_number = 0;
-    trh_data.max_sequence_number = 1;
-    trh_data.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 0);
-
-    TriggerRecordHeader trh(&trh_data);
+    // create TriggerRecordHeader, with its element_count component requests (a lone
+    // TriggerRecordHeaderData claiming them would make the header read past it)
+    std::vector<ComponentRequest> component_requests(element_count);
+    TriggerRecordHeader trh(component_requests);
+    trh.set_trigger_number(trig_num);
+    trh.set_trigger_timestamp(ts);
+    trh.set_run_number(run_number);
+    trh.set_sequence_number(0);
+    trh.set_max_sequence_number(1);
+    trh.set_element_id(SourceID(SourceID::Subsystem::kTRBuilder, 0));
 
     // create out TriggerRecord
     TriggerRecord tr(trh);
