@@ -26,6 +26,9 @@
 #include <utility>
 #include <vector>
 
+// This file implements the deprecated class
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 namespace dunedaq {
 namespace hdf5libs {
 

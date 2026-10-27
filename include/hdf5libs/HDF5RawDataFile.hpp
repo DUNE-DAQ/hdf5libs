@@ -66,6 +66,10 @@ namespace hdf5libs {
 void
 rename_without_replacing(const std::string& from, const std::string& to);
 
+// The class and its inline definitions below use the class itself; only uses outside this header warn
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 /**
  * @brief HDF5RawDataFile is the class responsible
  * for interfacing the DAQ format with the HDF5 file format.
@@ -82,7 +86,7 @@ rename_without_replacing(const std::string& from, const std::string& to);
  * get_source_id_for_geo_id() still returns the first (lowest) SourceID for a GeoID that the file
  * lists under more than one SourceID, unlike rawdatafilelibs, which gives no single answer for one.
  */
-class HDF5RawDataFile
+class [[deprecated("HDF5RawDataFile is deprecated and will be removed: use rawdatafilelibs::open_raw_data_file() / create_raw_data_file() (RawDataFileReader / RawDataFileWriter)")]] HDF5RawDataFile
 {
 
 public:
@@ -575,6 +579,8 @@ HDF5RawDataFile::get_attribute(const HighFive::DataSet& dset, std::string name)
   attr.read(value);
   return value;
 }
+
+#pragma GCC diagnostic pop
 
 } // namespace hdf5libs
 

@@ -54,7 +54,9 @@ public:
   // DEPRECATED: use appmodel::ConfigurationHelper::get_source_id_geo_id_map(), which returns a
   // daqdataformats::SourceIDGeoIDMap.
   // Kept for one release so that existing callers (e.g. trigger's MLTModule) keep working.
-  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session& session);
+  [[deprecated("use appmodel::ConfigurationHelper::get_source_id_geo_id_map(), which returns a "
+               "daqdataformats::SourceIDGeoIDMap")]] static source_id_geo_id_map_t
+  make_source_id_geo_id_map(const confmodel::Session& session);
 
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.

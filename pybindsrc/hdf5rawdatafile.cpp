@@ -17,6 +17,9 @@
 
 namespace py = pybind11;
 
+// These bindings expose the deprecated class (Python callers get a DeprecationWarning instead)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 namespace dunedaq {
 namespace hdf5libs {
 namespace python {

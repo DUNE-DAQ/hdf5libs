@@ -42,4 +42,13 @@ daq_add_application(HDF5LIBS_TestWriter HDF5LIBS_TestWriter.cpp TEST LINK_LIBRAR
 daq_add_application(HDF5LIBS_TestDumpRecord HDF5LIBS_TestDumpRecord.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 daq_add_application(HDF5LIBS_TestRecoverFile HDF5LIBS_TestRecoverFile.cpp TEST LINK_LIBRARIES ${PROJECT_NAME})
 
+# The unit tests and test apps use the deprecated HDF5RawDataFile on purpose (they test it, or
+# predate rawdatafilelibs), so they don't warn about it
+foreach(target HDF5WriteReadTriggerRecord_test HDF5WriteReadTimeSlice_test HDF5Backend_test
+               HDF5LIBS_TestReader HDF5LIBS_TestWriter HDF5LIBS_TestDumpRecord HDF5LIBS_TestRecoverFile)
+  if(TARGET ${target})
+    target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
+  endif()
+endforeach()
+
 daq_install()
