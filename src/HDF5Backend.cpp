@@ -549,6 +549,7 @@ HDF5WriterBackend::write_record(const daqdataformats::RecordIndex& index,
 {
   auto const& layout = get_file_layout();
   auto const& record_id = index.get_record_id();
+  m_stats_before_record = m_stats;
 
   HDF5SourceIDHandler::source_id_path_map_t path_map;
   auto [header_path, record_group] =
@@ -569,6 +570,21 @@ HDF5WriterBackend::write_record(const daqdataformats::RecordIndex& index,
   HDF5SourceIDHandler::store_record_level_path_info(record_group, path_map);
   HDF5SourceIDHandler::store_record_level_fragment_type_map(record_group, index.get_source_ids_by_fragment_type());
   HDF5SourceIDHandler::store_record_level_subdetector_map(record_group, index.get_source_ids_by_subdetector());
+}
+
+void
+HDF5WriterBackend::discard_record(const daqdataformats::RecordID& record_id)
+{
+  auto& file = get_file();
+  const std::string record_group_name =
+    get_file_layout().get_record_number_string(record_id.number, record_id.sequence);
+  if (file.exist(record_group_name)) {
+    file.unlink(record_group_name);
+  }
+  file.flush();
+  m_stats.recorded_size = m_stats_before_record.recorded_size;
+  m_stats.uncompressed_raw_data_size = m_stats_before_record.uncompressed_raw_data_size;
+  m_stats.total_file_size = file.getFileSize();
 }
 
 void
