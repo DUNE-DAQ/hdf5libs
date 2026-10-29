@@ -476,18 +476,18 @@ struct FileWriteFixture
     BOOST_REQUIRE_THROW(h5file_ptr->get_frag_ptr(1, 0, unknown_sid), dunedaq::hdf5libs::SourceIDNotFound);
     BOOST_REQUIRE(h5file_ptr->get_geo_ids_for_source_id(std::make_pair(1, 0), unknown_sid).empty());
 
-    // the failed lookups must not have disturbed the record's contents
+    // The failed lookups must not have disturbed the record's contents.
     BOOST_REQUIRE_EQUAL(h5file_ptr->get_fragment_source_ids(1, 0).size(), components_per_record);
     dunedaq::daqdataformats::SourceID known_sid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
     BOOST_REQUIRE_EQUAL(h5file_ptr->get_frag_ptr(1, 0, known_sid)->get_element_id().id, 1);
   }
 
   // Reads every record repeatedly through both the dataset-path and the (record, SourceID)
-  // overloads, adopting and freeing every buffer; under ASan this checks buffer ownership (H2, H6, H7)
+  // overloads, adopting and freeing every buffer; under ASan this checks buffer ownership.
   void read_through_all_overloads(int repeats = 3)
   {
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-    auto record_ids = h5file_ptr->get_all_record_ids(); // a copy: the loop below uses the file's caches
+    auto record_ids = h5file_ptr->get_all_record_ids();
     BOOST_REQUIRE_EQUAL(record_ids.size(), trigger_count);
     for (int pass = 0; pass < repeats; ++pass) {
       for (auto const& rid : record_ids) {
@@ -591,67 +591,6 @@ BOOST_AUTO_TEST_CASE(CompressedReadThroughAllOverloads)
   fixture.read_through_all_overloads();
 }
 
-BOOST_AUTO_TEST_CASE(ExplicitClose)
-{
-  const std::string file_path(std::filesystem::temp_directory_path());
-  const std::string bare_filename =
-    file_path + "/close_test" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
-  std::filesystem::remove(bare_filename);
-  std::filesystem::remove(inprogress_filename);
-
-  HDF5RawDataFile h5file(
-    bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map());
-  h5file.write(create_trigger_record(1));
-  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), inprogress_filename);
-  BOOST_REQUIRE(std::filesystem::exists(inprogress_filename));
-
-  h5file.close();
-  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), bare_filename);
-  BOOST_REQUIRE(std::filesystem::exists(bare_filename));
-  BOOST_REQUIRE(!std::filesystem::exists(inprogress_filename));
-
-  // a second close, and the destructor's close, are no-ops
-  BOOST_REQUIRE_NO_THROW(h5file.close());
-
-  // the closing attributes were written
-  HDF5RawDataFile reader(bare_filename);
-  BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
-  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1);
-  reader.close();
-
-  std::filesystem::remove(bare_filename);
-}
-
-BOOST_AUTO_TEST_CASE(StaleInProgressFileIsNotReused)
-{
-  const std::string file_path(std::filesystem::temp_directory_path());
-  const std::string bare_filename =
-    file_path + "/stale_test" + std::to_string(getpid()) + "_" + std::string(getenv("USER")) + ".hdf5";
-  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
-  std::filesystem::remove(bare_filename);
-
-  // stand-in for a file left behind by a crashed writer
-  const std::string stale_contents = "left over from a crash";
-  {
-    std::ofstream stale_file(inprogress_filename);
-    stale_file << stale_contents;
-  }
-
-  BOOST_REQUIRE_THROW(
-    HDF5RawDataFile(
-      bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map()),
-    dunedaq::hdf5libs::FileOpenFailed);
-
-  // the stale file must be untouched, and no final file created
-  std::ifstream stale_file(inprogress_filename);
-  std::string contents_after((std::istreambuf_iterator<char>(stale_file)), std::istreambuf_iterator<char>());
-  BOOST_REQUIRE_EQUAL(contents_after, stale_contents);
-  BOOST_REQUIRE(!std::filesystem::exists(bare_filename));
-
-  std::filesystem::remove(inprogress_filename);
-}
-
 namespace {
 std::string
 unique_test_file_name(const std::string& stem)
@@ -673,9 +612,66 @@ read_text_file(const std::string& name)
   std::ifstream file(name);
   return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
-} // namespace
+} // namespace ""
 
-// The rename used by close() never replaces an existing file, even without checking first
+BOOST_AUTO_TEST_CASE(ExplicitClose)
+{
+  const std::string bare_filename = unique_test_file_name("close_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+  std::filesystem::remove(inprogress_filename);
+
+  HDF5RawDataFile h5file(
+    bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map());
+  h5file.write(create_trigger_record(1));
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), inprogress_filename);
+  BOOST_REQUIRE(std::filesystem::exists(inprogress_filename));
+
+  h5file.close();
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), bare_filename);
+  BOOST_REQUIRE(std::filesystem::exists(bare_filename));
+  BOOST_REQUIRE(!std::filesystem::exists(inprogress_filename));
+
+  // A second close, and the destructor's close, are no-ops.
+  BOOST_REQUIRE_NO_THROW(h5file.close());
+
+  // The closing attributes were written.
+  HDF5RawDataFile reader(bare_filename);
+  BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
+  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1U);
+  reader.close();
+
+  std::filesystem::remove(bare_filename);
+}
+
+BOOST_AUTO_TEST_CASE(StaleInProgressFileIsNotReused)
+{
+  const std::string bare_filename = unique_test_file_name("stale_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+
+  // Stand-in for a file left behind by a crashed writer.
+  const std::string stale_contents = "left over from a crash";
+  {
+    std::ofstream stale_file(inprogress_filename);
+    stale_file << stale_contents;
+  }
+
+  BOOST_REQUIRE_THROW(
+    HDF5RawDataFile(
+      bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map()),
+    dunedaq::hdf5libs::FileOpenFailed);
+
+  // The stale file must be untouched, and no final file created.
+  std::ifstream stale_file(inprogress_filename);
+  std::string contents_after((std::istreambuf_iterator<char>(stale_file)), std::istreambuf_iterator<char>());
+  BOOST_REQUIRE_EQUAL(contents_after, stale_contents);
+  BOOST_REQUIRE(!std::filesystem::exists(bare_filename));
+
+  std::filesystem::remove(inprogress_filename);
+}
+
+// The rename used by close() never replaces an existing file, even without checking first.
 BOOST_AUTO_TEST_CASE(RenameWithoutReplacing)
 {
   const std::string from = unique_test_file_name("rename_from");
@@ -699,7 +695,7 @@ BOOST_AUTO_TEST_CASE(RenameWithoutReplacing)
   std::filesystem::remove(to);
 }
 
-// A file is never started if it could not get its final name without replacing an existing file
+// A file is never started if it could not get its final name without replacing an existing file.
 BOOST_AUTO_TEST_CASE(ExistingFinalFileIsNotReplaced)
 {
   const std::string bare_filename = unique_test_file_name("final_exists_test");
@@ -718,7 +714,7 @@ BOOST_AUTO_TEST_CASE(ExistingFinalFileIsNotReplaced)
 }
 
 // If the final name appears while the file is being written, close() fails once, keeps the
-// in-progress name (the file stays complete and readable for recovery) and replaces nothing
+// in-progress name (the file stays complete and readable for recovery) and replaces nothing.
 BOOST_AUTO_TEST_CASE(FinalNameAppearsBeforeClose)
 {
   const std::string bare_filename = unique_test_file_name("final_appears_test");
@@ -738,7 +734,7 @@ BOOST_AUTO_TEST_CASE(FinalNameAppearsBeforeClose)
 
   HDF5RawDataFile reader(inprogress_filename);
   BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
-  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1);
+  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1U);
   reader.close();
 
   std::filesystem::remove(bare_filename);
