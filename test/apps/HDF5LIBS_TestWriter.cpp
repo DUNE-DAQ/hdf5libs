@@ -88,7 +88,7 @@ main(int argc, char** argv)
   // auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map;
 
-  // files are never overwritten by HDF5RawDataFile, so this test app removes any earlier output itself
+  // Files are never overwritten by HDF5RawDataFile, so this test app removes any earlier output itself.
   for (auto const& old_file : { ofile_name, ofile_name + ".writing" }) {
     if (std::filesystem::remove(old_file)) {
       TLOG() << "Removed existing file " << old_file;
@@ -117,8 +117,7 @@ main(int argc, char** argv)
 
     TLOG() << "\tWriting trigger " << trig_num << " with time_stamp " << ts;
 
-    // create TriggerRecordHeader, with its element_count component requests (a lone
-    // TriggerRecordHeaderData claiming them would make the header read past it)
+    // The header must carry one component request per element, to match num_requested_components.
     std::vector<ComponentRequest> component_requests(element_count);
     TriggerRecordHeader trh(component_requests);
     trh.set_trigger_number(trig_num);
