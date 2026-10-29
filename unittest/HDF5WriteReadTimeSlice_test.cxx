@@ -352,11 +352,11 @@ struct FileWriteFixture
   }
 
   // Reads every TimeSlice repeatedly through both the dataset-path and the record-ID overloads,
-  // adopting and freeing every buffer; under ASan this checks buffer ownership (H2, H7)
+  // adopting and freeing every buffer; under ASan this checks buffer ownership.
   void read_through_all_overloads(int repeats = 3)
   {
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
-    auto record_ids = h5file_ptr->get_all_record_ids(); // a copy: the loop below uses the file's caches
+    auto record_ids = h5file_ptr->get_all_record_ids();
     BOOST_REQUIRE_EQUAL(record_ids.size(), static_cast<size_t>(timeslice_count));
     for (int pass = 0; pass < repeats; ++pass) {
       for (auto const& rid : record_ids) {

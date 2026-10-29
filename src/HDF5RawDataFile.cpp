@@ -17,6 +17,7 @@
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -33,16 +34,17 @@ namespace hdf5libs {
 constexpr uint32_t MAX_FILELAYOUT_VERSION = 4294967295; // NOLINT(build/unsigned)
 
 namespace {
-// Looks up a key in one of the per-record cache maps without inserting into it
+// Looks up a key in one of the per-record cache maps without inserting into it.
 template<typename MapType>
 typename MapType::mapped_type
 value_or_empty(const MapType& the_map, const typename MapType::key_type& key)
 {
-  auto iter = the_map.find(key);
+  const auto iter = the_map.find(key);
   return (iter == the_map.end()) ? typename MapType::mapped_type{} : iter->second;
 }
-} // namespace
+} // namespace ""
 
+// Uses renameat2 with RENAME_NOREPLACE, falling back to link() + unlink() on filesystems without it.
 void
 rename_without_replacing(const std::string& from, const std::string& to)
 {
@@ -51,7 +53,7 @@ rename_without_replacing(const std::string& from, const std::string& to)
   }
   int error = errno;
   if (error == EINVAL || error == ENOSYS || error == ENOTSUP) {
-    // the filesystem doesn't support RENAME_NOREPLACE (e.g. NFS); link() also fails if the new name exists
+    // The filesystem doesn't support RENAME_NOREPLACE (e.g. NFS); link() also fails if the new name exists.
     if (::link(from.c_str(), to.c_str()) == 0) {
       if (::unlink(from.c_str()) != 0) {
         throw std::system_error(
@@ -88,7 +90,7 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string file_name,
 
   auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
 
-  // never start a file that could not get its final name without replacing an existing one
+  // Never start a file that could not get its final name without replacing an existing one.
   if (filename_to_open != m_bare_file_name && std::filesystem::exists(m_bare_file_name)) {
     throw FileOpenFailed(
       ERS_HERE, filename_to_open, "a file with the final name " + m_bare_file_name + " already exists");
@@ -140,13 +142,35 @@ HDF5RawDataFile::~HDF5RawDataFile()
   } catch (std::exception const& excpt) {
     ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, excpt.what()));
   } catch (...) { // NOLINT(runtime/exceptions)
+    // A destructor must not throw, whatever close() throws.
     ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, "unknown exception"));
   }
 }
 
-/**
- * @brief Finalize and close the file (see the header for the contract).
- */
+void
+HDF5RawDataFile::write_closing_attributes()
+{
+  if (!m_file_ptr->hasAttribute("recorded_size")) {
+    write_attribute("recorded_size", m_recorded_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
+    write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("total_file_size")) {
+    write_attribute("total_file_size", m_total_file_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("closing_timestamp")) {
+    size_t file_closing_timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+    write_attribute("closing_timestamp", file_closing_timestamp);
+  }
+
+  m_file_ptr->flush();
+}
+
 void
 HDF5RawDataFile::close()
 {
@@ -158,49 +182,34 @@ HDF5RawDataFile::close()
   const std::string open_file_name = m_file_ptr->getName();
 
   if (writable) {
+    std::optional<std::string> finalize_error;
     try {
-      if (!m_file_ptr->hasAttribute("recorded_size")) {
-        write_attribute("recorded_size", m_recorded_size);
-      }
-
-      if (!m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
-        write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
-      }
-
-      if (!m_file_ptr->hasAttribute("total_file_size")) {
-        write_attribute("total_file_size", m_total_file_size);
-      }
-
-      if (!m_file_ptr->hasAttribute("closing_timestamp")) {
-        size_t file_closing_timestamp =
-          std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-        write_attribute("closing_timestamp", file_closing_timestamp);
-      }
-
-      m_file_ptr->flush();
+      write_closing_attributes();
     } catch (std::exception const& excpt) {
-      // release the file so that a failed close is not retried; the in-progress name stays on disk
-      m_file_ptr.reset();
-      m_closed_file_name = open_file_name;
-      throw FileCloseFailed(ERS_HERE, open_file_name, std::string("could not finalize the file: ") + excpt.what());
+      finalize_error = excpt.what();
     } catch (...) { // NOLINT(runtime/exceptions)
+      // Any failure must still release the file below, so nothing may escape here.
+      finalize_error = "unknown exception";
+    }
+    if (finalize_error) {
+      // Release the file so that a failed close is not retried; the in-progress name stays on disk.
       m_file_ptr.reset();
       m_closed_file_name = open_file_name;
-      throw FileCloseFailed(ERS_HERE, open_file_name, "could not finalize the file: unknown exception");
+      throw FileCloseFailed(ERS_HERE, open_file_name, "could not finalize the file: " + *finalize_error);
     }
   }
 
   m_file_ptr.reset();
   m_closed_file_name = open_file_name;
 
-  // rename file to the bare name, if needed, never replacing an existing file
+  // Rename the file to the bare name, if needed, never replacing an existing file.
   if (writable && open_file_name != m_bare_file_name) {
     try {
       rename_without_replacing(open_file_name, m_bare_file_name);
     } catch (std::system_error const& excpt) {
-      std::string reason = (excpt.code() == std::errc::file_exists)
-                             ? "the final name " + m_bare_file_name + " already exists"
-                             : excpt.what();
+      const std::string reason = (excpt.code() == std::errc::file_exists)
+                                   ? "the final name " + m_bare_file_name + " already exists"
+                                   : excpt.what();
       throw FileCloseFailed(ERS_HERE, open_file_name, reason + "; the file keeps its in-progress name");
     }
     m_closed_file_name = m_bare_file_name;
@@ -628,7 +637,7 @@ const std::string&
 HDF5RawDataFile::get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const
 {
   auto const& path_map = m_source_id_path_cache.at(rid);
-  auto iter = path_map.find(source_id);
+  const auto iter = path_map.find(source_id);
   if (iter == path_map.end()) {
     throw SourceIDNotFound(ERS_HERE, source_id.to_string(), rid.first, rid.second);
   }
@@ -1145,7 +1154,7 @@ std::unique_ptr<char[]>
 HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 {
   HighFive::DataSet data_set = get_valid_dataset(dataset_path);
-  size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
+  const size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
 
   auto membuffer = std::make_unique<char[]>(data_size);
 
@@ -1157,10 +1166,11 @@ HDF5RawDataFile::malloc_buffer_t
 HDF5RawDataFile::get_dataset_raw_data_malloc(const std::string& dataset_path)
 {
   HighFive::DataSet data_set = get_valid_dataset(dataset_path);
-  size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
+  const size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
 
-  // malloc(0) may return nullptr; always allocate at least one byte
-  malloc_buffer_t membuffer(static_cast<char*>(std::malloc(data_size > 0 ? data_size : 1))); // NOLINT
+  // malloc(0) may return nullptr; always allocate at least one byte.
+  malloc_buffer_t membuffer(
+    static_cast<char*>(std::malloc(data_size > 0 ? data_size : 1))); // NOLINT(cppcoreguidelines-no-malloc)
   if (membuffer == nullptr) {
     throw std::bad_alloc();
   }
@@ -1172,7 +1182,7 @@ HDF5RawDataFile::get_dataset_raw_data_malloc(const std::string& dataset_path)
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
-  // Fragment frees an adopted buffer with free(), so the buffer must come from malloc
+  // Fragment frees an adopted buffer with free(), so the buffer must come from malloc.
   auto membuffer = get_dataset_raw_data_malloc(dataset_name);
   auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
     membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
@@ -1262,7 +1272,7 @@ std::unique_ptr<daqdataformats::TriggerRecordHeader>
 HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
-  // the header copies the buffer, which is then freed by membuffer
+  // The header copies the buffer, which is then freed by membuffer.
   auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.get(), true);
   return trh_ptr;
 }

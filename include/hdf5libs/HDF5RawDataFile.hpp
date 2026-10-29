@@ -124,10 +124,9 @@ ERS_DECLARE_ISSUE(hdf5libs,
 
 namespace hdf5libs {
 
-// Renames a file without ever replacing an existing file at the new name, atomically (so a file
-// that appears at the new name concurrently is not replaced either). Uses renameat2 with
-// RENAME_NOREPLACE, or link() + unlink() on filesystems without it. Throws std::system_error
-// (code EEXIST if the new name exists); on failure the file keeps its old name.
+// Renames a file atomically without ever replacing an existing file at the new name, even one that
+// appears concurrently. Throws std::system_error (code EEXIST if the new name exists); on failure
+// the file keeps its old name.
 void
 rename_without_replacing(const std::string& from, const std::string& to);
 
@@ -152,11 +151,8 @@ public:
 
   inline static const std::string s_inprogress_suffix = ".writing";
 
-  // constructor for writing. By default the file is created exclusively: if a file with the
-  // in-progress name already exists (e.g. left over from a crash), the open fails with
-  // FileOpenFailed and the existing file is left untouched, never appended to or overwritten.
-  // With an in-progress suffix, a file that already has the final name is never replaced either:
-  // the open fails if it exists, and close() keeps the in-progress name if it appears meanwhile.
+  // Constructor for writing. Throws FileOpenFailed if the in-progress or the final name already
+  // exists; an existing file is never appended to, overwritten or replaced.
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
@@ -170,18 +166,16 @@ public:
   // constructor for reading and optional writing
   explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
-  // Calls close(); any failure is reported with ers::error, since a destructor must not throw
+  // Calls close(); any failure is reported with ers::error, since a destructor must not throw.
   ~HDF5RawDataFile();
 
-  // Finalizes the file: for a writable file, writes the closing attributes, flushes, closes it,
-  // and renames it to drop the in-progress suffix. The rename never replaces an existing file:
-  // if the final name exists, close() throws FileCloseFailed and the file keeps its in-progress
-  // name (as get_file_name() then reports). The underlying file is always released, even when
-  // this throws, so a failed close is never retried. Calling it again is a no-op.
-  // Apart from get_file_name(), no other member function may be used after close().
+  // Finalizes a writable file and renames it to drop the in-progress suffix, never replacing an
+  // existing file: if the final name exists, throws FileCloseFailed and the file keeps its
+  // in-progress name. The file is always released, even on failure; calling close() again is a
+  // no-op. Only get_file_name() may be used after close().
   void close();
 
-  // The name of the file on disk: the in-progress name while open, the final name once closed
+  // The name of the file on disk: the in-progress name while open, the final name once closed.
   std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_closed_file_name; }
   static std::string get_file_name_extension() { return "hdf5"; }
 
@@ -236,7 +230,7 @@ public:
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
-  // the returned set is owned by this object and cached on first use
+  // The returned set is owned by this object and cached on first use.
   const record_id_set& get_all_record_ids();
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
@@ -495,6 +489,12 @@ public:
   }
 
 private:
+  struct FreeDeleter
+  {
+    void operator()(void* ptr) const noexcept { std::free(ptr); } // NOLINT(cppcoreguidelines-no-malloc)
+  };
+  using malloc_buffer_t = std::unique_ptr<char[], FreeDeleter>; // NOLINT(modernize-avoid-c-arrays)
+
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile& operator=(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile(HDF5RawDataFile&&) = delete;
@@ -503,7 +503,7 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   std::string m_bare_file_name;
-  std::string m_closed_file_name; // the file's name after close(): normally the bare name
+  std::string m_closed_file_name; // The file's name after close(): normally the bare name.
   unsigned m_compression_level;
   unsigned m_open_flags;
 
@@ -535,21 +535,18 @@ private:
   // adds record-level information to caches, if needed
   void add_record_level_info_to_caches_if_needed(record_id_t rid);
 
-  // a dataset read into a buffer allocated with std::malloc, which a Fragment can take over
-  struct FreeDeleter
-  {
-    void operator()(void* ptr) const noexcept { std::free(ptr); } // NOLINT(cppcoreguidelines-no-malloc)
-  };
-  using malloc_buffer_t = std::unique_ptr<char[], FreeDeleter>; // NOLINT(modernize-avoid-c-arrays)
+  // Writes the closing attributes that are not already present, then flushes.
+  void write_closing_attributes();
+
+  // A dataset read into a buffer allocated with std::malloc, which a Fragment can take over.
   malloc_buffer_t get_dataset_raw_data_malloc(const std::string& dataset_path);
 
-  // the dataset at dataset_path; throws InvalidHDF5Dataset if it isn't valid
+  // Throws InvalidHDF5Dataset if the dataset is invalid.
   HighFive::DataSet get_valid_dataset(const std::string& dataset_path);
 
-  // throws RecordIDNotFound if the record is not in the file
   void throw_if_record_id_not_found(const record_id_t& rid);
 
-  // dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent
+  // Dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent.
   const std::string& get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const;
 
   // caches of full-file and record-specific information
