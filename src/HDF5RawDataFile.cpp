@@ -18,6 +18,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cstring>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -252,11 +253,17 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
 void
 HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
+
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
-             static_cast<const char*>(frag.get_storage_location()),
-             frag.get_size(),
+             static_cast<const char*>(frag.get_data()),
+             frag.get_data_size(),
              m_compression_level);
+
+  m_file_ptr->getDataSet(std::get<1>(write_results))
+    .createAttribute<char>("fragment_header", HighFive::DataSpace({ sizeof(daqdataformats::FragmentHeader) }))
+    .write_raw(static_cast<const char*>(frag.get_storage_location()));
+
   m_recorded_size += std::get<0>(write_results);
 
   daqdataformats::SourceID source_id = frag.get_element_id();
@@ -275,7 +282,7 @@ HDF5RawDataFile::write_file_layout()
 }
 
 /**
- * @brief write bytes to a dataset in the file, at the appropriate path
+ * @brief write bytes to a dataset in the file, at the appropriate path.
  */
 std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
@@ -319,7 +326,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   HighFive::DataSetCreateProps data_set_create_props;
   HighFive::DataSetAccessProps data_set_access_props;
 
-  if (compression_level > 0) {
+  if (compression_level > 0 && raw_data_size_bytes > 0) {
     std::vector<hsize_t> chunk_size = { raw_data_size_bytes, 1 };
     data_set_create_props.add(HighFive::Chunking(chunk_size));
     data_set_create_props.add(HighFive::Deflate(compression_level));
@@ -1067,10 +1074,27 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
-  auto membuffer = get_dataset_raw_data(dataset_name);
-  auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
-    membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
-  return frag_ptr;
+  HighFive::DataSet data_set = m_file_ptr->getDataSet(dataset_name);
+  size_t const header_size = sizeof(daqdataformats::FragmentHeader);
+  size_t const data_size = data_set.getSpace().getElementCount();
+
+  std::vector<char> header_bytes;
+  data_set.getAttribute("fragment_header").read(header_bytes);
+
+  if (header_bytes.size() != header_size)
+    // TODO: is there a better error to throw here?
+    throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
+
+  char* buf = static_cast<char*>(malloc(header_size + data_size)); // Fragment frees with free()
+  if (buf == nullptr)
+    throw std::bad_alloc();
+
+  std::memcpy(buf, header_bytes.data(), header_size);
+  if (data_size > 0)
+    data_set.read(buf + header_size); // payload -> after header
+
+  return std::make_unique<daqdataformats::Fragment>(
+    buf, daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
