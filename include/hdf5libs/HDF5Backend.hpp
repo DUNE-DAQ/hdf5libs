@@ -154,6 +154,8 @@ public:
   void write_record(const daqdataformats::RecordIndex& index,
                     const rawdatafilelibs::BlobView& header,
                     const std::vector<rawdatafilelibs::BlobView>& fragments) override;
+  // Unlinks the record's group (HDF5 doesn't give the space back, so the file size stays as it is)
+  void discard_record(const daqdataformats::RecordID& record_id) override;
   rawdatafilelibs::FileStats get_stats() const override { return m_stats; }
   void close(const rawdatafilelibs::FileMetadata& final_metadata) override;
 
@@ -184,6 +186,7 @@ private:
   std::unique_ptr<HighFive::File> m_file;
   std::unique_ptr<HDF5FileLayout> m_file_layout;
   rawdatafilelibs::FileStats m_stats;
+  rawdatafilelibs::FileStats m_stats_before_record; // restored by discard_record()
 };
 
 } // namespace dunedaq::hdf5libs

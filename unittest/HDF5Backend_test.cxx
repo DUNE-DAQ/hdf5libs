@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -505,6 +506,56 @@ BOOST_AUTO_TEST_CASE(SourceIDListedForTwoFragmentTypes)
   BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
   BOOST_REQUIRE(index.get_fragments().at(shared.source_id).fragment_type == shared.fragment_type);
   BOOST_REQUIRE(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type() == shared.fragment_type);
+  reader->close();
+  std::filesystem::remove_all(dir);
+}
+
+// An HDF5 writer backend whose first write_record() for record 2 stores only the record header (a
+// record group with its header dataset and maps) and then throws, as a failure in the middle of a
+// record would
+class PartlyWritingHDF5WriterBackend : public HDF5WriterBackend
+{
+public:
+  void write_record(const daqdataformats::RecordIndex& index,
+                    const rawdatafilelibs::BlobView& header,
+                    const std::vector<rawdatafilelibs::BlobView>& fragments) override
+  {
+    if (m_failed || index.get_record_id().number != 2) {
+      HDF5WriterBackend::write_record(index, header, fragments);
+      return;
+    }
+    m_failed = true;
+    HDF5WriterBackend::write_record(index, header, {});
+    throw std::runtime_error("simulated failure in the middle of a record");
+  }
+
+private:
+  bool m_failed{ false };
+};
+
+BOOST_AUTO_TEST_CASE(FailedWriteIsRemoved)
+{
+  const auto dir = make_test_dir("FailedWriteIsRemoved");
+  const std::string file_name = dir + "/failed_write.hdf5";
+  {
+    RawDataFileWriter writer(
+      std::make_unique<PartlyWritingHDF5WriterBackend>(), file_name, make_metadata(), make_geo_id_map());
+    writer.write(make_trigger_record(1));
+    const auto stats_before = writer.get_stats();
+
+    BOOST_REQUIRE_THROW(writer.write(make_trigger_record(2)), rawdatafilelibs::FileWriteFailed);
+    BOOST_REQUIRE(!writer.record_exists(RecordID{ 2 }));
+    BOOST_REQUIRE_EQUAL(writer.get_stats().recorded_size, stats_before.recorded_size);
+    BOOST_REQUIRE_EQUAL(writer.get_stats().uncompressed_raw_data_size, stats_before.uncompressed_raw_data_size);
+
+    // the retry succeeds
+    writer.write(make_trigger_record(2));
+    writer.close();
+  }
+
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  BOOST_REQUIRE_EQUAL(reader->get_record_ids().size(), 2);
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
   reader->close();
   std::filesystem::remove_all(dir);
 }
