@@ -193,6 +193,7 @@ HDF5RawDataFile::~HDF5RawDataFile()
   } catch (std::exception const& excpt) {
     ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, excpt.what()));
   } catch (...) { // NOLINT(runtime/exceptions)
+    // A destructor must not throw, whatever close() throws.
     ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, "unknown exception"));
   }
 }
@@ -273,9 +274,9 @@ HDF5RawDataFile::close()
     try {
       rename_without_replacing(open_file_name, m_bare_file_name);
     } catch (std::system_error const& excpt) {
-      std::string reason = (excpt.code() == std::errc::file_exists)
-                             ? "the final name " + m_bare_file_name + " already exists"
-                             : excpt.what();
+      const std::string reason = (excpt.code() == std::errc::file_exists)
+                                   ? "the final name " + m_bare_file_name + " already exists"
+                                   : excpt.what();
       throw FileCloseFailed(ERS_HERE, open_file_name, reason + "; the file keeps its in-progress name");
     }
     m_closed_file_name = m_bare_file_name;
