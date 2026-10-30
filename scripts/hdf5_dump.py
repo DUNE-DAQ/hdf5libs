@@ -130,6 +130,17 @@ class DAQDataFile:
                 print(banner_str.center(80, '='))
                 for k in self.h5file[i.path].attrs.keys():
                     print("{:<30}: {}".format(k, self.h5file[i.path].attrs[k]))
+            if not {"dataset-attributes", "all"}.isdisjoint(k_header_type):
+                for j in [i.header] + i.fragments:
+                    attrs = self.h5file[j].attrs
+                    if len(attrs) > 0:
+                        print(" Dataset Attributes ".center(80, '-'))
+                        print('{:<30}:\t{}'.format("Path", j))
+                        for k in attrs.keys():
+                            if k == 'fragment_header':
+                                print_fragment_header(bytearray(attrs[k]), self.clock_speed_hz)
+                            else:
+                                print("{:<30}: {}".format(k, attrs[k]))
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
@@ -143,7 +154,7 @@ class DAQDataFile:
             if not {"fragment", "both", "all"}.isdisjoint(k_header_type):
                 for j in i.fragments:
                     dset = self.h5file[j]
-                    data_array = bytearray(dset[:])
+                    data_array = bytearray(dset.attrs.get('fragment_header', dset[:]))
                     banner_str = " Fragment Header "
                     print(banner_str.center(80, '-'))
                     print('{:<30}:\t{}'.format("Path", j))
@@ -173,7 +184,7 @@ class DAQDataFile:
                 empty_frag_count = 0
                 for frag in i.fragments:
                     frag_dset = self.h5file[frag]
-                    frag_data = bytearray(frag_dset[:])
+                    frag_data = bytearray(frag_dset.attrs.get('fragment_header', frag_dset[:]))
                     (frag_version, ) = struct.unpack('<I', frag_data[4:8])
                     if frag_version != FRAGMENT_HEADER_VERSION:
                         raise ValueError(f"Invalid Fragment Header format version: expected {FRAGMENT_HEADER_VERSION} and found {frag_version}")
@@ -295,11 +306,12 @@ def parse_args():
 
     parser.add_argument('-p', '--print-out', action='append',
                         choices=['header', 'fragment', 'both', 'attributes',
-                                 'all'],
+                                 'dataset-attributes', 'all'],
                         help='''select which part of data to be displayed, this
                         option can be repeated multiple times, "-p both" is
                         equivalent to "-p header -p fragment", "-p all" is
-                        equivalent to "-p attributes -p header -p fragment"''')
+                        equivalent to "-p attributes -p dataset-attributes 
+                        -p header -p fragment"''')
 
     parser.add_argument('-c', '--check-fragments',
                         help='''check if fragments written in trigger record
