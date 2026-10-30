@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(RoundTripThroughPlugin)
   BOOST_REQUIRE(reader->get_geo_id_map() == geo_id_map);
   BOOST_REQUIRE((reader->get_record_ids() == std::set<RecordID>{ RecordID{ 1 }, RecordID{ 2 } }));
 
-  auto const& index = reader->get_index(RecordID{ 2 });
+  auto const& index = reader->get_record_index(RecordID{ 2 });
   BOOST_REQUIRE_EQUAL(index.get_header_source_id(), s_header_source_id);
   BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
   for (auto const& spec : s_fragments) {
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE(SourceIDListedForTwoFragmentTypes)
   }
 
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
-  const auto& index = reader->get_index(RecordID{ 1 });
+  const auto& index = reader->get_record_index(RecordID{ 1 });
   BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
   BOOST_REQUIRE(index.get_fragments().at(shared.source_id).fragment_type == shared.fragment_type);
   BOOST_REQUIRE(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type() == shared.fragment_type);
@@ -544,7 +544,7 @@ BOOST_AUTO_TEST_CASE(FailedWriteIsRemoved)
     const auto stats_before = writer.get_stats();
 
     BOOST_REQUIRE_THROW(writer.write(make_trigger_record(2)), rawdatafilelibs::FileWriteFailed);
-    BOOST_REQUIRE(!writer.record_exists(RecordID{ 2 }));
+    BOOST_REQUIRE(!writer.contains(RecordID{ 2 }));
     BOOST_REQUIRE_EQUAL(writer.get_stats().recorded_size, stats_before.recorded_size);
     BOOST_REQUIRE_EQUAL(writer.get_stats().uncompressed_raw_data_size, stats_before.uncompressed_raw_data_size);
 
