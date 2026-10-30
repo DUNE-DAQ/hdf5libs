@@ -17,12 +17,15 @@
 #include "boost/test/unit_test.hpp"
 
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <regex>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -463,6 +466,53 @@ struct FileWriteFixture
     BOOST_REQUIRE(trigger_number > 0xffffffff);
   }
 
+  void read_unknown_source_id()
+  {
+    // open file for reading now
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+
+    dunedaq::daqdataformats::SourceID unknown_sid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout,
+                                                      9999 };
+    BOOST_REQUIRE_THROW(h5file_ptr->get_frag_ptr(1, 0, unknown_sid), dunedaq::hdf5libs::SourceIDNotFound);
+    BOOST_REQUIRE(h5file_ptr->get_geo_ids_for_source_id(std::make_pair(1, 0), unknown_sid).empty());
+
+    // The failed lookups must not have disturbed the record's contents.
+    BOOST_REQUIRE_EQUAL(h5file_ptr->get_fragment_source_ids(1, 0).size(), components_per_record);
+    dunedaq::daqdataformats::SourceID known_sid = { dunedaq::daqdataformats::SourceID::Subsystem::kDetectorReadout, 1 };
+    BOOST_REQUIRE_EQUAL(h5file_ptr->get_frag_ptr(1, 0, known_sid)->get_element_id().id, 1);
+  }
+
+  // Reads every record repeatedly through both the dataset-path and the (record, SourceID)
+  // overloads, adopting and freeing every buffer; under ASan this checks buffer ownership.
+  void read_through_all_overloads(int repeats = 3)
+  {
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+    auto record_ids = h5file_ptr->get_all_record_ids();
+    BOOST_REQUIRE_EQUAL(record_ids.size(), trigger_count);
+    for (int pass = 0; pass < repeats; ++pass) {
+      for (auto const& rid : record_ids) {
+        auto trh_by_id = h5file_ptr->get_trh_ptr(rid);
+        auto trh_by_path = h5file_ptr->get_trh_ptr(h5file_ptr->get_record_header_dataset_path(rid));
+        BOOST_REQUIRE_EQUAL(trh_by_path->get_total_size_bytes(), trh_by_id->get_total_size_bytes());
+        BOOST_REQUIRE(std::memcmp(trh_by_path->get_storage_location(),
+                                  trh_by_id->get_storage_location(),
+                                  trh_by_id->get_total_size_bytes()) == 0);
+
+        auto paths = h5file_ptr->get_fragment_dataset_paths(rid);
+        BOOST_REQUIRE_EQUAL(paths.size(), components_per_record);
+        for (auto const& path : paths) {
+          auto frag_by_path = h5file_ptr->get_frag_ptr(path);
+          auto frag_by_sid = h5file_ptr->get_frag_ptr(rid, frag_by_path->get_element_id());
+          BOOST_REQUIRE_EQUAL(frag_by_sid->get_size(), frag_by_path->get_size());
+          BOOST_REQUIRE(std::memcmp(frag_by_sid->get_storage_location(),
+                                    frag_by_path->get_storage_location(),
+                                    frag_by_path->get_size()) == 0);
+        }
+      }
+    }
+    h5file_ptr->close();
+  }
+
   uint64_t trigger_count;
   uint64_t trigger_number;
   unsigned compression_level;
@@ -521,6 +571,174 @@ BOOST_AUTO_TEST_CASE(CompressedLargeTriggerRecordNumbers)
 {
   FileWriteFixture fixture(5, 1, 2000000000);
   fixture.read_write_large_trigger_numbers();
+}
+
+BOOST_AUTO_TEST_CASE(UnknownSourceID)
+{
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_unknown_source_id();
+}
+
+BOOST_AUTO_TEST_CASE(ReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 0, 0);
+  fixture.read_through_all_overloads();
+}
+
+BOOST_AUTO_TEST_CASE(CompressedReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 1, 0);
+  fixture.read_through_all_overloads();
+}
+
+namespace {
+std::string
+unique_test_file_name(const std::string& stem)
+{
+  return std::string(std::filesystem::temp_directory_path()) + "/" + stem + std::to_string(getpid()) + "_" +
+         std::string(getenv("USER")) + ".hdf5";
+}
+
+void
+write_text_file(const std::string& name, const std::string& contents)
+{
+  std::ofstream file(name);
+  file << contents;
+}
+
+std::string
+read_text_file(const std::string& name)
+{
+  std::ifstream file(name);
+  return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+} // namespace ""
+
+BOOST_AUTO_TEST_CASE(ExplicitClose)
+{
+  const std::string bare_filename = unique_test_file_name("close_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+  std::filesystem::remove(inprogress_filename);
+
+  HDF5RawDataFile h5file(
+    bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map());
+  h5file.write(create_trigger_record(1));
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), inprogress_filename);
+  BOOST_REQUIRE(std::filesystem::exists(inprogress_filename));
+
+  h5file.close();
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), bare_filename);
+  BOOST_REQUIRE(std::filesystem::exists(bare_filename));
+  BOOST_REQUIRE(!std::filesystem::exists(inprogress_filename));
+
+  // A second close, and the destructor's close, are no-ops.
+  BOOST_REQUIRE_NO_THROW(h5file.close());
+
+  // The closing attributes were written.
+  HDF5RawDataFile reader(bare_filename);
+  BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
+  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1U);
+  reader.close();
+
+  std::filesystem::remove(bare_filename);
+}
+
+BOOST_AUTO_TEST_CASE(StaleInProgressFileIsNotReused)
+{
+  const std::string bare_filename = unique_test_file_name("stale_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+
+  // Stand-in for a file left behind by a crashed writer.
+  const std::string stale_contents = "left over from a crash";
+  {
+    std::ofstream stale_file(inprogress_filename);
+    stale_file << stale_contents;
+  }
+
+  BOOST_REQUIRE_THROW(
+    HDF5RawDataFile(
+      bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map()),
+    dunedaq::hdf5libs::FileOpenFailed);
+
+  // The stale file must be untouched, and no final file created.
+  std::ifstream stale_file(inprogress_filename);
+  std::string contents_after((std::istreambuf_iterator<char>(stale_file)), std::istreambuf_iterator<char>());
+  BOOST_REQUIRE_EQUAL(contents_after, stale_contents);
+  BOOST_REQUIRE(!std::filesystem::exists(bare_filename));
+
+  std::filesystem::remove(inprogress_filename);
+}
+
+// The rename used by close() never replaces an existing file, even without checking first.
+BOOST_AUTO_TEST_CASE(RenameWithoutReplacing)
+{
+  const std::string from = unique_test_file_name("rename_from");
+  const std::string to = unique_test_file_name("rename_to");
+  write_text_file(from, "new");
+  write_text_file(to, "existing");
+
+  try {
+    rename_without_replacing(from, to);
+    BOOST_FAIL("rename_without_replacing replaced an existing file");
+  } catch (std::system_error const& excpt) {
+    BOOST_REQUIRE(excpt.code() == std::errc::file_exists);
+  }
+  BOOST_REQUIRE_EQUAL(read_text_file(from), "new");
+  BOOST_REQUIRE_EQUAL(read_text_file(to), "existing");
+
+  std::filesystem::remove(to);
+  BOOST_REQUIRE_NO_THROW(rename_without_replacing(from, to));
+  BOOST_REQUIRE(!std::filesystem::exists(from));
+  BOOST_REQUIRE_EQUAL(read_text_file(to), "new");
+  std::filesystem::remove(to);
+}
+
+// A file is never started if it could not get its final name without replacing an existing file.
+BOOST_AUTO_TEST_CASE(ExistingFinalFileIsNotReplaced)
+{
+  const std::string bare_filename = unique_test_file_name("final_exists_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(inprogress_filename);
+  write_text_file(bare_filename, "a finished file");
+
+  BOOST_REQUIRE_THROW(
+    HDF5RawDataFile(
+      bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map()),
+    dunedaq::hdf5libs::FileOpenFailed);
+  BOOST_REQUIRE_EQUAL(read_text_file(bare_filename), "a finished file");
+  BOOST_REQUIRE(!std::filesystem::exists(inprogress_filename));
+
+  std::filesystem::remove(bare_filename);
+}
+
+// If the final name appears while the file is being written, close() fails once, keeps the
+// in-progress name (the file stays complete and readable for recovery) and replaces nothing.
+BOOST_AUTO_TEST_CASE(FinalNameAppearsBeforeClose)
+{
+  const std::string bare_filename = unique_test_file_name("final_appears_test");
+  const std::string inprogress_filename = bare_filename + HDF5RawDataFile::s_inprogress_suffix;
+  std::filesystem::remove(bare_filename);
+  std::filesystem::remove(inprogress_filename);
+
+  HDF5RawDataFile h5file(
+    bare_filename, run_number, file_index, application_name, create_file_layout_params(), create_srcid_geoid_map());
+  h5file.write(create_trigger_record(1));
+  write_text_file(bare_filename, "another writer's file");
+
+  BOOST_REQUIRE_THROW(h5file.close(), dunedaq::hdf5libs::FileCloseFailed);
+  BOOST_REQUIRE_EQUAL(read_text_file(bare_filename), "another writer's file");
+  BOOST_REQUIRE_EQUAL(h5file.get_file_name(), inprogress_filename);
+  BOOST_REQUIRE_NO_THROW(h5file.close()); // not retried
+
+  HDF5RawDataFile reader(inprogress_filename);
+  BOOST_REQUIRE(reader.get_attribute<size_t>("closing_timestamp") > 0);
+  BOOST_REQUIRE_EQUAL(reader.get_all_trigger_record_ids().size(), 1U);
+  reader.close();
+
+  std::filesystem::remove(bare_filename);
+  std::filesystem::remove(inprogress_filename);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
