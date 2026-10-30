@@ -1078,12 +1078,9 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
   size_t const header_size = sizeof(daqdataformats::FragmentHeader);
   size_t const data_size = data_set.getSpace().getElementCount();
 
-  std::vector<char> header_bytes;
-  data_set.getAttribute("fragment_header").read(header_bytes);
-
+  std::vector<char> const header_bytes = get_attribute<std::vector<char>>(data_set, "fragment_header");
   if (header_bytes.size() != header_size)
-    // TODO: is there a better error to throw here?
-    throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
+    throw InvalidHDF5Attribute(ERS_HERE, "fragment_header");
 
   char* buf = static_cast<char*>(malloc(header_size + data_size)); // Fragment frees with free()
   if (buf == nullptr)
