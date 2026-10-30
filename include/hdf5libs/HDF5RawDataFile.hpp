@@ -180,6 +180,9 @@ private:
   HighFive::Group write(const daqdataformats::TimeSliceHeader& tsh,
                         HDF5SourceIDHandler::source_id_path_map_t& path_map);
   void write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map);
+  void write_record_contents(HighFive::Group& record_level_group,
+                             HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
+                             const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments);
 
 public:
   // attribute writers/getters

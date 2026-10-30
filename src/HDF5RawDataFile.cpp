@@ -141,36 +141,10 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  // the map of fragment types to SourceIDS
-  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
-
-  // the map of subdetectors to SourceIDS
-  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
-
   // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(tr.get_header_ref(), source_id_path_map);
 
-  // store the SourceID of the record header in the HDF5 file/group
-  // (since there should only be one entry in the map at this point, we'll take advantage of that...)
-  for (auto const& source_id_path : source_id_path_map) {
-    HDF5SourceIDHandler::store_record_header_source_id(record_level_group, source_id_path.first);
-  }
-
-  // write all of the fragments into the HDF5 file/group
-  for (auto const& frag_ptr : tr.get_fragments_ref()) {
-    write(*frag_ptr, source_id_path_map);
-    HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
-      fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
-    HDF5SourceIDHandler::add_subdetector_source_id_to_map(
-      subdetector_source_id_map,
-      static_cast<detdataformats::DetID::Subdetector>(frag_ptr->get_detector_id()),
-      frag_ptr->get_element_id());
-  }
-
-  // store all of the record-level maps in the HDF5 file/group
-  HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
-  HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
-  HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
+  write_record_contents(record_level_group, source_id_path_map, tr.get_fragments_ref());
 }
 
 /**
@@ -183,14 +157,22 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  // the map of fragment types to SourceIDS
-  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
-
-  // the map of subdetectors to SourceIDS
-  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
-
   // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(ts.get_header(), source_id_path_map);
+
+  write_record_contents(record_level_group, source_id_path_map, ts.get_fragments_ref());
+}
+
+/**
+ * @brief Write a record's fragments and store the record-level SourceID maps.
+ */
+void
+HDF5RawDataFile::write_record_contents(HighFive::Group& record_level_group,
+                                 HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
+                                 const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments)
+{
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
 
   // store the SourceID of the record header in the HDF5 file/group
   // (since there should only be one entry in the map at this point, we'll take advantage of that...)
@@ -199,7 +181,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
   }
 
   // write all of the fragments into the HDF5 file/group
-  for (auto const& frag_ptr : ts.get_fragments_ref()) {
+  for (auto const& frag_ptr : fragments) {
     write(*frag_ptr, source_id_path_map);
     HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
       fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
@@ -214,6 +196,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
   HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
   HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
 }
+
 
 /**
  * @brief Write a TriggerRecordHeader to the file.
