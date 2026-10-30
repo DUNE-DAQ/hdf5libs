@@ -361,7 +361,7 @@ HDF5ReaderBackend::scan_legacy_record(const RecordID& record_id, const HighFive:
 }
 
 daqdataformats::RecordIndex
-HDF5ReaderBackend::read_index(const RecordID& record_id)
+HDF5ReaderBackend::read_record_index(const RecordID& record_id)
 {
   return load_record(record_id).index;
 }
@@ -388,7 +388,7 @@ HDF5ReaderBackend::get_dataset_paths(const std::string& group_path)
   return collect_dataset_paths(m_file->getGroup(top), top);
 }
 
-rawdatafilelibs::Buffer
+rawdatafilelibs::Blob
 HDF5ReaderBackend::read_dataset(const std::string& dataset_path)
 {
   check_open();
@@ -396,12 +396,12 @@ HDF5ReaderBackend::read_dataset(const std::string& dataset_path)
   if (!data_set.isValid()) {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_path, m_file->getName());
   }
-  auto buffer = rawdatafilelibs::allocate_buffer(data_set.getSpace().getElementCount() * sizeof(char));
+  auto buffer = rawdatafilelibs::allocate_blob(data_set.getSpace().getElementCount() * sizeof(char));
   data_set.read(buffer.data.get());
   return buffer;
 }
 
-rawdatafilelibs::Buffer
+rawdatafilelibs::Blob
 HDF5ReaderBackend::read_blob(const RecordID& record_id, const SourceID& source_id)
 {
   return read_dataset(get_dataset_path(record_id, source_id));
@@ -629,7 +629,7 @@ HDF5WriterBackend::scan_for_recovery(const std::string& path)
       }
     };
     try {
-      auto index = reader.read_index(record_id);
+      auto index = reader.read_record_index(record_id);
       count(index.get_header_source_id());
       for (auto const& source_id : index.get_fragment_source_ids()) {
         count(source_id);
