@@ -310,7 +310,7 @@ def parse_args():
                         help='''select which part of data to be displayed, this
                         option can be repeated multiple times, "-p both" is
                         equivalent to "-p header -p fragment", "-p all" is
-                        equivalent to "-p attributes -p dataset-attributes 
+                        equivalent to "-p attributes -p dataset-attributes
                         -p header -p fragment"''')
 
     parser.add_argument('-c', '--check-fragments',
