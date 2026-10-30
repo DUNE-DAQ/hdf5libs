@@ -79,8 +79,8 @@ public:
   rawdatafilelibs::FileMetadata read_metadata() override;
   daqdataformats::SourceIDGeoIDMap read_geo_id_map() override;
   std::set<RecordID> read_record_ids() override;
-  daqdataformats::RecordIndex read_index(const RecordID& record_id) override;
-  rawdatafilelibs::Buffer read_blob(const RecordID& record_id, const SourceID& source_id) override;
+  daqdataformats::RecordIndex read_record_index(const RecordID& record_id) override;
+  rawdatafilelibs::Blob read_blob(const RecordID& record_id, const SourceID& source_id) override;
   void close() override;
 
   // ---- HDF5-only (expert) functions ----
@@ -101,7 +101,7 @@ public:
   std::vector<std::string> get_dataset_paths(const std::string& group_path = "");
 
   // The bytes of any dataset, by path; throws InvalidHDF5Dataset
-  rawdatafilelibs::Buffer read_dataset(const std::string& dataset_path);
+  rawdatafilelibs::Blob read_dataset(const std::string& dataset_path);
 
 private:
   struct RecordContents
