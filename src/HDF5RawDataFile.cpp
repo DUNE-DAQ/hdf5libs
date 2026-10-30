@@ -225,7 +225,7 @@ HDF5RawDataFile::close()
   auto reader = std::move(m_reader); // released even when closing fails
   auto* backend = m_reader_backend;
   m_reader_backend = nullptr;
-  const std::string open_file_name = reader->get_path();
+  const std::string open_file_name = reader->get_file_name();
   m_closed_file_name = open_file_name;
 
   if (m_allow_writing) {
@@ -290,7 +290,7 @@ HDF5RawDataFile::get_file_name() const
     return m_writer->get_current_file_name();
   }
   if (m_reader != nullptr) {
-    return m_reader->get_path();
+    return m_reader->get_file_name();
   }
   return m_closed_file_name.empty() ? m_bare_file_name : m_closed_file_name;
 }
@@ -376,7 +376,7 @@ bool
 HDF5RawDataFile::timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const
 {
   if (m_writer != nullptr) {
-    return m_writer->record_exists(daqdataformats::RecordID{ timeslice.get_header().timeslice_number });
+    return m_writer->contains(daqdataformats::RecordID{ timeslice.get_header().timeslice_number });
   }
   return get_reader().contains(daqdataformats::RecordID{ timeslice.get_header().timeslice_number });
 }
@@ -403,7 +403,7 @@ const daqdataformats::RecordIndex&
 HDF5RawDataFile::get_index(const record_id_t& rid)
 {
   throw_if_record_id_not_found(rid);
-  return get_reader().get_index(to_record_id(rid));
+  return get_reader().get_record_index(to_record_id(rid));
 }
 
 daqdataformats::SourceIDGeoIDMap
