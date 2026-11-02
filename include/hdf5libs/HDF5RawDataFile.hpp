@@ -59,10 +59,7 @@ namespace dunedaq {
 
 namespace hdf5libs {
 
-// Renames a file without ever replacing an existing file at the new name, atomically (so a file
-// that appears at the new name concurrently is not replaced either). The same as
-// rawdatafilelibs::rename_without_replacing: throws std::system_error (code EEXIST if the new
-// name exists); on failure the file keeps its old name.
+// Forwards to rawdatafilelibs::rename_without_replacing(); kept for existing callers.
 void
 rename_without_replacing(const std::string& from, const std::string& to);
 
@@ -439,6 +436,32 @@ public:
   bool timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const;
 
 private:
+  void open_for_writing(const std::string& file_name,
+                        rawdatafilelibs::FileMetadata metadata,
+                        const HDF5FileLayoutParameters& fl_params,
+                        const std::string& inprogress_filename_suffix,
+                        bool write_run_context_attributes);
+
+  rawdatafilelibs::FileStats get_stats() const noexcept;
+
+  // the open HighFive file; throws FileOpenFailed after close()
+  HighFive::File& get_h5_file() const;
+
+  // the reader; throws FileOpenFailed if the file was opened for writing, or after close()
+  rawdatafilelibs::RawDataFileReader& get_reader() const;
+  HDF5ReaderBackend& get_reader_backend() const;
+
+  void check_record_type(std::string);
+
+  // throws RecordIDNotFound if the record is not in the file
+  void throw_if_record_id_not_found(const record_id_t& rid);
+
+  // the record's index (as stored in the file); throws RecordIDNotFound
+  const daqdataformats::RecordIndex& get_index(const record_id_t& rid);
+
+  // the GeoID map restricted to the fragments in the record; throws RecordIDNotFound
+  daqdataformats::SourceIDGeoIDMap get_record_geo_id_map(const record_id_t& rid);
+
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile& operator=(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile(HDF5RawDataFile&&) = delete;
@@ -458,36 +481,7 @@ private:
   std::string m_record_type;
   daqdataformats::SourceIDGeoIDMap m_geo_id_map;
   rawdatafilelibs::FileStats m_final_stats; // the stats once the file is closed, or as read from the file
-
-  void open_for_writing(const std::string& file_name,
-                        rawdatafilelibs::FileMetadata metadata,
-                        const HDF5FileLayoutParameters& fl_params,
-                        const std::string& inprogress_filename_suffix,
-                        bool write_run_context_attributes);
-
-  rawdatafilelibs::FileStats get_stats() const noexcept;
-
-  // the open HighFive file; throws FileOpenFailed after close()
-  HighFive::File& get_h5_file() const;
-
-  // the reader; throws FileOpenFailed if the file was opened for writing, or after close()
-  rawdatafilelibs::RawDataFileReader& get_reader() const;
-  HDF5ReaderBackend& get_reader_backend() const;
-
-  // checking function
-  void check_record_type(std::string);
-
-  // throws RecordIDNotFound if the record is not in the file
-  void throw_if_record_id_not_found(const record_id_t& rid);
-
-  // the record's index (as stored in the file); throws RecordIDNotFound
-  const daqdataformats::RecordIndex& get_index(const record_id_t& rid);
-
-  // the GeoID map restricted to the fragments in the record; throws RecordIDNotFound
-  daqdataformats::SourceIDGeoIDMap get_record_geo_id_map(const record_id_t& rid);
-
-  // caches of full-file information
-  record_id_set m_all_record_ids_in_file;
+  record_id_set m_all_record_ids_in_file;   // filled on first use
 };
 
 // HDF5RawDataFile attribute writers/getters definitions

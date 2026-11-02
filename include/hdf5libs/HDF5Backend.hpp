@@ -42,19 +42,12 @@
 
 namespace dunedaq::hdf5libs {
 
-// The newest file layout version, which is the one written
-constexpr uint32_t s_current_file_layout_version = 7; // NOLINT(build/unsigned)
-
-// Files with a layout version at or below this have no stored per-record index, so their
-// records are found by scanning dataset paths (read-only support)
-constexpr uint32_t s_last_legacy_file_layout_version = 2; // NOLINT(build/unsigned)
-
 // The standard layout for a record type, used when a writer isn't given one: "TriggerRecord"
 // records with 4 sequence-number digits, or "TimeSlice" records with none.
 HDF5FileLayoutParameters
 default_file_layout_parameters(rawdatafilelibs::RecordType record_type);
 
-// The paths of all datasets below a group, depth first in name order; group_path is the group's path
+// The paths of all datasets below a group, depth first in name order
 std::vector<std::string>
 collect_dataset_paths(const HighFive::Group& group, const std::string& group_path);
 
@@ -83,12 +76,12 @@ public:
   rawdatafilelibs::Blob read_blob(const RecordID& record_id, const SourceID& source_id) override;
   void close() override;
 
-  // ---- HDF5-only (expert) functions ----
+  // HDF5-only; not needed to read records
 
   HighFive::File& get_file();
   const HDF5FileLayout& get_file_layout() const;
   uint32_t get_file_layout_version() const { return get_file_layout().get_version(); } // NOLINT(build/unsigned)
-  bool is_legacy_layout() const { return get_file_layout_version() <= s_last_legacy_file_layout_version; }
+  bool is_legacy_layout() const { return get_file_layout_version() <= HDF5FileLayout::s_last_legacy_version; }
 
   // The file's record type name, from its "record_type" attribute or else its layout
   const std::string& get_record_type_name() const noexcept { return m_record_type_name; }
@@ -103,6 +96,11 @@ public:
   // The bytes of any dataset, by path; throws InvalidHDF5Dataset
   rawdatafilelibs::Blob read_dataset(const std::string& dataset_path);
 
+  HDF5ReaderBackend(const HDF5ReaderBackend&) = delete;
+  HDF5ReaderBackend& operator=(const HDF5ReaderBackend&) = delete;
+  HDF5ReaderBackend(HDF5ReaderBackend&&) = delete;
+  HDF5ReaderBackend& operator=(HDF5ReaderBackend&&) = delete;
+
 private:
   struct RecordContents
   {
@@ -115,6 +113,7 @@ private:
   void check_open() const;
 
   bool m_allow_writing;
+  std::string m_path;
   std::unique_ptr<HighFive::File> m_file;
   std::unique_ptr<HDF5FileLayout> m_file_layout;
   std::string m_record_type_name;
@@ -122,9 +121,6 @@ private:
   bool m_warned_duplicate_source_ids{ false }; // DuplicateSourceIDInRecord is reported once per file
 };
 
-/**
- * @brief Options for HDF5WriterBackend
- */
 struct HDF5WriterOptions
 {
   // Group and dataset naming; default_file_layout_parameters() of the record type if unset
@@ -170,10 +166,15 @@ public:
                                const rawdatafilelibs::RecoveryScan& scan,
                                const rawdatafilelibs::FileMetadata& final_metadata) override;
 
-  // ---- HDF5-only (expert) functions ----
+  // HDF5-only; not needed to write records
 
   HighFive::File& get_file();
   const HDF5FileLayout& get_file_layout() const;
+
+  HDF5WriterBackend(const HDF5WriterBackend&) = delete;
+  HDF5WriterBackend& operator=(const HDF5WriterBackend&) = delete;
+  HDF5WriterBackend(HDF5WriterBackend&&) = delete;
+  HDF5WriterBackend& operator=(HDF5WriterBackend&&) = delete;
 
 private:
   // Writes one dataset, creating its groups as needed; returns the dataset path and the top-level (record) group
@@ -182,6 +183,7 @@ private:
                                                         size_t size);
 
   HDF5WriterOptions m_options;
+  std::string m_path;
   unsigned m_compression_level{ 0 }; // NOLINT(build/unsigned)
   std::unique_ptr<HighFive::File> m_file;
   std::unique_ptr<HDF5FileLayout> m_file_layout;
