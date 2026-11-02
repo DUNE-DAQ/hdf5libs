@@ -1,10 +1,9 @@
 /**
+ * @file HDF5RawDataFile.cpp The deprecated HDF5RawDataFile facade; see HDF5RawDataFile.hpp
+ *
  * This is part of the DUNE DAQ Application Framework, copyright 2020.
  * Licensing/copyright details are in the COPYING file that you should have
  * received with this code.
- *
- * HDF5RawDataFile is a deprecated facade over rawdatafilelibs::RawDataFileReader/Writer and the
- * HDF5 backend. It keeps its earlier behaviour and errors; see the header for the differences.
  */
 
 #include "hdf5libs/HDF5RawDataFile.hpp"
@@ -17,7 +16,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <filesystem>
 #include <map>
 #include <memory>
 #include <set>
@@ -64,7 +62,7 @@ encoded_geo_id_set(const GeoIDSet& geo_ids)
   return encoded;
 }
 
-} // namespace
+} // namespace ""
 
 /**
  * @brief Constructor for writing a new file
@@ -125,7 +123,7 @@ HDF5RawDataFile::open_for_writing(const std::string& file_name,
     metadata.record_type = rawdatafilelibs::string_to_record_type(fl_params.record_name_prefix);
   }
   if (metadata.record_type == rawdatafilelibs::RecordType::kUnknown) {
-    // the layout check reports an unknown record name (InvalidRecordName), as before
+    // the layout check reports an unknown record name (InvalidRecordName)
     HDF5FileLayout layout_check(fl_params);
   }
 
@@ -269,7 +267,6 @@ HDF5RawDataFile::close()
     throw FileCloseFailed(ERS_HERE, open_file_name, excpt.message(), excpt);
   }
 
-  // rename the file to the bare name, if needed, never replacing an existing file
   if (m_allow_writing && open_file_name != m_bare_file_name) {
     try {
       rename_without_replacing(open_file_name, m_bare_file_name);
@@ -714,7 +711,7 @@ HDF5RawDataFile::get_fragment_source_ids(const record_id_t& rid)
   return get_index(rid).get_fragment_source_ids();
 }
 
-// as before, this includes the record header's SourceID when it is of the requested subsystem
+// for compatibility, this includes the record header's SourceID when it is of the requested subsystem
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_subsystem(const record_id_t& rid,
                                               const daqdataformats::SourceID::Subsystem subsystem)
