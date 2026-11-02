@@ -51,19 +51,20 @@ attribute_value(const HighFive::Attribute& attribute)
       return py::float_(value);
     }
     default:
-      throw std::runtime_error("attribute " + attribute.getName() + " has a type that isn't supported here");
+      throw std::runtime_error("attribute " + attribute.getName() + " has type " + type.string() +
+                               ", which isn't supported here (strings, integers and floats are)");
   }
 }
-} // namespace
+} // namespace ""
 
 void
 register_hdf5backend(py::module& m)
 {
-  // the base classes are registered by rawdatafilelibs
+  // The base classes are registered by rawdatafilelibs.
   py::module_::import("rawdatafilelibs._daq_rawdatafilelibs_py");
 
-  m.attr("current_file_layout_version") = HDF5FileLayout::s_current_version;
-  m.attr("last_legacy_file_layout_version") = HDF5FileLayout::s_last_legacy_version;
+  m.attr("CURRENT_FILE_LAYOUT_VERSION") = HDF5FileLayout::s_current_version;
+  m.attr("LAST_LEGACY_FILE_LAYOUT_VERSION") = HDF5FileLayout::s_last_legacy_version;
 
   py::class_<HDF5ReaderBackend, rawdatafilelibs::ReaderBackend>(m, "HDF5ReaderBackend")
     .def("get_file_layout_version", &HDF5ReaderBackend::get_file_layout_version)
@@ -106,7 +107,7 @@ register_hdf5backend(py::module& m)
       "The bytes of a dataset, by path");
 
   py::class_<HDF5WriterBackend, rawdatafilelibs::WriterBackend>(m, "HDF5WriterBackend")
-    .def("get_file_layout_version", [](const HDF5WriterBackend& self) { return self.get_file_layout().get_version(); });
+    .def("get_file_layout_version", &HDF5WriterBackend::get_file_layout_version);
 }
 
 } // namespace python
