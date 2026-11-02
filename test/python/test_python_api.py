@@ -40,7 +40,7 @@ def test_pythonic_reading(test_file):
     with rawdatafilelibs.open(path) as f:
         assert f.record_type == "TriggerRecord"
         assert f.metadata.run_number == conf["run_number"]
-        assert f.metadata.layout_version == hdf5libs.s_current_file_layout_version
+        assert f.metadata.layout_version == hdf5libs.current_file_layout_version
         assert len(f) == conf["trigger_count"]
         assert [rid.number for rid in f.record_ids] == list(range(1, conf["trigger_count"] + 1))
 
