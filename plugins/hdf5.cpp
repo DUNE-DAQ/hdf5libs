@@ -8,4 +8,6 @@
 
 #include "hdf5libs/HDF5Backend.hpp"
 
+#include "rawdatafilelibs/Backend.hpp"
+
 DEFINE_DUNE_RAW_DATA_FILE_BACKEND(dunedaq::hdf5libs::HDF5ReaderBackend, dunedaq::hdf5libs::HDF5WriterBackend)

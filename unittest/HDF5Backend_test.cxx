@@ -30,6 +30,8 @@
 #include <highfive/H5File.hpp>
 #include <nlohmann/json.hpp>
 
+#include <unistd.h>
+
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -37,7 +39,6 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
 using namespace dunedaq;
@@ -53,8 +54,8 @@ using rawdatafilelibs::RecordType;
 
 namespace {
 
-constexpr size_t s_fragment_payload_size = 64;
-const SourceID s_header_source_id(SourceID::Subsystem::kTRBuilder, 0);
+constexpr size_t fragment_payload_size = 64;
+const SourceID header_source_id(SourceID::Subsystem::kTRBuilder, 0);
 
 // the fragments in every test record: SourceID, fragment type, subdetector
 struct FragmentSpec
@@ -63,7 +64,7 @@ struct FragmentSpec
   FragmentType fragment_type;
   DetID::Subdetector subdetector;
 };
-const std::vector<FragmentSpec> s_fragments = {
+const std::vector<FragmentSpec> test_fragments = {
   { SourceID(SourceID::Subsystem::kDetectorReadout, 0), FragmentType::kWIBEth, DetID::Subdetector::kHD_TPC },
   { SourceID(SourceID::Subsystem::kDetectorReadout, 1), FragmentType::kWIBEth, DetID::Subdetector::kHD_TPC },
   { SourceID(SourceID::Subsystem::kDetectorReadout, 2), FragmentType::kDAPHNE, DetID::Subdetector::kHD_PDS },
@@ -83,7 +84,7 @@ make_test_dir(const std::string& test_name)
 std::unique_ptr<daqdataformats::Fragment>
 make_fragment(const FragmentSpec& spec, uint64_t record_number, uint8_t fill) // NOLINT(build/unsigned)
 {
-  std::vector<char> payload(s_fragment_payload_size, static_cast<char>(fill));
+  std::vector<char> payload(fragment_payload_size, static_cast<char>(fill));
   auto fragment = std::make_unique<daqdataformats::Fragment>(payload.data(), payload.size());
   fragment->set_trigger_number(record_number);
   fragment->set_sequence_number(0);
@@ -98,8 +99,8 @@ daqdataformats::TriggerRecord
 make_trigger_record(uint64_t trigger_number) // NOLINT(build/unsigned)
 {
   std::vector<daqdataformats::ComponentRequest> requests;
-  requests.reserve(s_fragments.size());
-  for (auto const& spec : s_fragments) {
+  requests.reserve(test_fragments.size());
+  for (auto const& spec : test_fragments) {
     requests.emplace_back(spec.source_id, 1000, 2000);
   }
   daqdataformats::TriggerRecordHeader header(requests);
@@ -107,11 +108,11 @@ make_trigger_record(uint64_t trigger_number) // NOLINT(build/unsigned)
   header.set_run_number(42);
   header.set_sequence_number(0);
   header.set_max_sequence_number(1);
-  header.set_element_id(s_header_source_id);
+  header.set_element_id(header_source_id);
 
   daqdataformats::TriggerRecord record(header);
   uint8_t fill = 1; // NOLINT(build/unsigned)
-  for (auto const& spec : s_fragments) {
+  for (auto const& spec : test_fragments) {
     record.add_fragment(make_fragment(spec, trigger_number, fill));
     ++fill;
   }
@@ -122,9 +123,9 @@ daqdataformats::SourceIDGeoIDMap
 make_geo_id_map()
 {
   daqdataformats::SourceIDGeoIDMap geo_id_map;
-  geo_id_map.add(s_fragments[0].source_id, GeoID(DetID::Subdetector::kHD_TPC, 1, 0, 0));
-  geo_id_map.add(s_fragments[1].source_id, GeoID(DetID::Subdetector::kHD_TPC, 1, 0, 1));
-  geo_id_map.add(s_fragments[2].source_id, GeoID(DetID::Subdetector::kHD_PDS, 2, 3, 4));
+  geo_id_map.add(test_fragments[0].source_id, GeoID(DetID::Subdetector::kHD_TPC, 1, 0, 0));
+  geo_id_map.add(test_fragments[1].source_id, GeoID(DetID::Subdetector::kHD_TPC, 1, 0, 1));
+  geo_id_map.add(test_fragments[2].source_id, GeoID(DetID::Subdetector::kHD_PDS, 2, 3, 4));
   // a SourceID that no record contains
   geo_id_map.add(SourceID(SourceID::Subsystem::kDetectorReadout, 99), GeoID(DetID::Subdetector::kHD_TPC, 9, 9, 9));
   return geo_id_map;
@@ -161,7 +162,30 @@ read_attribute(const HighFive::File& file, const std::string& name)
   return value;
 }
 
-} // namespace
+// Lists source_id under one more fragment type in record 1's stored map, as older writers did
+void
+list_source_id_under_extra_type(const std::string& file_name, const SourceID& source_id, FragmentType extra_type)
+{
+  HDF5ReaderBackend reader(true);
+  reader.open(file_name);
+  const std::string path = reader.get_dataset_path(RecordID{ 1 }, source_id);
+  auto group = reader.get_file().getGroup(path.substr(0, path.find('/', 1)));
+  std::string map_string;
+  group.getAttribute("fragment_type_source_id_map").read(map_string);
+  auto json = nlohmann::json::parse(map_string);
+  nlohmann::json json_source_id;
+  json_source_id["subsys"] = static_cast<uint32_t>(source_id.subsystem); // NOLINT(build/unsigned)
+  json_source_id["id"] = source_id.id;
+  nlohmann::json entry;
+  entry["fragment_type"] = static_cast<uint32_t>(extra_type); // NOLINT(build/unsigned)
+  entry["sourceids"].push_back(json_source_id);
+  json["map_entries"].push_back(entry);
+  group.deleteAttribute("fragment_type_source_id_map");
+  group.createAttribute("fragment_type_source_id_map", json.dump());
+  reader.close();
+}
+
+} // namespace ""
 
 BOOST_AUTO_TEST_SUITE(HDF5Backend_test)
 
@@ -186,7 +210,7 @@ BOOST_AUTO_TEST_CASE(RoundTripThroughPlugin)
   BOOST_REQUIRE(written_stats.recorded_size > 0);
 
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
-  BOOST_REQUIRE(dynamic_cast<HDF5ReaderBackend*>(&reader->get_backend()) != nullptr);
+  BOOST_REQUIRE(dynamic_cast<HDF5ReaderBackend*>(&reader->get_backend()) != nullptr); // NOLINT(runtime/rtti)
 
   auto const& metadata = reader->get_metadata();
   auto expected = make_metadata();
@@ -200,16 +224,16 @@ BOOST_AUTO_TEST_CASE(RoundTripThroughPlugin)
   BOOST_REQUIRE_EQUAL(metadata.offline_data_stream, expected.offline_data_stream);
   BOOST_REQUIRE(metadata.run_is_for_test_purposes);
   BOOST_REQUIRE_EQUAL(metadata.compression_level, 0);
-  BOOST_REQUIRE_EQUAL(metadata.layout_version, s_current_file_layout_version);
+  BOOST_REQUIRE_EQUAL(metadata.layout_version, HDF5FileLayout::s_current_version);
   BOOST_REQUIRE(metadata.stats == written_stats);
 
   BOOST_REQUIRE(reader->get_geo_id_map() == geo_id_map);
   BOOST_REQUIRE((reader->get_record_ids() == std::set<RecordID>{ RecordID{ 1 }, RecordID{ 2 } }));
 
   auto const& index = reader->get_record_index(RecordID{ 2 });
-  BOOST_REQUIRE_EQUAL(index.get_header_source_id(), s_header_source_id);
-  BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
-  for (auto const& spec : s_fragments) {
+  BOOST_REQUIRE_EQUAL(index.get_header_source_id(), header_source_id);
+  BOOST_REQUIRE_EQUAL(index.get_fragments().size(), test_fragments.size());
+  for (auto const& spec : test_fragments) {
     auto info = index.get_fragment_info(spec.source_id);
     BOOST_REQUIRE(info.has_value());
     BOOST_REQUIRE(info->fragment_type == spec.fragment_type);
@@ -224,11 +248,11 @@ BOOST_AUTO_TEST_CASE(RoundTripThroughPlugin)
                                   original.get_header_ref().get_storage_location(),
                                   original.get_header_ref().get_total_size_bytes()),
                       0);
-  BOOST_REQUIRE_EQUAL(record.get_fragments_ref().size(), s_fragments.size());
-  for (auto const& spec : s_fragments) {
+  BOOST_REQUIRE_EQUAL(record.get_fragments_ref().size(), test_fragments.size());
+  for (auto const& spec : test_fragments) {
     auto fragment = reader->get_fragment(RecordID{ 2 }, spec.source_id);
     BOOST_REQUIRE_EQUAL(fragment->get_element_id(), spec.source_id);
-    BOOST_REQUIRE_EQUAL(fragment->get_size(), sizeof(daqdataformats::FragmentHeader) + s_fragment_payload_size);
+    BOOST_REQUIRE_EQUAL(fragment->get_size(), sizeof(daqdataformats::FragmentHeader) + fragment_payload_size);
   }
 
   // per-record GeoIDs are only those of fragments in the record
@@ -250,7 +274,7 @@ BOOST_AUTO_TEST_CASE(TimeSliceRoundTrip)
     header.run_number = 42;
     header.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 1);
     daqdataformats::TimeSlice timeslice(header);
-    timeslice.add_fragment(make_fragment(s_fragments[3], 7, 9));
+    timeslice.add_fragment(make_fragment(test_fragments[3], 7, 9));
     writer->write(timeslice);
     BOOST_REQUIRE_THROW(writer->write(make_trigger_record(1)), rawdatafilelibs::RecordTypeMismatch);
     writer->close();
@@ -299,7 +323,8 @@ BOOST_AUTO_TEST_CASE(OnDiskLayout)
                                                                  "uncompressed_raw_data_size",
                                                                  "total_file_size",
                                                                  "closing_timestamp" }));
-  BOOST_REQUIRE(file.getAttribute("run_number").getDataType() == HighFive::create_datatype<uint32_t>()); // NOLINT
+  // NOLINTNEXTLINE(build/unsigned)
+  BOOST_REQUIRE(file.getAttribute("run_number").getDataType() == HighFive::create_datatype<uint32_t>());
   BOOST_REQUIRE(file.getAttribute("creation_timestamp").getDataType() == HighFive::create_datatype<size_t>());
   BOOST_REQUIRE(file.getAttribute("closing_timestamp").getDataType() == HighFive::create_datatype<size_t>());
   BOOST_REQUIRE(file.getAttribute("compression_level").getDataType() == HighFive::create_datatype<unsigned>());
@@ -309,8 +334,8 @@ BOOST_AUTO_TEST_CASE(OnDiskLayout)
   BOOST_REQUIRE_EQUAL(read_attribute<size_t>(file, "creation_timestamp"), 1700000000123);
 
   const std::string record_group = "/TriggerRecord000001.0000";
-  BOOST_REQUIRE(file.exist(record_group + "/RawData/" + s_header_source_id.to_string() + "_TriggerRecordHeader"));
-  for (auto const& spec : s_fragments) {
+  BOOST_REQUIRE(file.exist(record_group + "/RawData/" + header_source_id.to_string() + "_TriggerRecordHeader"));
+  for (auto const& spec : test_fragments) {
     BOOST_REQUIRE(file.exist(record_group + "/RawData/" + spec.source_id.to_string() + "_" +
                              daqdataformats::fragment_type_to_string(spec.fragment_type)));
   }
@@ -378,8 +403,8 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsOldSemantics)
   const HDF5RawDataFile::record_id_t rid{ 1, 0 };
 
   // the record header's SourceID counts as one of the record's SourceIDs, and as one of its subsystem's
-  BOOST_REQUIRE_EQUAL(file.get_source_ids(rid).size(), s_fragments.size() + 1);
-  BOOST_REQUIRE_EQUAL(file.get_fragment_source_ids(rid).size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(file.get_source_ids(rid).size(), test_fragments.size() + 1);
+  BOOST_REQUIRE_EQUAL(file.get_fragment_source_ids(rid).size(), test_fragments.size());
   BOOST_REQUIRE_EQUAL(file.get_source_ids_for_subsystem(rid, SourceID::Subsystem::kTRBuilder).size(), 1);
   BOOST_REQUIRE_EQUAL(file.get_source_ids_for_subsystem(rid, SourceID::Subsystem::kDetectorReadout).size(), 3);
   BOOST_REQUIRE_EQUAL(file.get_source_ids_for_fragment_type(rid, FragmentType::kWIBEth).size(), 2);
@@ -391,8 +416,8 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsOldSemantics)
   BOOST_REQUIRE_EQUAL(file.get_geo_ids(rid).size(), 3);
   BOOST_REQUIRE_EQUAL(file.get_geo_ids_for_subdetector(rid, DetID::Subdetector::kHD_TPC).size(), 2);
   const auto geo_id = GeoID(DetID::Subdetector::kHD_PDS, 2, 3, 4).encode();
-  BOOST_REQUIRE_EQUAL(file.get_source_id_for_geo_id(rid, geo_id), s_fragments[2].source_id);
-  BOOST_REQUIRE_EQUAL(file.get_frag_ptr(rid, geo_id)->get_element_id(), s_fragments[2].source_id);
+  BOOST_REQUIRE_EQUAL(file.get_source_id_for_geo_id(rid, geo_id), test_fragments[2].source_id);
+  BOOST_REQUIRE_EQUAL(file.get_frag_ptr(rid, geo_id)->get_element_id(), test_fragments[2].source_id);
 
   // the old error types
   BOOST_REQUIRE_THROW(file.get_frag_ptr(rid, SourceID(SourceID::Subsystem::kTrigger, 77)), SourceIDNotFound);
@@ -400,7 +425,7 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsOldSemantics)
   BOOST_REQUIRE_THROW(file.get_all_timeslice_ids(), WrongRecordTypeRequested);
 
   auto record = file.get_trigger_record(rid);
-  BOOST_REQUIRE_EQUAL(record.get_fragments_ref().size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(record.get_fragments_ref().size(), test_fragments.size());
   file.close();
   std::filesystem::remove_all(dir);
 }
@@ -432,7 +457,7 @@ BOOST_AUTO_TEST_CASE(OnlyWellFormedRecordNamesAreRecords)
 
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
   BOOST_REQUIRE((reader->get_record_ids() == std::set<RecordID>{ RecordID{ 1 }, RecordID{ 2 } }));
-  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), test_fragments.size());
   reader->close();
   std::filesystem::remove_all(dir);
 }
@@ -443,9 +468,9 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsFirstMatchForSharedGeoID)
 {
   const auto dir = make_test_dir("FacadeKeepsFirstMatchForSharedGeoID");
   const std::string file_name = dir + "/shared.hdf5";
-  const GeoID shared(DetID::Subdetector::kHD_TPC, 1, 0, 0); // s_fragments[0]'s GeoID
+  const GeoID shared(DetID::Subdetector::kHD_TPC, 1, 0, 0); // test_fragments[0]'s GeoID
   auto encoded = make_geo_id_map().to_encoded();
-  encoded[s_fragments[1].source_id].push_back(shared.encode());
+  encoded[test_fragments[1].source_id].push_back(shared.encode());
   {
     auto writer = rawdatafilelibs::create_raw_data_file(
       file_name, make_metadata(), daqdataformats::SourceIDGeoIDMap::from_encoded(encoded));
@@ -455,8 +480,8 @@ BOOST_AUTO_TEST_CASE(FacadeKeepsFirstMatchForSharedGeoID)
 
   HDF5RawDataFile file(file_name);
   const HDF5RawDataFile::record_id_t rid{ 1, 0 };
-  BOOST_REQUIRE_EQUAL(file.get_source_id_for_geo_id(rid, shared.encode()), s_fragments[0].source_id);
-  BOOST_REQUIRE_EQUAL(file.get_frag_ptr(rid, shared.encode())->get_element_id(), s_fragments[0].source_id);
+  BOOST_REQUIRE_EQUAL(file.get_source_id_for_geo_id(rid, shared.encode()), test_fragments[0].source_id);
+  BOOST_REQUIRE_EQUAL(file.get_frag_ptr(rid, shared.encode())->get_element_id(), test_fragments[0].source_id);
   file.close();
 
   // the format-independent reader reads the file too, but gives no single SourceID for that GeoID
@@ -475,37 +500,52 @@ BOOST_AUTO_TEST_CASE(SourceIDListedForTwoFragmentTypes)
 {
   const auto dir = make_test_dir("SourceIDListedForTwoFragmentTypes");
   const std::string file_name = dir + "/shared_source_id.hdf5";
-  const auto& shared = s_fragments[3]; // a Trigger_Activity fragment
+  const auto& shared = test_fragments[3]; // a Trigger_Activity fragment
   {
     auto writer = rawdatafilelibs::create_raw_data_file(file_name, make_metadata(), make_geo_id_map());
     writer->write(make_trigger_record(1));
     writer->close();
   }
-  {
-    HDF5ReaderBackend reader(true);
-    reader.open(file_name);
-    const std::string path = reader.get_dataset_path(RecordID{ 1 }, shared.source_id);
-    auto group = reader.get_file().getGroup(path.substr(0, path.find('/', 1)));
-    std::string map_string;
-    group.getAttribute("fragment_type_source_id_map").read(map_string);
-    auto json = nlohmann::json::parse(map_string);
-    nlohmann::json source_id;
-    source_id["subsys"] = static_cast<uint32_t>(shared.source_id.subsystem); // NOLINT(build/unsigned)
-    source_id["id"] = shared.source_id.id;
-    nlohmann::json entry;
-    entry["fragment_type"] = static_cast<uint32_t>(FragmentType::kTriggerPrimitive); // NOLINT(build/unsigned)
-    entry["sourceids"].push_back(source_id);
-    json["map_entries"].push_back(entry);
-    group.deleteAttribute("fragment_type_source_id_map");
-    group.createAttribute("fragment_type_source_id_map", json.dump());
-    reader.close();
-  }
+  list_source_id_under_extra_type(file_name, shared.source_id, FragmentType::kTriggerPrimitive);
 
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
   const auto& index = reader->get_record_index(RecordID{ 1 });
-  BOOST_REQUIRE_EQUAL(index.get_fragments().size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(index.get_fragments().size(), test_fragments.size());
   BOOST_REQUIRE(index.get_fragments().at(shared.source_id).fragment_type == shared.fragment_type);
   BOOST_REQUIRE(reader->get_fragment(RecordID{ 1 }, shared.source_id)->get_fragment_type() == shared.fragment_type);
+  reader->close();
+  std::filesystem::remove_all(dir);
+}
+
+// A fragment type name can end another type's name (WIB ends ProtoWIB, Trigger_Primitive ends
+// FW_Trigger_Primitive): the type in the dataset path is matched whole, not as a suffix
+BOOST_AUTO_TEST_CASE(TypeNameEndingAnotherTypeName)
+{
+  const auto dir = make_test_dir("TypeNameEndingAnotherTypeName");
+  const std::string file_name = dir + "/protowib.hdf5";
+  const FragmentSpec spec{ SourceID(SourceID::Subsystem::kDetectorReadout, 5),
+                           FragmentType::kProtoWIB,
+                           DetID::Subdetector::kHD_TPC };
+  {
+    auto writer = rawdatafilelibs::create_raw_data_file(file_name, make_metadata(), daqdataformats::SourceIDGeoIDMap());
+    std::vector<daqdataformats::ComponentRequest> requests;
+    requests.emplace_back(spec.source_id, 1000, 2000);
+    daqdataformats::TriggerRecordHeader header(requests);
+    header.set_trigger_number(1);
+    header.set_run_number(42);
+    header.set_sequence_number(0);
+    header.set_max_sequence_number(1);
+    header.set_element_id(header_source_id);
+    daqdataformats::TriggerRecord record(header);
+    record.add_fragment(make_fragment(spec, 1, 1));
+    writer->write(record);
+    writer->close();
+  }
+  list_source_id_under_extra_type(file_name, spec.source_id, FragmentType::kWIB);
+
+  auto reader = rawdatafilelibs::open_raw_data_file(file_name);
+  auto const& index = reader->get_record_index(RecordID{ 1 });
+  BOOST_REQUIRE(index.get_fragments().at(spec.source_id).fragment_type == FragmentType::kProtoWIB);
   reader->close();
   std::filesystem::remove_all(dir);
 }
@@ -555,7 +595,7 @@ BOOST_AUTO_TEST_CASE(FailedWriteIsRemoved)
 
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
   BOOST_REQUIRE_EQUAL(reader->get_record_ids().size(), 2);
-  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), test_fragments.size());
   reader->close();
   std::filesystem::remove_all(dir);
 }
@@ -597,7 +637,6 @@ BOOST_AUTO_TEST_CASE(LayoutMustMatchRecordType)
   std::filesystem::remove_all(dir);
 }
 
-// Files whose timestamps are strings (layout versions <= 5) are read too
 namespace {
 // An HDF5 file as a crashed writer leaves it: records written, but no closing attributes and still
 // named "<name>.writing". Returns the stats a normal close stored.
@@ -623,7 +662,7 @@ make_unfinished_hdf5_file(const std::string& file_name, unsigned compression_lev
   std::filesystem::rename(file_name, file_name + ".writing");
   return stats;
 }
-} // namespace
+} // namespace ""
 
 // Recovery recalculates the stats as close() counts them, compressed sizes included
 BOOST_AUTO_TEST_CASE(RecoverCompressedFile)
@@ -651,7 +690,7 @@ BOOST_AUTO_TEST_CASE(RecoverCompressedFile)
   auto reader = rawdatafilelibs::open_raw_data_file(file_name);
   BOOST_REQUIRE_EQUAL(reader->get_metadata().closing_timestamp_ms, report.scan.last_modified_ms);
   BOOST_REQUIRE(reader->get_metadata().recovery_timestamp_ms > 0);
-  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), s_fragments.size());
+  BOOST_REQUIRE_EQUAL(reader->get_trigger_record(RecordID{ 2 }).get_fragments_ref().size(), test_fragments.size());
   reader->close();
 
   // nothing left to do
@@ -683,7 +722,7 @@ BOOST_AUTO_TEST_CASE(RecoveryWithAnUnreadableFragment)
   {
     HDF5ReaderBackend reader(true);
     reader.open(file_name + ".writing");
-    const std::string path = reader.get_dataset_path(RecordID{ 2 }, s_fragments[1].source_id);
+    const std::string path = reader.get_dataset_path(RecordID{ 2 }, test_fragments[1].source_id);
     auto& file = reader.get_file();
     lost = file.getDataSet(path).getStorageSize();
     auto slash = path.rfind('/');
@@ -717,6 +756,7 @@ BOOST_AUTO_TEST_CASE(TruncatedFileIsNotRecovered)
   std::filesystem::remove_all(dir);
 }
 
+// Files whose timestamps are strings (layout versions <= 5) are read too
 BOOST_AUTO_TEST_CASE(StringTimestamps)
 {
   const auto dir = make_test_dir("StringTimestamps");

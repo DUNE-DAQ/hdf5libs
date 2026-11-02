@@ -69,10 +69,16 @@ namespace hdf5libs {
 class HDF5FileLayout
 {
 public:
+  // The version written. Files at or below s_last_legacy_version store no per-record index, so
+  // their records are found by scanning dataset paths (read-only support).
+  static constexpr uint32_t s_current_version = 7;     // NOLINT(build/unsigned)
+  static constexpr uint32_t s_last_legacy_version = 2; // NOLINT(build/unsigned)
+
   /**
    * @brief Constructor from json conf, used in DataWriterModule. Version always most recent.
    */
-  explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = 7); // NOLINT(build/unsigned)
+  explicit HDF5FileLayout(HDF5FileLayoutParameters conf,
+                          uint32_t version = s_current_version); // NOLINT(build/unsigned)
 
   uint32_t get_version() const noexcept // NOLINT(build/unsigned)
   {
@@ -129,15 +135,13 @@ public:
   std::vector<std::string> get_path_elements(const daqdataformats::FragmentHeader& fh) const;
 
   /**
-   * @brief the path for a record header, from the record's ID and the header's SourceID.
-   * Gives the same path as the TriggerRecordHeader and TimeSliceHeader versions above.
+   * @brief Gives the same path as the TriggerRecordHeader and TimeSliceHeader versions above.
    */
   std::vector<std::string> get_record_header_path_elements(const daqdataformats::RecordID& record_id,
                                                            const daqdataformats::SourceID& header_source_id) const;
 
   /**
-   * @brief the path for a fragment, from its record's ID, its SourceID and its type.
-   * Gives the same path as the FragmentHeader version above, for a fragment of that record.
+   * @brief Gives the same path as the FragmentHeader version above, for a fragment of that record.
    */
   std::vector<std::string> get_fragment_path_elements(const daqdataformats::RecordID& record_id,
                                                       const daqdataformats::SourceID& source_id,
