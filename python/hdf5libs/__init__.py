@@ -1,7 +1,7 @@
+import warnings
+
 # rawdatafilelibs registers the backend base classes and the types used by the HDF5 backend bindings
 import rawdatafilelibs  # noqa: F401
-
-import warnings
 
 from ._daq_hdf5libs_py import *
 from ._daq_hdf5libs_py import _HDF5RawDataFile
