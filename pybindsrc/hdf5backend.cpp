@@ -62,8 +62,8 @@ register_hdf5backend(py::module& m)
   // the base classes are registered by rawdatafilelibs
   py::module_::import("rawdatafilelibs._daq_rawdatafilelibs_py");
 
-  m.attr("s_current_file_layout_version") = s_current_file_layout_version;
-  m.attr("s_last_legacy_file_layout_version") = s_last_legacy_file_layout_version;
+  m.attr("current_file_layout_version") = HDF5FileLayout::s_current_version;
+  m.attr("last_legacy_file_layout_version") = HDF5FileLayout::s_last_legacy_version;
 
   py::class_<HDF5ReaderBackend, rawdatafilelibs::ReaderBackend>(m, "HDF5ReaderBackend")
     .def("get_file_layout_version", &HDF5ReaderBackend::get_file_layout_version)
