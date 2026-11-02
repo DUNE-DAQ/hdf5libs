@@ -170,6 +170,7 @@ public:
 
   HighFive::File& get_file();
   const HDF5FileLayout& get_file_layout() const;
+  uint32_t get_file_layout_version() const { return get_file_layout().get_version(); } // NOLINT(build/unsigned)
 
   HDF5WriterBackend(const HDF5WriterBackend&) = delete;
   HDF5WriterBackend& operator=(const HDF5WriterBackend&) = delete;
