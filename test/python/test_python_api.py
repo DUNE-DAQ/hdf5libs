@@ -4,6 +4,7 @@ Needs HDF5LIBS_TestWriter on PATH (it is, in a work area with hdf5libs built). R
     pytest -v sourcecode/hdf5libs/test/python
 """
 
+import contextlib
 import json
 import pathlib
 import shutil
@@ -22,7 +23,7 @@ APPS_DIR = pathlib.Path(__file__).resolve().parent.parent / "apps"
 
 @pytest.fixture(scope="module")
 def test_file(tmp_path_factory):
-    """A TriggerRecord file written by HDF5LIBS_TestWriter: 5 records of 12 fragments."""
+    """A TriggerRecord file written by HDF5LIBS_TestWriter from test/apps/testwriter_conf.json, with that conf."""
     if shutil.which("HDF5LIBS_TestWriter") is None:
         pytest.skip("HDF5LIBS_TestWriter is not on PATH")
     directory = tmp_path_factory.mktemp("hdf5libs_python")
@@ -40,7 +41,7 @@ def test_pythonic_reading(test_file):
     with rawdatafilelibs.open(path) as f:
         assert f.record_type == "TriggerRecord"
         assert f.metadata.run_number == conf["run_number"]
-        assert f.metadata.layout_version == hdf5libs.current_file_layout_version
+        assert f.metadata.layout_version == hdf5libs.CURRENT_FILE_LAYOUT_VERSION
         assert len(f) == conf["trigger_count"]
         assert [rid.number for rid in f.record_ids] == list(range(1, conf["trigger_count"] + 1))
 
@@ -83,7 +84,7 @@ def test_compatibility_names_match_hdf5rawdatafile(test_file):
         old = hdf5libs.HDF5RawDataFile(str(path))
     assert any(issubclass(w.category, DeprecationWarning) for w in caught)
 
-    with rawdatafilelibs.open(path) as new:
+    with contextlib.closing(old), rawdatafilelibs.open(path) as new:
         assert new.get_all_record_ids() == [tuple(rid) for rid in old.get_all_record_ids()]
         with pytest.deprecated_call():
             assert new.get_all_trigger_record_ids() == [tuple(rid) for rid in old.get_all_trigger_record_ids()]
@@ -99,19 +100,20 @@ def test_compatibility_names_match_hdf5rawdatafile(test_file):
                 assert new.get_frag(rid, source_id).get_data_bytes() == old.get_frag(rid, source_id).get_data_bytes()
         with pytest.raises(TypeError), pytest.deprecated_call():
             new.get_all_timeslice_ids()
-    old.close()
 
 
 def test_copy_records_to_new_files(test_file, tmp_path):
-    """Records read from one file can be written to another, of the same or another format."""
-    path, conf = test_file
+    """Records read from one file can be written to another, of the same or another format.
+    Only the odd-numbered records are copied, to exercise filtering.
+    """
+    path, _ = test_file
     rawdatafilelibs.clear_in_memory_files()
     with rawdatafilelibs.open(path) as source:
         for destination in (tmp_path / "copy.hdf5", "copy.rdfmem"):
             with rawdatafilelibs.create(destination, "TriggerRecord", geo_id_map=source.geo_id_map,
                                         run_number=source.metadata.run_number) as writer:
                 for record in source:
-                    if record.number % 2 == 1:  # a filter
+                    if record.number % 2 == 1:
                         writer.write(record.assemble())
                 with pytest.raises(RuntimeError, match="already exists"):
                     writer.write(source[1].assemble())
