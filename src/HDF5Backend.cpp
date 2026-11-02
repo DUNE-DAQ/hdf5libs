@@ -10,7 +10,7 @@
 #include "hdf5libs/HDF5SourceIDHandler.hpp"
 
 #include "hdf5libs/Issues.hpp"
-#include "logging/Logging.hpp" // before Issues.hpp, so that TLOG_DEBUG << issue works
+#include "logging/Logging.hpp"
 
 #include <highfive/H5DataSet.hpp>
 #include <highfive/H5Group.hpp>
@@ -26,7 +26,6 @@
 #include <memory>
 #include <set>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -61,6 +60,7 @@ read_timestamp_attribute(const HighFive::File& file, const std::string& name)
     try {
       return std::stoull(value);
     } catch (std::exception const&) {
+      TLOG_DEBUG(7) << "Ignoring attribute " << name << ", whose value \"" << value << "\" isn't a timestamp";
       return 0;
     }
   }
@@ -108,7 +108,7 @@ add_dataset_paths(const HighFive::Group& group, std::string group_path, std::vec
     }
   }
 }
-} // namespace
+} // namespace ""
 
 std::vector<std::string>
 collect_dataset_paths(const HighFive::Group& group, const std::string& group_path)
@@ -130,9 +130,6 @@ default_file_layout_parameters(rawdatafilelibs::RecordType record_type)
   return params;
 }
 
-// ---------------------------------------------------------------------------
-// Reading
-
 HDF5ReaderBackend::HDF5ReaderBackend(bool allow_writing)
   : m_allow_writing(allow_writing)
 {
@@ -141,6 +138,8 @@ HDF5ReaderBackend::HDF5ReaderBackend(bool allow_writing)
 void
 HDF5ReaderBackend::open(const std::string& path)
 {
+  m_path = path;
+  m_records.clear();
   m_file =
     std::make_unique<HighFive::File>(path, m_allow_writing ? HighFive::File::ReadWrite : HighFive::File::ReadOnly);
   m_warned_duplicate_source_ids = false;
@@ -168,7 +167,7 @@ void
 HDF5ReaderBackend::check_open() const
 {
   if (m_file == nullptr) {
-    throw std::logic_error("the HDF5 file is not open");
+    throw FileOpenFailed(ERS_HERE, m_path, "the HDF5 file is not open");
   }
 }
 
@@ -230,7 +229,6 @@ HDF5ReaderBackend::read_record_ids()
     return !text.empty() && std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c); });
   };
   for (auto const& name : m_file->listObjectNames()) {
-    // the whole name must be the prefix followed by digits, optionally "." and more digits
     if (name.rfind(record_prefix, 0) != 0) {
       continue;
     }
@@ -305,8 +303,9 @@ HDF5ReaderBackend::load_record(const RecordID& record_id)
     for (auto const& type : types) {
       const std::string name = daqdataformats::fragment_type_to_string(type);
       listed += (listed.empty() ? "" : ", ") + name;
-      if (path != contents.dataset_paths.end() && path->second.size() > name.size() &&
-          path->second.compare(path->second.size() - name.size(), name.size(), name) == 0) {
+      const std::string suffix = "_" + name; // a type name can end another's (WIB, ProtoWIB)
+      if (path != contents.dataset_paths.end() && path->second.size() > suffix.size() &&
+          path->second.compare(path->second.size() - suffix.size(), suffix.size(), suffix) == 0) {
         fragment_info[source_id].fragment_type = type;
         kept = path->second;
       }
@@ -396,7 +395,7 @@ HDF5ReaderBackend::read_dataset(const std::string& dataset_path)
   if (!data_set.isValid()) {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_path, m_file->getName());
   }
-  auto buffer = rawdatafilelibs::allocate_blob(data_set.getSpace().getElementCount() * sizeof(char));
+  auto buffer = rawdatafilelibs::allocate_blob(data_set.getSpace().getElementCount());
   data_set.read(buffer.data.get());
   return buffer;
 }
@@ -420,9 +419,6 @@ HDF5ReaderBackend::close()
   }
 }
 
-// ---------------------------------------------------------------------------
-// Writing
-
 HDF5WriterBackend::HDF5WriterBackend(HDF5WriterOptions options)
   : m_options(std::move(options))
 {
@@ -432,7 +428,7 @@ HighFive::File&
 HDF5WriterBackend::get_file()
 {
   if (m_file == nullptr) {
-    throw std::logic_error("the HDF5 file is not open");
+    throw FileOpenFailed(ERS_HERE, m_path, "the HDF5 file is not open");
   }
   return *m_file;
 }
@@ -441,7 +437,7 @@ const HDF5FileLayout&
 HDF5WriterBackend::get_file_layout() const
 {
   if (m_file_layout == nullptr) {
-    throw std::logic_error("the HDF5 file has not been opened");
+    throw FileOpenFailed(ERS_HERE, m_path, "the HDF5 file has not been opened");
   }
   return *m_file_layout;
 }
@@ -451,6 +447,7 @@ HDF5WriterBackend::open(const std::string& path,
                         const rawdatafilelibs::FileMetadata& metadata,
                         const daqdataformats::SourceIDGeoIDMap& geo_id_map)
 {
+  m_path = path;
   auto params = m_options.file_layout_parameters.value_or(default_file_layout_parameters(metadata.record_type));
   const std::string record_type_name = rawdatafilelibs::record_type_to_string(metadata.record_type);
   if (params.record_name_prefix != record_type_name) {
@@ -637,12 +634,16 @@ HDF5WriterBackend::scan_for_recovery(const std::string& path)
     } catch (std::exception const&) {
       complete = false;
     }
-    ++(complete ? scan.readable_records : scan.unreadable_records);
+    if (complete) {
+      ++scan.readable_records;
+    } else {
+      ++scan.unreadable_records;
+    }
   }
   scan.calculated_stats.total_file_size = file.getFileSize();
   reader.close();
 
-  struct stat stat_results;
+  struct stat stat_results{};
   if (stat(path.c_str(), &stat_results) == 0) {
     scan.last_modified_ms = static_cast<uint64_t>(stat_results.st_mtime) * 1000; // NOLINT(build/unsigned)
   }
@@ -670,8 +671,9 @@ HDF5WriterBackend::store_recovery_metadata(const std::string& path,
     }
   }
   if (!scan.has_recovery_timestamp) {
+    // int64_t, as HDF5LIBS_TestRecoverFile has always written it
     write_attribute_if_absent(
-      file, "file_recovery_timestamp", static_cast<int64_t>(final_metadata.recovery_timestamp_ms)); // as before
+      file, "file_recovery_timestamp", static_cast<int64_t>(final_metadata.recovery_timestamp_ms));
   }
   file.flush();
   reader.close();
