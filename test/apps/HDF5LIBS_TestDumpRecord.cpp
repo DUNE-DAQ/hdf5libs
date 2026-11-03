@@ -201,7 +201,7 @@ main(int argc, char** argv)
       ss << "\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
-         << " has size = " << frag_ptr->get_data_size() << " -----";
+         << " has size = " << frag_ptr->get_size() << " -----";
       if (h5_raw_data_file.is_trigger_record_type()) {
         try {
           auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
