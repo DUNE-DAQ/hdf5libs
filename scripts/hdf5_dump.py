@@ -99,6 +99,7 @@ class DAQDataFile:
         self.clock_speed_hz = k_clock_speed_hz
 
     def convert_to_binary(self, binary_file, k_nrecords):
+
         with open(binary_file, 'wb') as bf:
             n = 0
             for i in self.records:
@@ -109,7 +110,7 @@ class DAQDataFile:
                 bf.write(idata_array)
                 for j in i.fragments:
                     dset = self.h5file[j]
-                    jdata_array = bytearray(dset[:])
+                    jdata_array = bytearray(dset.attrs.get('fragment_header', b'')) + bytearray(dset[:])
                     bf.write(jdata_array)
                 n += 1
         return
