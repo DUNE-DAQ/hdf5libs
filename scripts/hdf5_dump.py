@@ -12,7 +12,7 @@ import sys
 
 # Current allowed range of file layout versions
 FILELAYOUT_MIN_VERSION = 4
-FILELAYOUT_MAX_VERSION = 7
+FILELAYOUT_MAX_VERSION = 8
 
 # Current header versions
 TRIGGER_RECORD_HEADER_VERSION = 5
@@ -307,11 +307,10 @@ def parse_args():
     parser.add_argument('-p', '--print-out', action='append',
                         choices=['header', 'fragment', 'both', 'attributes',
                                  'dataset-attributes', 'all'],
-                        help='''select which part of data to be displayed, this
-                        option can be repeated multiple times, "-p both" is
-                        equivalent to "-p header -p fragment", "-p all" is
-                        equivalent to "-p attributes -p dataset-attributes
-                        -p header -p fragment"''')
+                        help='''select which part of data to be displayed
+                        (%(choices)s), this option can be repeated multiple
+                        times, "-p both" is equivalent to "-p header -p
+                        fragment", "-p all" prints everything''')
 
     parser.add_argument('-c', '--check-fragments',
                         help='''check if fragments written in trigger record
@@ -334,18 +333,14 @@ def parse_args():
 
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 2.0')
-    return parser.parse_args()
 
+    args = parser.parse_args()
+    if args.print_out is None and not args.check_fragments and args.binary_output is None:
+        parser.error("use at least one of -p/--print-out, -c/--check-fragments, -b/--binary-output")
+    return args
 
 def main():
     args = parse_args()
-    if args.print_out is None and args.check_fragments is False and \
-            args.binary_output is None:
-        print("Error: use at least one of the two following options:")
-        print("       -p, --print-out {header, fragment, both}")
-        print("       -c, --check-fragments")
-        print("       -b, --binary-output")
-        return
 
     h5 = DAQDataFile(args.file_name)
 
