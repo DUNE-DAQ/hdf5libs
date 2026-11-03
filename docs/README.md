@@ -108,7 +108,7 @@ Upon closing the file -- at object destruction -- the following attributes are w
 - "total_file_size" (`size_t`, total number of bytes in the file, including datasets, metadata, and unallocated space)
 - "closing_timestamp" (`std::string`, string translation of the number of milliseconds since epoch).
 
-The key interface for writing is the `HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)` member, which takes a TriggerRecord, creates a group in the HDF5 file for it, and then writes all of the underlying data (`TriggerRecordHeader` and `Fragment`s) to appropriate datasets and subgroups. All data are written as dimension 1 `char` arrays, with no change to the input `TriggerRecord` object.
+The key interface for writing is the `HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)` member, which takes a TriggerRecord, creates a group in the HDF5 file for it, and then writes all of the underlying `Fragment`s to appropriate datasets and subgroups. The associated `TriggerRecordHeader` is stored as an attribute on the `Fragment` dataset. All data are written as dimension 1 `char` arrays, with no change to the input `TriggerRecord` object.
 
 #### Reading
 The constructor for creating a new HDF5RawDataFile for reading looks like this:
@@ -127,6 +127,10 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 -  `get_frag_ptr(...)` members return a unique ptr to a `Fragment`, with inputs either being a full path as you would get from `get_all_fragment_dataset_paths()`, or by specifying the trigger number and `GeoID` of the desired data (or also the elements of the `GeoID`). 
 
 # Version Notes
+
+## Version 8 Notes
+
+- Factored `Fragment` headers as dataset attributes.
 
 ## Version 7 Notes
 
