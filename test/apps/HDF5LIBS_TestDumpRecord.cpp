@@ -201,7 +201,7 @@ main(int argc, char** argv)
       ss << "\t" << fragment_type_to_string(frag_ptr->get_fragment_type()) << " fragment with SourceID "
          << frag_ptr->get_element_id().to_string() << " from subdetector "
          << DetID::subdetector_to_string(static_cast<DetID::Subdetector>(frag_ptr->get_detector_id()))
-         << " has size = " << frag_ptr->get_size() << " -----";
+         << " has size = " << frag_ptr->get_data_size() << " -----";
       if (h5_raw_data_file.is_trigger_record_type()) {
         try {
           auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
@@ -257,7 +257,7 @@ main(int argc, char** argv)
         continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TCs = 0;
         int number_of_referenced_TAs = 0;
@@ -295,7 +295,7 @@ main(int argc, char** argv)
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TAs = 0;
         int number_of_referenced_TPs = 0;
@@ -345,7 +345,7 @@ main(int argc, char** argv)
         }
         ss << "\n\t\t"
            << "Number of TPs in this fragment="
-           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
+           << ((frag_ptr->get_data_size()) / sizeof(TriggerPrimitive))
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         ss << "\n\t\t"
