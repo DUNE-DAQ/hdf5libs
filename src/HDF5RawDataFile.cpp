@@ -1057,6 +1057,12 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
+  if (get_version() < 8) {
+    std::unique_ptr<char[]> membuffer = get_dataset_raw_data(dataset_name);
+    return std::make_unique<daqdataformats::Fragment>(
+      membuffer.release(), daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+  }
+
   HighFive::DataSet data_set = m_file_ptr->getDataSet(dataset_name);
   size_t const header_size = sizeof(daqdataformats::FragmentHeader);
   size_t const data_size = data_set.getSpace().getElementCount();
