@@ -10,9 +10,12 @@
 #include "logging/Logging.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <new>
 #include <set>
 #include <sstream>
 #include <string>
@@ -234,7 +237,6 @@ HDF5RawDataFile::write(const daqdataformats::TimeSliceHeader& tsh, HDF5SourceIDH
 void
 HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map)
 {
-
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
              static_cast<const char*>(frag.get_data()),
@@ -314,7 +316,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     data_set_create_props.add(HighFive::Deflate(compression_level));
   }
 
-  m_uncompressed_raw_data_size += raw_data_size_bytes;
+  m_uncompressed_raw_data_size += raw_data_size_bytes + header_size_bytes;
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
 
