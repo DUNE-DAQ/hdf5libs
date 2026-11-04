@@ -1072,17 +1072,17 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
   size_t const header_size = sizeof(daqdataformats::FragmentHeader);
   size_t const data_size = data_set.getSpace().getElementCount();
 
-  std::vector<char> const header_bytes = get_attribute<std::vector<char>>(data_set, "fragment_header");
+  auto const header_bytes = get_attribute<std::vector<char>>(data_set, "fragment_header");
   if (header_bytes.size() != header_size)
     throw InvalidHDF5Attribute(ERS_HERE, "fragment_header");
 
-  char* buf = static_cast<char*>(malloc(header_size + data_size)); // Fragment frees with free()
+  char* buf = static_cast<char*>(malloc(header_size + data_size)); // NOLINT(cppcoreguidelines-no-malloc)
   if (buf == nullptr)
-    throw std::bad_alloc();
+    throw MemoryAllocationFailed(ERS_HERE, dataset_name, header_size + data_size);
 
   std::memcpy(buf, header_bytes.data(), header_size);
   if (data_size > 0)
-    data_set.read(buf + header_size); // payload -> after header
+    data_set.read(buf + header_size); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
   return std::make_unique<daqdataformats::Fragment>(buf, daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
 }

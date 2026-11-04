@@ -110,6 +110,11 @@ ERS_DECLARE_ISSUE(hdf5libs,
                   "Subdetector name \"" << name << "\" does not map to a valid detector ID.",
                   ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  MemoryAllocationFailed,
+                  "Failed to allocate " << bytes << " bytes for dataset " << data_set,
+                  ((std::string)data_set)((size_t)bytes))
+
 namespace hdf5libs {
 
 /**
