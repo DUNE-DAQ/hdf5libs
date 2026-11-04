@@ -108,7 +108,7 @@ Upon closing the file -- at object destruction -- the following attributes are w
 - "total_file_size" (`size_t`, total number of bytes in the file, including datasets, metadata, and unallocated space)
 - "closing_timestamp" (`std::string`, string translation of the number of milliseconds since epoch).
 
-The key interface for writing is the `HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)` member, which takes a TriggerRecord, creates a group in the HDF5 file for it, and then writes all of the underlying `Fragment`s to appropriate datasets and subgroups. The associated `TriggerRecordHeader` is stored as an attribute on the `Fragment` dataset. All data are written as dimension 1 `char` arrays, with no change to the input `TriggerRecord` object.
+The key interface for writing is the `HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)` member, which takes a TriggerRecord, creates a group in the HDF5 file for it, and then writes all of the underlying `Fragment`s to appropriate datasets and subgroups. Starting with file layout version 8, each `Fragment` dataset holds only the payload, and its `FragmentHeader` is stored as a dataset attribute named `fragment_header`. All data are written as dimension 1 `char` arrays, with no change to the input `TriggerRecord` object.
 
 #### Reading
 The constructor for creating a new HDF5RawDataFile for reading looks like this:
