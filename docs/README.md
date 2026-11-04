@@ -130,7 +130,7 @@ However, there are a number of useful accessors included in `HDF5RawDataFile` to
 
 ## Version 8 Notes
 
-- Factored `Fragment` headers as dataset attributes.
+- Factored `Fragment` header as dataset a attribute named `fragment_header`.
 
 ## Version 7 Notes
 
