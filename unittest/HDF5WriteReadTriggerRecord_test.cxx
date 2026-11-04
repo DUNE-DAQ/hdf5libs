@@ -32,7 +32,6 @@ constexpr int run_number = 53;
 constexpr int file_index = 0;
 const std::string application_name = "HDF5WriteReadTriggerRecord_test";
 constexpr size_t fragment_size = 100;
-constexpr size_t fragment_header_size = 72;
 constexpr size_t element_count_tpc = 4;
 constexpr size_t element_count_pds = 4;
 constexpr size_t element_count_ta = 4;
@@ -342,7 +341,7 @@ struct FileWriteFixture
     for (const std::string& frag_path : all_frag_paths) {
       HighFive::DataSet frag_dset = h5file_ptr->get_dataset(frag_path);
       std::vector<char> header_bytes = h5file_ptr->get_attribute<std::vector<char>>(frag_dset, "fragment_header");
-      BOOST_REQUIRE_EQUAL(header_bytes.size(), fragment_header_size);
+      BOOST_REQUIRE_EQUAL(header_bytes.size(), sizeof(dunedaq::daqdataformats::FragmentHeader));
       BOOST_REQUIRE_EQUAL(frag_dset.getSpace().getElementCount(), fragment_size);
     }
 
