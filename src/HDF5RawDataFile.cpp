@@ -261,7 +261,8 @@ HDF5RawDataFile::write_file_layout()
 }
 
 /**
- * @brief write bytes to a dataset in the file, at the appropriate path.
+ * @brief write bytes to a dataset in the file, at the appropriate path, optionally
+ * with a header attribute.
  */
 std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
