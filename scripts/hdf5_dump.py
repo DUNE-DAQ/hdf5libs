@@ -99,7 +99,6 @@ class DAQDataFile:
         self.clock_speed_hz = k_clock_speed_hz
 
     def convert_to_binary(self, binary_file, k_nrecords):
-
         with open(binary_file, 'wb') as bf:
             n = 0
             for i in self.records:
