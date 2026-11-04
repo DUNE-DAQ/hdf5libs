@@ -18,7 +18,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <cstring>
 
 namespace dunedaq {
 namespace hdf5libs {
@@ -168,8 +167,8 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
  */
 void
 HDF5RawDataFile::write_record_contents(HighFive::Group& record_level_group,
-                                 HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
-                                 const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments)
+                                       HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
+                                       const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments)
 {
   HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
   HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
@@ -196,7 +195,6 @@ HDF5RawDataFile::write_record_contents(HighFive::Group& record_level_group,
   HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
   HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
 }
-
 
 /**
  * @brief Write a TriggerRecordHeader to the file.
@@ -241,11 +239,9 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
              static_cast<const char*>(frag.get_data()),
              frag.get_data_size(),
-             m_compression_level);
-
-  m_file_ptr->getDataSet(std::get<1>(write_results))
-    .createAttribute<char>("fragment_header", HighFive::DataSpace({ sizeof(daqdataformats::FragmentHeader) }))
-    .write_raw(static_cast<const char*>(frag.get_storage_location()));
+             m_compression_level,
+             static_cast<const char*>(frag.get_storage_location()),
+             sizeof(daqdataformats::FragmentHeader));
 
   m_recorded_size += std::get<0>(write_results);
 
@@ -271,7 +267,9 @@ std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
                           const char* raw_data_ptr,
                           size_t raw_data_size_bytes,
-                          unsigned compression_level)
+                          unsigned compression_level,
+                          const char* header_ptr,
+                          size_t header_size_bytes)
 {
   const std::string dataset_name = group_and_dataset_path_elements.back();
 
@@ -321,6 +319,10 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
+    if (header_ptr != nullptr) {
+      data_set.createAttribute<char>("fragment_header", HighFive::DataSpace({ header_size_bytes }))
+        .write_raw(header_ptr);
+    }
     m_total_file_size = m_file_ptr->getFileSize();
     m_file_ptr->flush();
     return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
@@ -1059,8 +1061,8 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
   if (get_version() < 8) {
     std::unique_ptr<char[]> membuffer = get_dataset_raw_data(dataset_name);
-    return std::make_unique<daqdataformats::Fragment>(
-      membuffer.release(), daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+    return std::make_unique<daqdataformats::Fragment>(membuffer.release(),
+                                                      daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
   }
 
   HighFive::DataSet data_set = m_file_ptr->getDataSet(dataset_name);
@@ -1079,8 +1081,7 @@ HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
   if (data_size > 0)
     data_set.read(buf + header_size); // payload -> after header
 
-  return std::make_unique<daqdataformats::Fragment>(
-    buf, daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+  return std::make_unique<daqdataformats::Fragment>(buf, daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
