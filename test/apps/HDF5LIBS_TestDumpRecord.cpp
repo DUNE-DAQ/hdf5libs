@@ -344,7 +344,7 @@ main(int argc, char** argv)
           std::exit(1);
         }
         ss << "\n\t\t"
-           << "Number of TPs in this fragment=" << ((frag_ptr->get_data_size()) / sizeof(TriggerPrimitive))
+           << "Number of TPs in this fragment=" << (frag_ptr->get_data_size()) / sizeof(TriggerPrimitive)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         ss << "\n\t\t"
