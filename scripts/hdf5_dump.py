@@ -340,6 +340,7 @@ def parse_args():
         parser.error("use at least one of -p/--print-out, -c/--check-fragments, -b/--binary-output")
     return args
 
+
 def main():
     args = parse_args()
 
