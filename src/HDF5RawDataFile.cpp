@@ -328,7 +328,7 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
     }
     m_total_file_size = m_file_ptr->getFileSize();
     m_file_ptr->flush();
-    return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
+    return std::make_tuple(data_set.getStorageSize() + header_size_bytes, data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
