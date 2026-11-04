@@ -257,7 +257,7 @@ main(int argc, char** argv)
         continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TCs = 0;
         int number_of_referenced_TAs = 0;
@@ -295,7 +295,7 @@ main(int argc, char** argv)
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TAs = 0;
         int number_of_referenced_TPs = 0;
@@ -344,8 +344,7 @@ main(int argc, char** argv)
           std::exit(1);
         }
         ss << "\n\t\t"
-           << "Number of TPs in this fragment="
-           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
+           << "Number of TPs in this fragment=" << (frag_ptr->get_data_size()) / sizeof(TriggerPrimitive)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         ss << "\n\t\t"

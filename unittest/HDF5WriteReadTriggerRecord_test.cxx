@@ -338,6 +338,13 @@ struct FileWriteFixture
     auto all_frag_paths = h5file_ptr->get_all_fragment_dataset_paths();
     BOOST_REQUIRE_EQUAL(trigger_count * components_per_record, all_frag_paths.size());
 
+    for (const std::string& frag_path : all_frag_paths) {
+      HighFive::DataSet frag_dset = h5file_ptr->get_dataset(frag_path);
+      auto header_bytes = h5file_ptr->get_attribute<std::vector<char>>(frag_dset, "fragment_header");
+      BOOST_REQUIRE_EQUAL(header_bytes.size(), sizeof(dunedaq::daqdataformats::FragmentHeader));
+      BOOST_REQUIRE_EQUAL(frag_dset.getSpace().getElementCount(), fragment_size);
+    }
+
     // test access by name
     std::unique_ptr<dunedaq::daqdataformats::TriggerRecordHeader> trh_ptr;
     trh_ptr = h5file_ptr->get_trh_ptr(all_trh_paths.at(2));
