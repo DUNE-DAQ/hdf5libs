@@ -396,6 +396,8 @@ public:
   }
 #endif
 
+  HighFive::DataSet get_dataset(const std::string& dataset_path) { return m_file_ptr->getDataSet(dataset_path); }
+
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
