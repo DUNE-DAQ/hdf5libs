@@ -11,9 +11,6 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUTPARAMETERS_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5FILELAYOUTPARAMETERS_HPP_
 
-#include "appmodel/HDF5FileLayoutParams.hpp"
-#include "appmodel/HDF5PathParams.hpp"
-
 #include "nlohmann/json.hpp"
 
 #include <vector>
@@ -30,15 +27,6 @@ struct HDF5PathParameters
   int32_t digits_for_element_number = 5;
 
   HDF5PathParameters() = default;
-  [[deprecated("translating appmodel configuration is done outside hdf5libs now: use "
-               "dfmodules::make_hdf5_file_layout_parameters() (dfmodules/HDF5FileConfig.hpp)")]]
-  HDF5PathParameters(appmodel::HDF5PathParams const* from_conf)
-  {
-    detector_group_type = from_conf->get_detector_group_type();
-    detector_group_name = from_conf->get_detector_group_name();
-    element_name_prefix = from_conf->get_element_name_prefix();
-    digits_for_element_number = from_conf->get_digits_for_element_number();
-  }
   HDF5PathParameters(nlohmann::json from_json)
   {
     detector_group_type = from_json["detector_group_type"];
@@ -71,24 +59,6 @@ struct HDF5FileLayoutParameters
   std::vector<HDF5PathParameters> path_params_list;
 
   HDF5FileLayoutParameters() = default;
-  [[deprecated("translating appmodel configuration is done outside hdf5libs now: use "
-               "dfmodules::make_hdf5_file_layout_parameters() (dfmodules/HDF5FileConfig.hpp)")]]
-  HDF5FileLayoutParameters(appmodel::HDF5FileLayoutParams const* from_conf)
-  {
-    record_name_prefix = from_conf->get_record_name_prefix();
-    digits_for_record_number = from_conf->get_digits_for_record_number();
-    digits_for_sequence_number = from_conf->get_digits_for_sequence_number();
-    record_header_dataset_name = from_conf->get_record_header_dataset_name();
-    raw_data_group_name = from_conf->get_raw_data_group_name();
-    view_group_name = from_conf->get_view_group_name();
-
-    for (auto& pp : from_conf->get_path_params_list()) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // the deprecated HDF5PathParameters(appmodel) constructor
-      path_params_list.emplace_back(HDF5PathParameters(pp));
-#pragma GCC diagnostic pop
-    }
-  }
   HDF5FileLayoutParameters(nlohmann::json from_json)
   {
     record_name_prefix = from_json["record_name_prefix"];

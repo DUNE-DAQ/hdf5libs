@@ -51,8 +51,6 @@ public:
   typedef std::map<daqdataformats::FragmentType, std::set<daqdataformats::SourceID>> fragment_type_source_id_map_t;
   typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
-  // DEPRECATED: use appmodel::ConfigurationHelper::get_source_id_geo_id_map(), which returns a
-  // daqdataformats::SourceIDGeoIDMap.
   // Kept for one release so that existing callers (e.g. trigger's MLTModule) keep working.
   [[deprecated("use appmodel::ConfigurationHelper::get_source_id_geo_id_map(), which returns a "
                "daqdataformats::SourceIDGeoIDMap")]] static source_id_geo_id_map_t
