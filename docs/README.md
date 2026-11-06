@@ -1,5 +1,7 @@
 ## Overview
 
+This branch is purely for testing the upstream CI workflows in `DUNE-DAQ/.github`. It should not be merged into any other branches.
+
 The _hdflibs_ repository contains the classes that are used for interfacing between _dunedaq_ data applications (writers and readers) and the [HighFive](https://github.com/BlueBrain/HighFive) library to read/write HDF5 files. 
 
 There are two main classes in use:
