@@ -128,7 +128,7 @@ public:
 
   // define a record number type
   // that is a pair of the trigger record or timeslice number and sequence number
-  typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
+  typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t;
   typedef std::set<record_id_t, std::less<>> record_id_set;
 
   inline static const std::string s_inprogress_suffix = ".writing";
