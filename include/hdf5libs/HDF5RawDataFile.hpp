@@ -249,7 +249,7 @@ public:
   std::vector<std::string> get_fragment_dataset_paths(const std::string& typestring,
   const uint32_t id); // NOLINT(build/unsigned)
 
-  // get a list of all the source ids from a list of fragment dataset paths
+  //get a list of all the source ids from a list of fragment dataset paths
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
