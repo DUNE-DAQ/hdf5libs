@@ -32,7 +32,7 @@ on:
 jobs:
   build_develop_dispatch:
     name: Build against the development release
-    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@develop
+    uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@amogan/add_workflow_dispatch_to_ci
     with:
       caller_event_name: ${{ inputs.caller_event_name || github.event_name }}
       target_branch: ${{ inputs.target_branch || '' }}
