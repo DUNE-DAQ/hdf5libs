@@ -9,6 +9,7 @@
  * received with this code.
  */
 
+#include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5RawDataFile.hpp"
 
 #include "daqdataformats/Fragment.hpp"
@@ -116,9 +117,15 @@ main(int argc, char** argv)
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
 
+  uint32_t input_file_layout_version = h5_raw_data_file.get_file_layout().get_version();
+  uint32_t latest_file_layout_version = HDF5FileLayout::s_latest_version;
+
+  std::cout << "input file version: " << input_file_layout_version << std::endl;
+  std::cout << "current file layout version: " << latest_file_layout_version << std::endl;
+
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
-  if (h5_raw_data_file.get_file_layout().get_version() >= 6) {
+  if (input_file_layout_version >= 6) {
     auto creation_timestamp = h5_raw_data_file.get_attribute<size_t>("creation_timestamp");
     ss << "\n\tCreation timestamp: " << creation_timestamp;
   } else {
