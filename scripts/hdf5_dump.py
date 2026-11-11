@@ -12,7 +12,7 @@ import sys
 
 # Current allowed range of file layout versions
 FILELAYOUT_MIN_VERSION = 4
-FILELAYOUT_MAX_VERSION = 7
+FILELAYOUT_MAX_VERSION = 8
 
 # Current header versions
 TRIGGER_RECORD_HEADER_VERSION = 5
@@ -109,7 +109,7 @@ class DAQDataFile:
                 bf.write(idata_array)
                 for j in i.fragments:
                     dset = self.h5file[j]
-                    jdata_array = bytearray(dset[:])
+                    jdata_array = bytearray(dset.attrs.get('fragment_header', b'')) + bytearray(dset[:])
                     bf.write(jdata_array)
                 n += 1
         return
@@ -130,6 +130,17 @@ class DAQDataFile:
                 print(banner_str.center(80, '='))
                 for k in self.h5file[i.path].attrs.keys():
                     print("{:<30}: {}".format(k, self.h5file[i.path].attrs[k]))
+            if not {"dataset-attributes", "all"}.isdisjoint(k_header_type):
+                for j in [i.header] + i.fragments:
+                    attrs = self.h5file[j].attrs
+                    if len(attrs) > 0:
+                        print(" Dataset Attributes ".center(80, '-'))
+                        print('{:<30}:\t{}'.format("Path", j))
+                        for k in attrs.keys():
+                            if k == 'fragment_header':
+                                print_fragment_header(bytearray(attrs[k]), self.clock_speed_hz)
+                            else:
+                                print("{:<30}: {}".format(k, attrs[k]))
             if not {"header", "both", "all"}.isdisjoint(k_header_type):
                 dset = self.h5file[i.header]
                 data_array = bytearray(dset[:])
@@ -143,7 +154,7 @@ class DAQDataFile:
             if not {"fragment", "both", "all"}.isdisjoint(k_header_type):
                 for j in i.fragments:
                     dset = self.h5file[j]
-                    data_array = bytearray(dset[:])
+                    data_array = bytearray(dset.attrs.get('fragment_header', dset[:]))
                     banner_str = " Fragment Header "
                     print(banner_str.center(80, '-'))
                     print('{:<30}:\t{}'.format("Path", j))
@@ -173,7 +184,7 @@ class DAQDataFile:
                 empty_frag_count = 0
                 for frag in i.fragments:
                     frag_dset = self.h5file[frag]
-                    frag_data = bytearray(frag_dset[:])
+                    frag_data = bytearray(frag_dset.attrs.get('fragment_header', frag_dset[:]))
                     (frag_version, ) = struct.unpack('<I', frag_data[4:8])
                     if frag_version != FRAGMENT_HEADER_VERSION:
                         raise ValueError(f"Invalid Fragment Header format version: expected {FRAGMENT_HEADER_VERSION} and found {frag_version}")
@@ -295,11 +306,11 @@ def parse_args():
 
     parser.add_argument('-p', '--print-out', action='append',
                         choices=['header', 'fragment', 'both', 'attributes',
-                                 'all'],
-                        help='''select which part of data to be displayed, this
-                        option can be repeated multiple times, "-p both" is
-                        equivalent to "-p header -p fragment", "-p all" is
-                        equivalent to "-p attributes -p header -p fragment"''')
+                                 'dataset-attributes', 'all'],
+                        help='''select which part of data to be displayed
+                        (%(choices)s), this option can be repeated multiple
+                        times, "-p both" is equivalent to "-p header -p
+                        fragment", "-p all" prints everything''')
 
     parser.add_argument('-c', '--check-fragments',
                         help='''check if fragments written in trigger record
@@ -322,18 +333,15 @@ def parse_args():
 
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s 2.0')
-    return parser.parse_args()
+
+    args = parser.parse_args()
+    if args.print_out is None and not args.check_fragments and args.binary_output is None:
+        parser.error("use at least one of -p/--print-out, -c/--check-fragments, -b/--binary-output")
+    return args
 
 
 def main():
     args = parse_args()
-    if args.print_out is None and args.check_fragments is False and \
-            args.binary_output is None:
-        print("Error: use at least one of the two following options:")
-        print("       -p, --print-out {header, fragment, both}")
-        print("       -c, --check-fragments")
-        print("       -b, --binary-output")
-        return
 
     h5 = DAQDataFile(args.file_name)
 

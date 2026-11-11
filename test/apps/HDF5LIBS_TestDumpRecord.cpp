@@ -9,6 +9,7 @@
  * received with this code.
  */
 
+#include "hdf5libs/HDF5FileLayout.hpp"
 #include "hdf5libs/HDF5RawDataFile.hpp"
 
 #include "daqdataformats/Fragment.hpp"
@@ -38,6 +39,22 @@ print_usage(const char* appname)
   std::cout << "Where a negative number of TRs to skip counts backward from the end of the file." << std::endl;
   std::cout << "And the \'-t\' option causes human-readable times to be printed for selected timestamp values."
             << std::endl;
+}
+
+void
+validate_version(const std::string classname, const uint32_t expected_version, const uint32_t found_version)
+{
+  if (expected_version == found_version) return;
+
+  std::cout << std::endl;
+  std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
+            << "used a different version" << std::endl
+            << "       of the " << classname << " "
+            << "than this application (built with the current version of the software) is expecting." << std::endl;
+  std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
+  std::cout << "(Expected " << classname << " version " << expected_version << " and found version " << found_version
+            << ".)" << std::endl;
+  std::exit(1);
 }
 
 std::string
@@ -115,10 +132,15 @@ main(int argc, char** argv)
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
+  uint32_t input_file_layout_version = h5_raw_data_file.get_file_layout().get_version();
+
+  validate_version("HDF5FileLayout", HDF5FileLayout::s_file_layout_version, input_file_layout_version);
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
-  if (h5_raw_data_file.get_file_layout().get_version() >= 6) {
+  ss << "\n\tFile layout version: " << input_file_layout_version;
+
+  if (input_file_layout_version >= 6) {
     auto creation_timestamp = h5_raw_data_file.get_attribute<size_t>("creation_timestamp");
     ss << "\n\tCreation timestamp: " << creation_timestamp;
   } else {
@@ -168,18 +190,10 @@ main(int argc, char** argv)
       ss << "\n\tTimeSliceHeader: " << *tsh_ptr;
     } else {
       auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-      if (trh_ptr->get_header().version != TriggerRecordHeaderData::s_trigger_record_header_version) {
-        std::cout << std::endl;
-        std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-                  << "used a different version" << std::endl
-                  << "       of the TriggerRecordHeader "
-                  << "than this application (built with the current version of the software) is expecting."
-                  << std::endl;
-        std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-        std::cout << "(Expected TRH version " << TriggerRecordHeaderData::s_trigger_record_header_version
-                  << " and found version " << trh_ptr->get_header().version << ".)" << std::endl;
-        std::exit(1);
-      }
+      validate_version("TriggerRecordHeader",
+                        TriggerRecordHeaderData::s_trigger_record_header_version,
+                        trh_ptr->get_header().version
+      );
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
       if (print_calendar_time) {
         std::string trigger_timestamp_string = get_calendar_time_string(trh_ptr->get_header().trigger_timestamp);
@@ -257,7 +271,7 @@ main(int argc, char** argv)
         continue;
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerCandidate) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TCs = 0;
         int number_of_referenced_TAs = 0;
@@ -295,7 +309,7 @@ main(int argc, char** argv)
         }
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerActivity) {
-        size_t payload_size = frag_ptr->get_size() - sizeof(FragmentHeader);
+        size_t payload_size = frag_ptr->get_data_size();
         size_t offset = 0;
         int number_of_TAs = 0;
         int number_of_referenced_TPs = 0;
@@ -332,20 +346,9 @@ main(int argc, char** argv)
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
         TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
-        if (tpptr->version != TriggerPrimitive::s_trigger_primitive_version) {
-          std::cout << std::endl;
-          std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-                    << std::endl
-                    << "       used a different version of the TriggerPrimitive data structure than this " << std::endl
-                    << "       application (built with the current version of the software) is expecting." << std::endl;
-          std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-          std::cout << "(Expected TP version " << static_cast<int>(TriggerPrimitive::s_trigger_primitive_version)
-                    << " and found version " << tpptr->version << ".)" << std::endl;
-          std::exit(1);
-        }
+        validate_version("TriggerPrimitive", TriggerPrimitive::s_trigger_primitive_version, tpptr->version);
         ss << "\n\t\t"
-           << "Number of TPs in this fragment="
-           << ((frag_ptr->get_size() - sizeof(FragmentHeader)) / sizeof(TriggerPrimitive))
+           << "Number of TPs in this fragment=" << (frag_ptr->get_data_size()) / sizeof(TriggerPrimitive)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
            << ", size of Fragment Header=" << sizeof(FragmentHeader);
         ss << "\n\t\t"

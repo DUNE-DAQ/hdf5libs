@@ -10,9 +10,12 @@
 #include "logging/Logging.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <new>
 #include <set>
 #include <sstream>
 #include <string>
@@ -140,36 +143,10 @@ HDF5RawDataFile::write(const daqdataformats::TriggerRecord& tr)
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  // the map of fragment types to SourceIDS
-  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
-
-  // the map of subdetectors to SourceIDS
-  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
-
   // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(tr.get_header_ref(), source_id_path_map);
 
-  // store the SourceID of the record header in the HDF5 file/group
-  // (since there should only be one entry in the map at this point, we'll take advantage of that...)
-  for (auto const& source_id_path : source_id_path_map) {
-    HDF5SourceIDHandler::store_record_header_source_id(record_level_group, source_id_path.first);
-  }
-
-  // write all of the fragments into the HDF5 file/group
-  for (auto const& frag_ptr : tr.get_fragments_ref()) {
-    write(*frag_ptr, source_id_path_map);
-    HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
-      fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
-    HDF5SourceIDHandler::add_subdetector_source_id_to_map(
-      subdetector_source_id_map,
-      static_cast<detdataformats::DetID::Subdetector>(frag_ptr->get_detector_id()),
-      frag_ptr->get_element_id());
-  }
-
-  // store all of the record-level maps in the HDF5 file/group
-  HDF5SourceIDHandler::store_record_level_path_info(record_level_group, source_id_path_map);
-  HDF5SourceIDHandler::store_record_level_fragment_type_map(record_level_group, fragment_type_source_id_map);
-  HDF5SourceIDHandler::store_record_level_subdetector_map(record_level_group, subdetector_source_id_map);
+  write_record_contents(record_level_group, source_id_path_map, tr.get_fragments_ref());
 }
 
 /**
@@ -182,14 +159,22 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
   // and fragments (and then write the map into the HDF5 TR_record Group)
   HDF5SourceIDHandler::source_id_path_map_t source_id_path_map;
 
-  // the map of fragment types to SourceIDS
-  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
-
-  // the map of subdetectors to SourceIDS
-  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
-
   // write the record header into the HDF5 file/group
   HighFive::Group record_level_group = write(ts.get_header(), source_id_path_map);
+
+  write_record_contents(record_level_group, source_id_path_map, ts.get_fragments_ref());
+}
+
+/**
+ * @brief Write a record's fragments and store the record-level SourceID maps.
+ */
+void
+HDF5RawDataFile::write_record_contents(HighFive::Group& record_level_group,
+                                       HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
+                                       const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments)
+{
+  HDF5SourceIDHandler::fragment_type_source_id_map_t fragment_type_source_id_map;
+  HDF5SourceIDHandler::subdetector_source_id_map_t subdetector_source_id_map;
 
   // store the SourceID of the record header in the HDF5 file/group
   // (since there should only be one entry in the map at this point, we'll take advantage of that...)
@@ -198,7 +183,7 @@ HDF5RawDataFile::write(const daqdataformats::TimeSlice& ts)
   }
 
   // write all of the fragments into the HDF5 file/group
-  for (auto const& frag_ptr : ts.get_fragments_ref()) {
+  for (auto const& frag_ptr : fragments) {
     write(*frag_ptr, source_id_path_map);
     HDF5SourceIDHandler::add_fragment_type_source_id_to_map(
       fragment_type_source_id_map, frag_ptr->get_fragment_type(), frag_ptr->get_element_id());
@@ -254,9 +239,12 @@ HDF5RawDataFile::write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler
 {
   std::tuple<size_t, std::string, HighFive::Group> write_results =
     do_write(m_file_layout_ptr->get_path_elements(frag.get_header()),
+             static_cast<const char*>(frag.get_data()),
+             frag.get_data_size(),
+             m_compression_level,
              static_cast<const char*>(frag.get_storage_location()),
-             frag.get_size(),
-             m_compression_level);
+             sizeof(daqdataformats::FragmentHeader));
+
   m_recorded_size += std::get<0>(write_results);
 
   daqdataformats::SourceID source_id = frag.get_element_id();
@@ -275,13 +263,16 @@ HDF5RawDataFile::write_file_layout()
 }
 
 /**
- * @brief write bytes to a dataset in the file, at the appropriate path
+ * @brief write bytes to a dataset in the file, at the appropriate path, optionally
+ * with a header attribute.
  */
 std::tuple<size_t, std::string, HighFive::Group>
 HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path_elements,
                           const char* raw_data_ptr,
                           size_t raw_data_size_bytes,
-                          unsigned compression_level)
+                          unsigned compression_level,
+                          const char* header_ptr,
+                          size_t header_size_bytes)
 {
   const std::string dataset_name = group_and_dataset_path_elements.back();
 
@@ -319,21 +310,25 @@ HDF5RawDataFile::do_write(std::vector<std::string> const& group_and_dataset_path
   HighFive::DataSetCreateProps data_set_create_props;
   HighFive::DataSetAccessProps data_set_access_props;
 
-  if (compression_level > 0) {
+  if (compression_level > 0 && raw_data_size_bytes > 0) {
     std::vector<hsize_t> chunk_size = { raw_data_size_bytes, 1 };
     data_set_create_props.add(HighFive::Chunking(chunk_size));
     data_set_create_props.add(HighFive::Deflate(compression_level));
   }
 
-  m_uncompressed_raw_data_size += raw_data_size_bytes;
+  m_uncompressed_raw_data_size += raw_data_size_bytes + header_size_bytes;
 
   auto data_set = sub_group.createDataSet<char>(dataset_name, data_space, data_set_create_props, data_set_access_props);
 
   if (data_set.isValid()) {
     data_set.write_raw(raw_data_ptr);
+    if (header_ptr != nullptr) {
+      data_set.createAttribute<char>("fragment_header", HighFive::DataSpace({ header_size_bytes }))
+        .write_raw(header_ptr);
+    }
     m_total_file_size = m_file_ptr->getFileSize();
     m_file_ptr->flush();
-    return std::make_tuple(data_set.getStorageSize(), data_set.getPath(), top_level_group);
+    return std::make_tuple(data_set.getStorageSize() + header_size_bytes, data_set.getPath(), top_level_group);
   } else {
     throw InvalidHDF5Dataset(ERS_HERE, dataset_name, m_file_ptr->getName());
   }
@@ -1067,10 +1062,29 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
-  auto membuffer = get_dataset_raw_data(dataset_name);
-  auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
-    membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
-  return frag_ptr;
+  if (get_version() < 8) {
+    std::unique_ptr<char[]> membuffer = get_dataset_raw_data(dataset_name);
+    return std::make_unique<daqdataformats::Fragment>(membuffer.release(),
+                                                      daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
+  }
+
+  HighFive::DataSet data_set = m_file_ptr->getDataSet(dataset_name);
+  size_t const header_size = sizeof(daqdataformats::FragmentHeader);
+  size_t const data_size = data_set.getSpace().getElementCount();
+
+  auto const header_bytes = get_attribute<std::vector<char>>(data_set, "fragment_header");
+  if (header_bytes.size() != header_size)
+    throw InvalidHDF5Attribute(ERS_HERE, "fragment_header");
+
+  char* buf = static_cast<char*>(malloc(header_size + data_size)); // NOLINT(cppcoreguidelines-no-malloc)
+  if (buf == nullptr)
+    throw MemoryAllocationFailed(ERS_HERE, dataset_name, header_size + data_size);
+
+  std::memcpy(buf, header_bytes.data(), header_size);
+  if (data_size > 0)
+    data_set.read(buf + header_size); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+
+  return std::make_unique<daqdataformats::Fragment>(buf, daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
 }
 
 std::unique_ptr<daqdataformats::Fragment>
