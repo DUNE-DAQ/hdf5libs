@@ -41,6 +41,22 @@ print_usage(const char* appname)
             << std::endl;
 }
 
+void
+validate_version(const std::string classname, const uint32_t expected_version, const uint32_t found_version)
+{
+  if (expected_version == found_version) return;
+
+  std::cout << std::endl;
+  std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
+            << "used a different version" << std::endl
+            << "       of the " << classname << " "
+            << "than this application (built with the current version of the software) is expecting." << std::endl;
+  std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
+  std::cout << "(Expected " << classname << " version " << expected_version << " and found version " << found_version
+            << ".)" << std::endl;
+  std::exit(1);
+}
+
 std::string
 get_calendar_time_string(timestamp_t timestamp)
 {
@@ -116,15 +132,14 @@ main(int argc, char** argv)
   auto file_index = h5_raw_data_file.get_attribute<unsigned int>("file_index");
   auto app_name = h5_raw_data_file.get_attribute<std::string>("application_name");
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
-
   uint32_t input_file_layout_version = h5_raw_data_file.get_file_layout().get_version();
-  uint32_t latest_file_layout_version = HDF5FileLayout::s_latest_version;
 
-  std::cout << "input file version: " << input_file_layout_version << std::endl;
-  std::cout << "current file layout version: " << latest_file_layout_version << std::endl;
+  validate_version("HDF5FileLayout", HDF5FileLayout::s_file_layout_version, input_file_layout_version);
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
+  ss << "\n\tFile layout version: " << input_file_layout_version;
+
   if (input_file_layout_version >= 6) {
     auto creation_timestamp = h5_raw_data_file.get_attribute<size_t>("creation_timestamp");
     ss << "\n\tCreation timestamp: " << creation_timestamp;
@@ -175,18 +190,10 @@ main(int argc, char** argv)
       ss << "\n\tTimeSliceHeader: " << *tsh_ptr;
     } else {
       auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
-      if (trh_ptr->get_header().version != TriggerRecordHeaderData::s_trigger_record_header_version) {
-        std::cout << std::endl;
-        std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-                  << "used a different version" << std::endl
-                  << "       of the TriggerRecordHeader "
-                  << "than this application (built with the current version of the software) is expecting."
-                  << std::endl;
-        std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-        std::cout << "(Expected TRH version " << TriggerRecordHeaderData::s_trigger_record_header_version
-                  << " and found version " << trh_ptr->get_header().version << ".)" << std::endl;
-        std::exit(1);
-      }
+      validate_version("TriggerRecordHeader",
+                        TriggerRecordHeaderData::s_trigger_record_header_version,
+                        trh_ptr->get_header().version
+      );
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
       if (print_calendar_time) {
         std::string trigger_timestamp_string = get_calendar_time_string(trh_ptr->get_header().trigger_timestamp);
@@ -339,17 +346,7 @@ main(int argc, char** argv)
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
         TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
-        if (tpptr->version != TriggerPrimitive::s_trigger_primitive_version) {
-          std::cout << std::endl;
-          std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-                    << std::endl
-                    << "       used a different version of the TriggerPrimitive data structure than this " << std::endl
-                    << "       application (built with the current version of the software) is expecting." << std::endl;
-          std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-          std::cout << "(Expected TP version " << static_cast<int>(TriggerPrimitive::s_trigger_primitive_version)
-                    << " and found version " << tpptr->version << ".)" << std::endl;
-          std::exit(1);
-        }
+        validate_version("TriggerPrimitive", TriggerPrimitive::s_trigger_primitive_version, tpptr->version);
         ss << "\n\t\t"
            << "Number of TPs in this fragment=" << (frag_ptr->get_data_size()) / sizeof(TriggerPrimitive)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)
