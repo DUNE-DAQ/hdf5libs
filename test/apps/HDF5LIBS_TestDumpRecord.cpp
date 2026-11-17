@@ -42,18 +42,25 @@ print_usage(const char* appname)
 }
 
 void
-validate_version(const std::string classname, const uint32_t expected_version, const uint32_t found_version)
+validate_version(const std::string& classname, const uint32_t found_version, const uint32_t maximum_supported_version, uint32_t minimum_supported_version=0)
 {
-  if (expected_version == found_version) return;
+
+  // If no minimum version is supplied, we assume this means an exact version match is required
+  if (minimum_supported_version == 0) minimum_supported_version = maximum_supported_version;
+
+  if (found_version >= minimum_supported_version && found_version <= maximum_supported_version) return;
 
   std::cout << std::endl;
   std::cout << "ERROR: The specified data file was written with a version of the DUNE-DAQ software that "
-            << "used a different version" << std::endl
+            << "used an incompatible version" << std::endl
             << "       of the " << classname << " "
             << "than this application (built with the current version of the software) is expecting." << std::endl;
   std::cout << "Please use a version of the software that is compatible with the data file." << std::endl;
-  std::cout << "(Expected " << classname << " version " << expected_version << " and found version " << found_version
-            << ".)" << std::endl;
+  std::cout << "(Expected " << classname << " version " << maximum_supported_version << " and found version " << found_version;
+  if (minimum_supported_version > 0) {
+    std::cout << "; minimum supported version " << minimum_supported_version;
+  }
+  std::cout << ".)" << std::endl;
   std::exit(1);
 }
 
@@ -134,7 +141,7 @@ main(int argc, char** argv)
   auto compression_level = h5_raw_data_file.get_attribute_if_exists<unsigned>("compression_level", 0);
   uint32_t input_file_layout_version = h5_raw_data_file.get_file_layout().get_version();
 
-  validate_version("HDF5FileLayout", HDF5FileLayout::s_file_layout_version, input_file_layout_version);
+  validate_version("HDF5FileLayout", input_file_layout_version, HDF5FileLayout::s_file_layout_version, HDF5FileLayout::s_minimum_supported_version);
 
   ss << "\n\tRun number: " << run_number;
   ss << "\n\tFile index: " << file_index;
@@ -191,8 +198,8 @@ main(int argc, char** argv)
     } else {
       auto trh_ptr = h5_raw_data_file.get_trh_ptr(record_id);
       validate_version("TriggerRecordHeader",
-                        TriggerRecordHeaderData::s_trigger_record_header_version,
-                        trh_ptr->get_header().version
+                        trh_ptr->get_header().version,
+                        TriggerRecordHeaderData::s_trigger_record_header_version
       );
       ss << "\n\tTriggerRecordHeader: " << trh_ptr->get_header();
       if (print_calendar_time) {
@@ -346,7 +353,7 @@ main(int argc, char** argv)
       }
       if (frag_ptr->get_fragment_type() == FragmentType::kTriggerPrimitive) {
         TriggerPrimitive* tpptr = static_cast<TriggerPrimitive*>(frag_ptr->get_data());
-        validate_version("TriggerPrimitive", TriggerPrimitive::s_trigger_primitive_version, tpptr->version);
+        validate_version("TriggerPrimitive", tpptr->version, TriggerPrimitive::s_trigger_primitive_version);
         ss << "\n\t\t"
            << "Number of TPs in this fragment=" << (frag_ptr->get_data_size()) / sizeof(TriggerPrimitive)
            << ", size of TP data structure=" << sizeof(TriggerPrimitive)

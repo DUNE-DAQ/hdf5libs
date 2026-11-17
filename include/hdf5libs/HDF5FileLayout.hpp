@@ -71,6 +71,7 @@ public:
   /**
    * @brief Constructor from json conf, used in DataWriterModule. Version always most recent.
    */
+  static constexpr uint32_t s_minimum_supported_version = 4;
   static constexpr uint32_t s_file_layout_version = 8;
 
   explicit HDF5FileLayout(HDF5FileLayoutParameters conf, uint32_t version = s_file_layout_version); // NOLINT(build/unsigned)
