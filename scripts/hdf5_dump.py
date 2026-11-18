@@ -147,7 +147,7 @@ class DAQDataFile:
                 banner_str = f" {self.record_type} Header "
                 print(banner_str.center(80, '='))
                 print('{:<30}:\t{}'.format("Path", i.path))
-                print('{:<30}:\t{}'.format("Size", dset.shape))
+                print('{:<30}:\t{}'.format("Dataset shape", dset.shape))
                 print('{:<30}:\t{}'.format("Data type", dset.dtype))
                 print_header(data_array, self.record_type, self.clock_speed_hz,
                              k_list_components)
@@ -158,7 +158,7 @@ class DAQDataFile:
                     banner_str = " Fragment Header "
                     print(banner_str.center(80, '-'))
                     print('{:<30}:\t{}'.format("Path", j))
-                    print('{:<30}:\t{}'.format("Size", dset.shape))
+                    print('{:<30}:\t{}'.format("Dataset shape", dset.shape))
                     print('{:<30}:\t{}'.format("Data type", dset.dtype))
                     print_fragment_header(data_array, self.clock_speed_hz)
             n += 1
