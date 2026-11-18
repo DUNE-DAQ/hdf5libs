@@ -110,6 +110,11 @@ ERS_DECLARE_ISSUE(hdf5libs,
                   "Subdetector name \"" << name << "\" does not map to a valid detector ID.",
                   ((std::string)name))
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  MemoryAllocationFailed,
+                  "Failed to allocate " << bytes << " bytes for dataset " << data_set,
+                  ((std::string)data_set)((size_t)bytes))
+
 namespace hdf5libs {
 
 /**
@@ -180,6 +185,9 @@ private:
   HighFive::Group write(const daqdataformats::TimeSliceHeader& tsh,
                         HDF5SourceIDHandler::source_id_path_map_t& path_map);
   void write(const daqdataformats::Fragment& frag, HDF5SourceIDHandler::source_id_path_map_t& path_map);
+  void write_record_contents(HighFive::Group& record_level_group,
+                             HDF5SourceIDHandler::source_id_path_map_t& source_id_path_map,
+                             const std::vector<std::unique_ptr<daqdataformats::Fragment>>& fragments);
 
 public:
   // attribute writers/getters
@@ -393,6 +401,8 @@ public:
   }
 #endif
 
+  HighFive::DataSet get_dataset(const std::string& dataset_path) { return m_file_ptr->getDataSet(dataset_path); }
+
   std::unique_ptr<char[]> get_dataset_raw_data(const std::string& dataset_path);
 
   std::unique_ptr<daqdataformats::Fragment> get_frag_ptr(const std::string& dataset_name);
@@ -490,7 +500,9 @@ private:
   std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&,
                                                             const char*,
                                                             size_t,
-                                                            unsigned compression_level);
+                                                            unsigned compression_level,
+                                                            const char* header_ptr = nullptr,
+                                                            size_t header_size_bytes = 0);
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
