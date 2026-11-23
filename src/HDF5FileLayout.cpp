@@ -106,8 +106,7 @@ HDF5FileLayout::get_path_elements(const daqdataformats::TriggerRecordHeader& trh
   path_elements.push_back(m_conf_params.raw_data_group_name);
 
   // then the SourceID plus record header name
-  path_elements.push_back(trh.get_header().element_id.to_string() + "_" +
-                          m_conf_params.record_header_dataset_name);
+  path_elements.push_back(trh.get_header().element_id.to_string() + "_" + m_conf_params.record_header_dataset_name);
 
   return path_elements;
 }
@@ -164,8 +163,7 @@ std::string
 HDF5FileLayout::get_path_string(const daqdataformats::TimeSliceHeader& tsh) const
 {
   std::ostringstream path_string;
-  path_string << "/" << get_timeslice_number_string(tsh.timeslice_number)
-              << "/" << m_conf_params.raw_data_group_name
+  path_string << "/" << get_timeslice_number_string(tsh.timeslice_number) << "/" << m_conf_params.raw_data_group_name
               << "/" << tsh.element_id.to_string() << "_" << m_conf_params.record_header_dataset_name;
   return path_string.str();
 }
