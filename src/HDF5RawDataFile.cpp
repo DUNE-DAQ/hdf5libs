@@ -9,7 +9,6 @@
 
 #include "logging/Logging.hpp"
 
-#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -18,6 +17,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 namespace dunedaq {
 namespace hdf5libs {
