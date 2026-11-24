@@ -10,19 +10,61 @@
 #include "logging/Logging.hpp"
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <new>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 namespace dunedaq {
 namespace hdf5libs {
 
 constexpr uint32_t MAX_FILELAYOUT_VERSION = 4294967295; // NOLINT(build/unsigned)
+
+namespace {
+// Looks up a key in one of the per-record cache maps without inserting into it.
+template<typename MapType>
+typename MapType::mapped_type
+value_or_empty(const MapType& the_map, const typename MapType::key_type& key)
+{
+  const auto iter = the_map.find(key);
+  return (iter == the_map.end()) ? typename MapType::mapped_type{} : iter->second;
+}
+} // namespace ""
+
+// Uses renameat2 with RENAME_NOREPLACE, falling back to link() + unlink() on filesystems without it.
+void
+rename_without_replacing(const std::string& from, const std::string& to)
+{
+  if (::renameat2(AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), RENAME_NOREPLACE) == 0) {
+    return;
+  }
+  int error = errno;
+  if (error == EINVAL || error == ENOSYS || error == ENOTSUP) {
+    // The filesystem doesn't support RENAME_NOREPLACE (e.g. NFS); link() also fails if the new name exists.
+    if (::link(from.c_str(), to.c_str()) == 0) {
+      if (::unlink(from.c_str()) != 0) {
+        throw std::system_error(
+          errno, std::generic_category(), "renamed " + from + " to " + to + " but could not remove the old name");
+      }
+      return;
+    }
+    error = errno;
+  }
+  throw std::system_error(error, std::generic_category(), "could not rename " + from + " to " + to);
+}
 
 /**
  * @brief Constructor for writing a new file
@@ -47,6 +89,12 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string file_name,
   }
 
   auto filename_to_open = m_bare_file_name + inprogress_filename_suffix;
+
+  // Never start a file that could not get its final name without replacing an existing one.
+  if (filename_to_open != m_bare_file_name && std::filesystem::exists(m_bare_file_name)) {
+    throw FileOpenFailed(
+      ERS_HERE, filename_to_open, "a file with the final name " + m_bare_file_name + " already exists");
+  }
 
   // do the file open
   try {
@@ -89,36 +137,83 @@ HDF5RawDataFile::HDF5RawDataFile(const std::string file_name,
 
 HDF5RawDataFile::~HDF5RawDataFile()
 {
-  if (m_file_ptr.get() != nullptr && m_open_flags != HighFive::File::ReadOnly) {
-    if (!m_file_ptr->hasAttribute("recorded_size")) {
-      write_attribute("recorded_size", m_recorded_size);
+  try {
+    close();
+  } catch (std::exception const& excpt) {
+    ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, excpt.what()));
+  } catch (...) { // NOLINT(runtime/exceptions)
+    // A destructor must not throw, whatever close() throws.
+    ers::error(FileCloseFailed(ERS_HERE, m_bare_file_name, "unknown exception"));
+  }
+}
+
+void
+HDF5RawDataFile::write_closing_attributes()
+{
+  if (!m_file_ptr->hasAttribute("recorded_size")) {
+    write_attribute("recorded_size", m_recorded_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
+    write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("total_file_size")) {
+    write_attribute("total_file_size", m_total_file_size);
+  }
+
+  if (!m_file_ptr->hasAttribute("closing_timestamp")) {
+    size_t file_closing_timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
+    write_attribute("closing_timestamp", file_closing_timestamp);
+  }
+
+  m_file_ptr->flush();
+}
+
+void
+HDF5RawDataFile::close()
+{
+  if (m_file_ptr == nullptr) {
+    return;
+  }
+
+  const bool writable = (m_open_flags != HighFive::File::ReadOnly);
+  const std::string open_file_name = m_file_ptr->getName();
+
+  if (writable) {
+    std::optional<std::string> finalize_error;
+    try {
+      write_closing_attributes();
+    } catch (std::exception const& excpt) {
+      finalize_error = excpt.what();
+    } catch (...) { // NOLINT(runtime/exceptions)
+      // Any failure must still release the file below, so nothing may escape here.
+      finalize_error = "unknown exception";
     }
-
-    if (!m_file_ptr->hasAttribute("uncompressed_raw_data_size")) {
-      write_attribute("uncompressed_raw_data_size", m_uncompressed_raw_data_size);
-    }
-
-    if (!m_file_ptr->hasAttribute("total_file_size")) {
-      write_attribute("total_file_size", m_total_file_size);
-    }
-
-    if (!m_file_ptr->hasAttribute("closing_timestamp")) {
-      size_t file_closing_timestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count();
-      write_attribute("closing_timestamp", file_closing_timestamp);
-    }
-
-    m_file_ptr->flush();
-
-    // rename file to the bare name, if needed
-    if (m_file_ptr->getName() != m_bare_file_name) {
-      std::filesystem::rename(m_file_ptr->getName(), m_bare_file_name);
+    if (finalize_error) {
+      // Release the file so that a failed close is not retried; the in-progress name stays on disk.
+      m_file_ptr.reset();
+      m_closed_file_name = open_file_name;
+      throw FileCloseFailed(ERS_HERE, open_file_name, "could not finalize the file: " + *finalize_error);
     }
   }
 
-  // explicit destruction; not really needed, but nice to be clear...
   m_file_ptr.reset();
-  m_file_layout_ptr.reset();
+  m_closed_file_name = open_file_name;
+
+  // Rename the file to the bare name, if needed, never replacing an existing file.
+  if (writable && open_file_name != m_bare_file_name) {
+    try {
+      rename_without_replacing(open_file_name, m_bare_file_name);
+    } catch (std::system_error const& excpt) {
+      const std::string reason = (excpt.code() == std::errc::file_exists)
+                                   ? "the final name " + m_bare_file_name + " already exists"
+                                   : excpt.what();
+      throw FileCloseFailed(ERS_HERE, open_file_name, reason + "; the file keeps its in-progress name");
+    }
+    m_closed_file_name = m_bare_file_name;
+  }
 }
 
 /**
@@ -530,6 +625,25 @@ HDF5RawDataFile::add_record_level_info_to_caches_if_needed(record_id_t rid)
   m_subdetector_source_id_cache[rid] = subdetector_source_id_map;
 }
 
+void
+HDF5RawDataFile::throw_if_record_id_not_found(const record_id_t& rid)
+{
+  if (get_all_record_ids().count(rid) == 0) {
+    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  }
+}
+
+const std::string&
+HDF5RawDataFile::get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const
+{
+  auto const& path_map = m_source_id_path_cache.at(rid);
+  const auto iter = path_map.find(source_id);
+  if (iter == path_map.end()) {
+    throw SourceIDNotFound(ERS_HERE, source_id.to_string(), rid.first, rid.second);
+  }
+  return iter->second;
+}
+
 /**
  * @brief Return a vector of dataset names
  */
@@ -554,7 +668,7 @@ HDF5RawDataFile::get_dataset_paths(std::string top_level_group_name)
 /**
  * @brief Return all of the record numbers in the file.
  */
-HDF5RawDataFile::record_id_set // NOLINT(build/unsigned)
+const HDF5RawDataFile::record_id_set& // NOLINT(build/unsigned)
 HDF5RawDataFile::get_all_record_ids()
 {
   if (!m_all_record_ids_in_file.empty())
@@ -676,15 +790,13 @@ HDF5RawDataFile::get_timeslice_header_dataset_paths()
 std::string
 HDF5RawDataFile::get_record_header_dataset_path(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   if (get_version() <= 2) {
     return (m_file_ptr->getPath() + m_file_layout_ptr->get_record_header_path(rid.first, rid.second));
   } else {
     daqdataformats::SourceID source_id = get_record_header_source_id(rid);
-    return m_source_id_path_cache[rid][source_id];
+    return get_cached_source_id_path(rid, source_id);
   }
 }
 
@@ -747,9 +859,7 @@ HDF5RawDataFile::get_all_fragment_dataset_paths()
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   std::vector<std::string> frag_paths;
   if (get_version() <= 2) {
@@ -763,7 +873,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid)
   } else {
     std::set<daqdataformats::SourceID> source_id_list = get_fragment_source_ids(rid);
     for (auto const& source_id : source_id_list) {
-      frag_paths.push_back(m_source_id_path_cache[rid][source_id]);
+      frag_paths.push_back(get_cached_source_id_path(rid, source_id));
     }
   }
   return frag_paths;
@@ -790,7 +900,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const daqdataformats::SourceID::Subs
     } else {
       std::set<daqdataformats::SourceID> source_id_list = get_source_ids_for_subsystem(rid, subsystem);
       for (auto const& source_id : source_id_list) {
-        frag_paths.push_back(m_source_id_path_cache[rid][source_id]);
+        frag_paths.push_back(get_cached_source_id_path(rid, source_id));
       }
     }
   }
@@ -807,9 +917,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const std::string& subsystem_name)
 std::vector<std::string>
 HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid, const daqdataformats::SourceID::Subsystem subsystem)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   if (get_version() <= 2) {
     return get_dataset_paths(m_file_ptr->getPath() +
@@ -818,7 +926,7 @@ HDF5RawDataFile::get_fragment_dataset_paths(const record_id_t& rid, const daqdat
     std::vector<std::string> frag_paths;
     std::set<daqdataformats::SourceID> source_id_list = get_source_ids_for_subsystem(rid, subsystem);
     for (auto const& source_id : source_id_list) {
-      frag_paths.push_back(m_source_id_path_cache[rid][source_id]);
+      frag_paths.push_back(get_cached_source_id_path(rid, source_id));
     }
     return frag_paths;
   }
@@ -906,9 +1014,7 @@ HDF5RawDataFile::get_all_geo_ids() const
 std::set<uint64_t> // NOLINT(build/unsigned)
 HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
@@ -924,9 +1030,7 @@ HDF5RawDataFile::get_geo_ids(const record_id_t& rid)
 std::set<uint64_t> // NOLINT(build/unsigned)
 HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
@@ -948,9 +1052,7 @@ HDF5RawDataFile::get_geo_ids_for_subdetector(const record_id_t& rid, const detda
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
@@ -960,9 +1062,7 @@ HDF5RawDataFile::get_source_ids(const record_id_t& rid)
 daqdataformats::SourceID
 HDF5RawDataFile::get_record_header_source_id(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
@@ -972,9 +1072,7 @@ HDF5RawDataFile::get_record_header_source_id(const record_id_t& rid)
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_fragment_source_ids(const record_id_t& rid)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
@@ -985,25 +1083,21 @@ std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_subsystem(const record_id_t& rid,
                                               const daqdataformats::SourceID::Subsystem subsystem)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  return m_subsystem_source_id_cache[rid][subsystem];
+  return value_or_empty(m_subsystem_source_id_cache[rid], subsystem);
 }
 
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_fragment_type(const record_id_t& rid, const daqdataformats::FragmentType frag_type)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  return m_fragment_type_source_id_cache[rid][frag_type];
+  return value_or_empty(m_fragment_type_source_id_cache[rid], frag_type);
 }
 
 std::set<daqdataformats::SourceID>
@@ -1018,14 +1112,13 @@ HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector(const record_id_t& 
   if (subdet == detdataformats::DetID::Subdetector::kUnknown)
     throw InvalidSubdetectorString(ERS_HERE, subdet_name);
 
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  std::set<daqdataformats::SourceID> fragtype_match_sids = m_fragment_type_source_id_cache[rid][frag_type];
-  std::set<daqdataformats::SourceID> detid_match_sids = m_subdetector_source_id_cache[rid][subdet];
+  std::set<daqdataformats::SourceID> fragtype_match_sids =
+    value_or_empty(m_fragment_type_source_id_cache[rid], frag_type);
+  std::set<daqdataformats::SourceID> detid_match_sids = value_or_empty(m_subdetector_source_id_cache[rid], subdet);
   std::set<daqdataformats::SourceID> combined_set_sids;
   for (auto ftsid : fragtype_match_sids) {
     if (detid_match_sids.contains(ftsid)) {
@@ -1038,17 +1131,15 @@ HDF5RawDataFile::get_source_ids_for_fragtype_and_subdetector(const record_id_t& 
 std::set<daqdataformats::SourceID>
 HDF5RawDataFile::get_source_ids_for_subdetector(const record_id_t& rid, const detdataformats::DetID::Subdetector subdet)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  return m_subdetector_source_id_cache[rid][subdet];
+  return value_or_empty(m_subdetector_source_id_cache[rid], subdet);
 }
 
-std::unique_ptr<char[]>
-HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
+HighFive::DataSet
+HDF5RawDataFile::get_valid_dataset(const std::string& dataset_path)
 {
   HighFive::Group parent_group = m_file_ptr->getGroup("/");
   HighFive::DataSet data_set = parent_group.getDataSet(dataset_path);
@@ -1056,9 +1147,33 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
   if (!data_set.isValid())
     throw InvalidHDF5Dataset(ERS_HERE, dataset_path, get_file_name());
 
-  size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
+  return data_set;
+}
+
+std::unique_ptr<char[]>
+HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
+{
+  HighFive::DataSet data_set = get_valid_dataset(dataset_path);
+  const size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
 
   auto membuffer = std::make_unique<char[]>(data_size);
+
+  data_set.read(membuffer.get());
+  return membuffer;
+}
+
+HDF5RawDataFile::malloc_buffer_t
+HDF5RawDataFile::get_dataset_raw_data_malloc(const std::string& dataset_path)
+{
+  HighFive::DataSet data_set = get_valid_dataset(dataset_path);
+  const size_t data_size = data_set.getSpace().getElementCount() * sizeof(char);
+
+  // malloc(0) may return nullptr; always allocate at least one byte.
+  malloc_buffer_t membuffer(
+    static_cast<char*>(std::malloc(data_size > 0 ? data_size : 1))); // NOLINT(cppcoreguidelines-no-malloc)
+  if (membuffer == nullptr) {
+    throw std::bad_alloc();
+  }
 
   data_set.read(membuffer.get());
   return membuffer;
@@ -1067,7 +1182,8 @@ HDF5RawDataFile::get_dataset_raw_data(const std::string& dataset_path)
 std::unique_ptr<daqdataformats::Fragment>
 HDF5RawDataFile::get_frag_ptr(const std::string& dataset_name)
 {
-  auto membuffer = get_dataset_raw_data(dataset_name);
+  // Fragment frees an adopted buffer with free(), so the buffer must come from malloc.
+  auto membuffer = get_dataset_raw_data_malloc(dataset_name);
   auto frag_ptr = std::make_unique<daqdataformats::Fragment>(
     membuffer.release(), dunedaq::daqdataformats::Fragment::BufferAdoptionMode::kTakeOverBuffer);
   return frag_ptr;
@@ -1079,13 +1195,11 @@ HDF5RawDataFile::get_frag_ptr(const record_id_t& rid, const daqdataformats::Sour
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  return get_frag_ptr(m_source_id_path_cache[rid][source_id]);
+  return get_frag_ptr(get_cached_source_id_path(rid, source_id));
 }
 
 std::unique_ptr<daqdataformats::Fragment>
@@ -1158,7 +1272,8 @@ std::unique_ptr<daqdataformats::TriggerRecordHeader>
 HDF5RawDataFile::get_trh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
-  auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.release(), true);
+  // The header copies the buffer, which is then freed by membuffer.
+  auto trh_ptr = std::make_unique<daqdataformats::TriggerRecordHeader>(membuffer.get(), true);
   return trh_ptr;
 }
 
@@ -1168,14 +1283,12 @@ HDF5RawDataFile::get_trh_ptr(const record_id_t& rid)
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
   daqdataformats::SourceID rh_source_id = m_record_header_source_id_cache[rid];
-  return get_trh_ptr(m_source_id_path_cache[rid][rh_source_id]);
+  return get_trh_ptr(get_cached_source_id_path(rid, rh_source_id));
 }
 
 std::unique_ptr<daqdataformats::TimeSliceHeader>
@@ -1183,7 +1296,7 @@ HDF5RawDataFile::get_tsh_ptr(const std::string& dataset_name)
 {
   auto membuffer = get_dataset_raw_data(dataset_name);
   auto tsh_ptr = std::make_unique<daqdataformats::TimeSliceHeader>(
-    *(reinterpret_cast<daqdataformats::TimeSliceHeader*>(membuffer.release()))); // NOLINT
+    *(reinterpret_cast<daqdataformats::TimeSliceHeader*>(membuffer.get()))); // NOLINT
   return tsh_ptr;
 }
 
@@ -1193,14 +1306,12 @@ HDF5RawDataFile::get_tsh_ptr(const record_id_t& rid)
   if (get_version() < 2)
     throw IncompatibleFileLayoutVersion(ERS_HERE, get_version(), 2, MAX_FILELAYOUT_VERSION);
 
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
   daqdataformats::SourceID rh_source_id = m_record_header_source_id_cache[rid];
-  return get_tsh_ptr(m_source_id_path_cache[rid][rh_source_id]);
+  return get_tsh_ptr(get_cached_source_id_path(rid, rh_source_id));
 }
 
 daqdataformats::TriggerRecord
@@ -1228,22 +1339,18 @@ HDF5RawDataFile::get_timeslice(const daqdataformats::timeslice_number_t ts_num)
 std::vector<uint64_t> // NOLINT(build/unsigned)
 HDF5RawDataFile::get_geo_ids_for_source_id(const record_id_t& rid, const daqdataformats::SourceID& source_id)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
-  return m_source_id_geo_id_cache[rid][source_id];
+  return value_or_empty(m_source_id_geo_id_cache[rid], source_id);
 }
 
 daqdataformats::SourceID
 HDF5RawDataFile::get_source_id_for_geo_id(const record_id_t& rid,
                                           const uint64_t requested_geo_id) // NOLINT(build/unsigned)
 {
-  auto rec_id = get_all_record_ids().find(rid);
-  if (rec_id == get_all_record_ids().end())
-    throw RecordIDNotFound(ERS_HERE, rid.first, rid.second);
+  throw_if_record_id_not_found(rid);
 
   add_record_level_info_to_caches_if_needed(rid);
 
