@@ -1,4 +1,4 @@
-name: Single-Package CI Build and Linting
+name: Single-Package CI
 
 on:
   push:
@@ -31,7 +31,7 @@ on:
 
 jobs:
   build_develop_dispatch:
-    name: Build against the development release
+    name: Run Tests
     uses: DUNE-DAQ/.github/.github/workflows/dunedaq-develop-cpp-ci.yml@amogan/refactor_ci_jobs
     with:
       caller_event_name: ${{ inputs.caller_event_name || github.event_name }}
