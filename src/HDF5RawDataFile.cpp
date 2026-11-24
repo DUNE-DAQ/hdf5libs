@@ -9,7 +9,6 @@
 
 #include "logging/Logging.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -24,6 +23,7 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <fcntl.h>
 #include <unistd.h>

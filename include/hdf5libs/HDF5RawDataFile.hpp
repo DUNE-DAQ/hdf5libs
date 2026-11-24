@@ -146,7 +146,7 @@ public:
 
   // define a record number type
   // that is a pair of the trigger record or timeslice number and sequence number
-  typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t; // NOLINT(build/unsigned)
+  typedef std::pair<uint64_t, daqdataformats::sequence_number_t> record_id_t;
   typedef std::set<record_id_t, std::less<>> record_id_set;
 
   inline static const std::string s_inprogress_suffix = ".writing";
@@ -277,7 +277,7 @@ public:
   std::vector<std::string> get_fragment_dataset_paths(const std::string& typestring,
   const uint32_t id); // NOLINT(build/unsigned)
 
-  // get a list of all the source ids from a list of fragment dataset paths
+  //get a list of all the source ids from a list of fragment dataset paths
   std::set<daqdataformats::SourceID> get_source_ids(std::vector<std::string> const& frag_dataset_paths);
 #endif
 
