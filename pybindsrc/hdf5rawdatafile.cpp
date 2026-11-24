@@ -38,6 +38,8 @@ register_hdf5rawdatafile(py::module& m)
          py::overload_cast<const std::string&>(&HDF5RawDataFile::get_attribute<size_t>),
          "Get integer attribute")
 
+    .def(
+      "close", &HDF5RawDataFile::close, "Close the file; no other methods except get_file_name may be used afterwards")
     .def("get_file_name", &HDF5RawDataFile::get_file_name, "Get file name")
     .def("get_recorded_size", &HDF5RawDataFile::get_recorded_size, "Get recorded size")
     .def("get_record_type", &HDF5RawDataFile::get_record_type, "Get record type")
