@@ -12,15 +12,15 @@
 #ifndef HDF5LIBS_INCLUDE_HDF5LIBS_HDF5SOURCEIDHANDLER_HPP_
 #define HDF5LIBS_INCLUDE_HDF5LIBS_HDF5SOURCEIDHANDLER_HPP_
 
+#include "confmodel/Session.hpp"
 #include "daqdataformats/Fragment.hpp"
 #include "daqdataformats/SourceID.hpp"
 #include "detdataformats/DetID.hpp"
-#include "confmodel/Session.hpp"
 
-//#include "hdf5libs/hdf5filelayout/Structs.hpp"
-//#include "daqdataformats/TimeSliceHeader.hpp"
-//#include "daqdataformats/TriggerRecordHeader.hpp"
-//#include "logging/Logging.hpp"
+// #include "hdf5libs/hdf5filelayout/Structs.hpp"
+// #include "daqdataformats/TimeSliceHeader.hpp"
+// #include "daqdataformats/TriggerRecordHeader.hpp"
+// #include "logging/Logging.hpp"
 
 #include <highfive/H5File.hpp>
 #include <highfive/H5Group.hpp>
@@ -51,7 +51,7 @@ public:
   typedef std::map<daqdataformats::FragmentType, std::set<daqdataformats::SourceID>> fragment_type_source_id_map_t;
   typedef std::map<detdataformats::DetID::Subdetector, std::set<daqdataformats::SourceID>> subdetector_source_id_map_t;
 
-  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session* session);
+  static source_id_geo_id_map_t make_source_id_geo_id_map(const confmodel::Session& session);
 
   /**
    * Stores the map from SourceID to GeoID in the specified HighFive::File.
@@ -205,7 +205,8 @@ private:
   /**
    * Parses the specified JSON string into the specified fragment_type_source_id_map
    */
-  static void parse_json_string(const std::string& json_string, fragment_type_source_id_map_t& fragment_type_source_id_map);
+  static void parse_json_string(const std::string& json_string,
+                                fragment_type_source_id_map_t& fragment_type_source_id_map);
 
   /**
    * Parses the specified JSON string into the specified subdetector_source_id_map

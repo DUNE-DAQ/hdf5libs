@@ -16,6 +16,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -81,11 +82,18 @@ main(int argc, char** argv)
          << "\nFragment size (bytes, incl. header): " << fragment_size;
 
   // Read src-geo id map
-  //std::ifstream f(hw_map_file_name);
-  //nlohmann::json data = nlohmann::json::parse(f);
+  // std::ifstream f(hw_map_file_name);
+  // nlohmann::json data = nlohmann::json::parse(f);
 
-  //auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
+  // auto srcid_geoid_map = data.get<hdf5rawdatafile::SrcIDGeoIDMap>();
   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map;
+
+  // Files are never overwritten by HDF5RawDataFile, so this test app removes any earlier output itself.
+  for (auto const& old_file : { ofile_name, ofile_name + ".writing" }) {
+    if (std::filesystem::remove(old_file)) {
+      TLOG() << "Removed existing file " << old_file;
+    }
+  }
 
   // open our file for writing
   HDF5RawDataFile h5_raw_data_file = HDF5RawDataFile(ofile_name,
@@ -95,8 +103,7 @@ main(int argc, char** argv)
                                                      fl_conf,    // file_layout_confs
                                                      srcid_geoid_map,
                                                      compression_level, // gzip compression_level
-                                                     ".writing", // optional: suffix to use for files being written
-                                                     HighFive::File::Overwrite); // optional: overwrite existing file
+                                                     ".writing"); // optional: suffix to use for files being written
 
   std::vector<char> dummy_data(fragment_size);
 
@@ -110,17 +117,15 @@ main(int argc, char** argv)
 
     TLOG() << "\tWriting trigger " << trig_num << " with time_stamp " << ts;
 
-    // create TriggerRecordHeader
-    TriggerRecordHeaderData trh_data;
-    trh_data.trigger_number = trig_num;
-    trh_data.trigger_timestamp = ts;
-    trh_data.num_requested_components = element_count;
-    trh_data.run_number = run_number;
-    trh_data.sequence_number = 0;
-    trh_data.max_sequence_number = 1;
-    trh_data.element_id = SourceID(SourceID::Subsystem::kTRBuilder, 0);
-
-    TriggerRecordHeader trh(&trh_data);
+    // The header must carry one component request per element, to match num_requested_components.
+    std::vector<ComponentRequest> component_requests(element_count);
+    TriggerRecordHeader trh(component_requests);
+    trh.set_trigger_number(trig_num);
+    trh.set_trigger_timestamp(ts);
+    trh.set_run_number(run_number);
+    trh.set_sequence_number(0);
+    trh.set_max_sequence_number(1);
+    trh.set_element_id(SourceID(SourceID::Subsystem::kTRBuilder, 0));
 
     // create out TriggerRecord
     TriggerRecord tr(trh);

@@ -28,18 +28,19 @@
 #include <nlohmann/json.hpp>
 
 // System
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <sys/statvfs.h>
 #include <utility>
 #include <variant>
 #include <vector>
-#include <optional>
 
 namespace dunedaq {
 
@@ -61,8 +62,7 @@ ERS_DECLARE_ISSUE(hdf5libs,
 
 ERS_DECLARE_ISSUE(hdf5libs,
                   MissingFileLayout,
-                  "No DUNEDAQ FileLayout information available."
-                    << " Assigning version " << version,
+                  "No DUNEDAQ FileLayout information available." << " Assigning version " << version,
                   ((uint32_t)version)) // NOLINT(build/unsigned)
 
 ERS_DECLARE_ISSUE(hdf5libs,
@@ -89,6 +89,17 @@ ERS_DECLARE_ISSUE(hdf5libs,
                   "Record ID with record number=" << rec_num << " and sequence number=" << seq_num << " not found.",
                   ((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
 
+ERS_DECLARE_ISSUE(hdf5libs,
+                  SourceIDNotFound,
+                  "SourceID " << source_id << " not found in record with record number=" << rec_num
+                              << " and sequence number=" << seq_num << ".",
+                  ((std::string)source_id)((uint64_t)rec_num)((uint16_t)seq_num)) // NOLINT(build/unsigned)
+
+ERS_DECLARE_ISSUE(hdf5libs,
+                  FileCloseFailed,
+                  "Issue when closing file " << file << ": " << message,
+                  ((std::string)file)((std::string)message))
+
 ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Group, "Group " << name << " is invalid.", ((std::string)name))
 
 ERS_DECLARE_ISSUE(hdf5libs,
@@ -101,15 +112,23 @@ ERS_DECLARE_ISSUE(hdf5libs, InvalidHDF5Attribute, "Attribute " << name << " not 
 
 ERS_DECLARE_ISSUE(hdf5libs, HDF5AttributeExists, "Attribute " << name << " already exists.", ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, TimeSliceAlreadyExists, "The TimeSlice record for " << name << " already exists.", ((std::string)name))
+ERS_DECLARE_ISSUE(hdf5libs,
+                  InvalidFragmentTypeString,
+                  "Fragment type name \"" << name << "\" does not map to a valid type.",
+                  ((std::string)name))
 
-ERS_DECLARE_ISSUE(hdf5libs, InvalidFragmentTypeString,
-                  "Fragment type name \"" << name << "\" does not map to a valid type.", ((std::string)name))
-
-ERS_DECLARE_ISSUE(hdf5libs, InvalidSubdetectorString,
-                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.", ((std::string)name))
+ERS_DECLARE_ISSUE(hdf5libs,
+                  InvalidSubdetectorString,
+                  "Subdetector name \"" << name << "\" does not map to a valid detector ID.",
+                  ((std::string)name))
 
 namespace hdf5libs {
+
+// Renames a file atomically without ever replacing an existing file at the new name, even one that
+// appears concurrently. Throws std::system_error (code EEXIST if the new name exists); on failure
+// the file keeps its old name.
+void
+rename_without_replacing(const std::string& from, const std::string& to);
 
 /**
  * @brief HDF5RawDataFile is the class responsible
@@ -132,7 +151,8 @@ public:
 
   inline static const std::string s_inprogress_suffix = ".writing";
 
-  // constructor for writing
+  // Constructor for writing. Throws FileOpenFailed if the in-progress or the final name already
+  // exists; an existing file is never appended to, overwritten or replaced.
   HDF5RawDataFile(std::string file_name,
                   daqdataformats::run_number_t run_number,
                   size_t file_index,
@@ -141,14 +161,23 @@ public:
                   HDF5SourceIDHandler::source_id_geo_id_map_t srcid_geoid_map,
                   unsigned compression_level = 0,
                   std::string inprogress_filename_suffix = s_inprogress_suffix,
-                  unsigned open_flags = HighFive::File::Create);
+                  unsigned open_flags = HighFive::File::Excl);
 
   // constructor for reading and optional writing
   explicit HDF5RawDataFile(const std::string& file_name, bool allow_writing = false);
 
+  // Calls close(); any failure is reported with ers::error, since a destructor must not throw.
   ~HDF5RawDataFile();
 
-  std::string get_file_name() const { return m_file_ptr->getName(); }
+  // Finalizes a writable file and renames it to drop the in-progress suffix, never replacing an
+  // existing file: if the final name exists, throws FileCloseFailed and the file keeps its
+  // in-progress name. The file is always released, even on failure; calling close() again is a
+  // no-op. Only get_file_name() may be used after close().
+  void close();
+
+  // The name of the file on disk: the in-progress name while open, the final name once closed.
+  std::string get_file_name() const { return m_file_ptr ? m_file_ptr->getName() : m_closed_file_name; }
+  static std::string get_file_name_extension() { return "hdf5"; }
 
   size_t get_recorded_size() const noexcept { return m_recorded_size; }
   size_t get_uncompressed_raw_data_size() const noexcept { return m_uncompressed_raw_data_size; }
@@ -201,7 +230,8 @@ public:
 
   std::vector<std::string> get_dataset_paths(std::string top_level_group_name = "");
 
-  record_id_set get_all_record_ids();
+  // The returned set is owned by this object and cached on first use.
+  const record_id_set& get_all_record_ids();
   record_id_set get_all_trigger_record_ids();
   record_id_set get_all_timeslice_ids();
 
@@ -253,19 +283,19 @@ public:
 
   HDF5SourceIDHandler::source_id_geo_id_map_t get_srcid_geoid_map() const;
 
-  //get a list of all the geo ids anywhere in the file
+  // get a list of all the geo ids anywhere in the file
   std::set<uint64_t> get_all_geo_ids() const; // NOLINT(build/unsigned)
 
-  //get GeoIDs in a record
+  // get GeoIDs in a record
   std::set<uint64_t> get_geo_ids(const record_id_t& rid); // NOLINT(build/unsigned)
-  std::set<uint64_t> get_geo_ids(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids(const uint64_t rec_num,  // NOLINT(build/unsigned)
                                  const daqdataformats::sequence_number_t seq_num = 0)
   {
     return get_geo_ids(std::make_pair(rec_num, seq_num));
   }
   std::set<uint64_t> get_geo_ids_for_subdetector(const record_id_t& rid, // NOLINT(build/unsigned)
                                                  const detdataformats::DetID::Subdetector subdet);
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const detdataformats::DetID::Subdetector subdet)
   {
@@ -277,7 +307,7 @@ public:
     detdataformats::DetID::Subdetector subdet = detdataformats::DetID::string_to_subdetector(subdet_name);
     return get_geo_ids_for_subdetector(rid, subdet);
   }
-  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, //NOLINT(build/unsigned)
+  std::set<uint64_t> get_geo_ids_for_subdetector(const uint64_t rec_num, // NOLINT(build/unsigned)
                                                  const daqdataformats::sequence_number_t seq_num,
                                                  const std::string& subdet_name)
   {
@@ -452,7 +482,19 @@ public:
   daqdataformats::SourceID get_source_id_for_geo_id(const record_id_t& rid,
                                                     const uint64_t geo_id); // NOLINT(build/unsigned)
 
+  bool timeslice_already_exists(const daqdataformats::TimeSlice& timeslice) const
+  {
+    const std::string& timeslice_header_path{ m_file_layout_ptr->get_path_string(timeslice.get_header()) };
+    return m_file_ptr->exist(timeslice_header_path);
+  }
+
 private:
+  struct FreeDeleter
+  {
+    void operator()(void* ptr) const noexcept { std::free(ptr); } // NOLINT(cppcoreguidelines-no-malloc)
+  };
+  using malloc_buffer_t = std::unique_ptr<char[], FreeDeleter>; // NOLINT(modernize-avoid-c-arrays)
+
   HDF5RawDataFile(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile& operator=(const HDF5RawDataFile&) = delete;
   HDF5RawDataFile(HDF5RawDataFile&&) = delete;
@@ -461,6 +503,7 @@ private:
   std::unique_ptr<HighFive::File> m_file_ptr;
   std::unique_ptr<HDF5FileLayout> m_file_layout_ptr;
   std::string m_bare_file_name;
+  std::string m_closed_file_name; // The file's name after close(): normally the bare name.
   unsigned m_compression_level;
   unsigned m_open_flags;
 
@@ -479,7 +522,10 @@ private:
   void check_record_type(std::string);
 
   // writing to datasets
-  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&, const char*, size_t, unsigned compression_level); 
+  std::tuple<size_t, std::string, HighFive::Group> do_write(std::vector<std::string> const&,
+                                                            const char*,
+                                                            size_t,
+                                                            unsigned compression_level);
 
   // unpacking groups when reading
   void explore_subgroup(const HighFive::Group& parent_group,
@@ -488,6 +534,20 @@ private:
 
   // adds record-level information to caches, if needed
   void add_record_level_info_to_caches_if_needed(record_id_t rid);
+
+  // Writes the closing attributes that are not already present, then flushes.
+  void write_closing_attributes();
+
+  // A dataset read into a buffer allocated with std::malloc, which a Fragment can take over.
+  malloc_buffer_t get_dataset_raw_data_malloc(const std::string& dataset_path);
+
+  // Throws InvalidHDF5Dataset if the dataset is invalid.
+  HighFive::DataSet get_valid_dataset(const std::string& dataset_path);
+
+  void throw_if_record_id_not_found(const record_id_t& rid);
+
+  // Dataset path of a SourceID in an already-cached record; throws SourceIDNotFound if absent.
+  const std::string& get_cached_source_id_path(const record_id_t& rid, const daqdataformats::SourceID& source_id) const;
 
   // caches of full-file and record-specific information
   record_id_set m_all_record_ids_in_file;
@@ -551,7 +611,7 @@ T
 HDF5RawDataFile::get_attribute_if_exists(const std::string& name, const T& default_value)
 {
   if (!m_file_ptr->hasAttribute(name)) {
-     TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
+    TLOG_DEBUG(7) << "Debug: Attribute \"" << name << "\" not found. Defaulting to " << default_value;
     return default_value;
   }
   auto attr = m_file_ptr->getAttribute(name);

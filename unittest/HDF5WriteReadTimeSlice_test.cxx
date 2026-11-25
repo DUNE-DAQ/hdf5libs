@@ -17,6 +17,7 @@
 #include "boost/test/unit_test.hpp"
 
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -146,18 +147,16 @@ create_timeslice(int ts_num)
   return ts;
 }
 
-struct FileWriteFixture 
+struct FileWriteFixture
 {
-  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0) 
-    : timeslice_count(num_slices), 
-      compression_level(comp_lvl),
-      file_path(std::filesystem::temp_directory_path()),
-      hdf5_filename(
-        "demo" + std::to_string(getpid()) + "_"
-        + std::string(getenv("USER") ? getenv("USER") : "") +
-        + "_comp" + std::to_string(compression_level) + ".hdf5"),
-      fl_pars(create_file_layout_params()),
-      recorded_size_at_write(0)
+  FileWriteFixture(int num_slices = 5, unsigned comp_lvl = 0)
+    : timeslice_count(num_slices)
+    , compression_level(comp_lvl)
+    , file_path(std::filesystem::temp_directory_path())
+    , hdf5_filename("demo" + std::to_string(getpid()) + "_" + std::string(getenv("USER") ? getenv("USER") : "") +
+                    +"_comp" + std::to_string(compression_level) + ".hdf5")
+    , fl_pars(create_file_layout_params())
+    , recorded_size_at_write(0)
   {
     delete_files_matching_pattern(file_path, hdf5_filename);
 
@@ -175,7 +174,6 @@ struct FileWriteFixture
                                                                     srcid_geoid_map,
                                                                     compression_level));
 
-
     // write several events, each with several fragments
     for (int timeslice_number = 1; timeslice_number <= timeslice_count; ++timeslice_number)
       h5file_ptr->write(create_timeslice(timeslice_number));
@@ -186,15 +184,12 @@ struct FileWriteFixture
     h5file_ptr.reset(); // explicit destruction
   }
 
-  ~FileWriteFixture() 
-  {
-    delete_files_matching_pattern(file_path, hdf5_filename);
-  }
+  ~FileWriteFixture() { delete_files_matching_pattern(file_path, hdf5_filename); }
 
   void read_file_attributes()
   {
     // open file for reading now
-    //std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
+    // std::unique_ptr<HDF5RawDataFile> h5file_ptr = std::make_unique<HDF5RawDataFile>(file_path + "/" + hdf5_filename);
     h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
 
     // check attributes
@@ -216,8 +211,9 @@ struct FileWriteFixture
     auto file_layout_parameters_read = h5file_ptr->get_file_layout().get_file_layout_params();
     BOOST_REQUIRE_EQUAL(fl_pars.to_json(), file_layout_parameters_read.to_json());
 
-    if (this->compression_level == 0) {uncompressed_raw_data_size = recorded_size_at_write;}
-    else {
+    if (this->compression_level == 0) {
+      uncompressed_raw_data_size = recorded_size_at_write;
+    } else {
       compressed_raw_data_size = recorded_size_at_write;
       BOOST_ASSERT(compressed_raw_data_size < uncompressed_raw_data_size);
     }
@@ -355,6 +351,35 @@ struct FileWriteFixture
     BOOST_REQUIRE_EQUAL(frag_ptr->get_element_id().id, 1);
   }
 
+  // Reads every TimeSlice repeatedly through both the dataset-path and the record-ID overloads,
+  // adopting and freeing every buffer; under ASan this checks buffer ownership.
+  void read_through_all_overloads(int repeats = 3)
+  {
+    h5file_ptr.reset(new HDF5RawDataFile(file_path + "/" + hdf5_filename));
+    auto record_ids = h5file_ptr->get_all_record_ids();
+    BOOST_REQUIRE_EQUAL(record_ids.size(), static_cast<size_t>(timeslice_count));
+    for (int pass = 0; pass < repeats; ++pass) {
+      for (auto const& rid : record_ids) {
+        auto tsh_by_id = h5file_ptr->get_tsh_ptr(rid);
+        auto tsh_by_path = h5file_ptr->get_tsh_ptr(h5file_ptr->get_record_header_dataset_path(rid));
+        BOOST_REQUIRE(
+          std::memcmp(tsh_by_path.get(), tsh_by_id.get(), sizeof(dunedaq::daqdataformats::TimeSliceHeader)) == 0);
+
+        auto paths = h5file_ptr->get_fragment_dataset_paths(rid);
+        BOOST_REQUIRE(!paths.empty());
+        for (auto const& path : paths) {
+          auto frag_by_path = h5file_ptr->get_frag_ptr(path);
+          auto frag_by_sid = h5file_ptr->get_frag_ptr(rid, frag_by_path->get_element_id());
+          BOOST_REQUIRE_EQUAL(frag_by_sid->get_size(), frag_by_path->get_size());
+          BOOST_REQUIRE(std::memcmp(frag_by_sid->get_storage_location(),
+                                    frag_by_path->get_storage_location(),
+                                    frag_by_path->get_size()) == 0);
+        }
+      }
+    }
+    h5file_ptr->close();
+  }
+
   int timeslice_count;
   unsigned compression_level;
   std::string file_path;
@@ -366,40 +391,52 @@ struct FileWriteFixture
 
 BOOST_AUTO_TEST_SUITE(HDF5WriteReadTimeSlice_test)
 
-BOOST_AUTO_TEST_CASE(ReadFileAttributes) 
+BOOST_AUTO_TEST_CASE(ReadFileAttributes)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileAttributes)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_attributes();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileDatasets) 
+BOOST_AUTO_TEST_CASE(ReadFileDatasets)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_datasets();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileDatasets)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_datasets();
 }
 
-BOOST_AUTO_TEST_CASE(ReadFileMaxSequence) 
+BOOST_AUTO_TEST_CASE(ReadFileMaxSequence)
 {
   FileWriteFixture fixture(5, 0);
   fixture.read_file_max_sequence();
 }
 
-BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence) 
+BOOST_AUTO_TEST_CASE(ReadCompressedFileMaxSequence)
 {
   FileWriteFixture fixture(5, 1);
   fixture.read_file_max_sequence();
+}
+
+BOOST_AUTO_TEST_CASE(ReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 0);
+  fixture.read_through_all_overloads();
+}
+
+BOOST_AUTO_TEST_CASE(CompressedReadThroughAllOverloads)
+{
+  FileWriteFixture fixture(5, 1);
+  fixture.read_through_all_overloads();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
