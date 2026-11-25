@@ -596,7 +596,8 @@ std::string
 unique_test_file_name(const std::string& stem)
 {
   return std::string(std::filesystem::temp_directory_path()) + "/" + stem + std::to_string(getpid()) + "_" +
-         std::string(getenv("USER")) + ".hdf5";
+         std::string(getenv("USER") ? getenv("USER") : "") +
+        ".hdf5";
 }
 
 void
